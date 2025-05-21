@@ -1,69 +1,117 @@
 # Typus
 
-*Shared taxonomy and metadata types for the Polli‑Labs ecological software stack*
+**Shared taxonomy & geo‑temporal types for the Polli‑Labs ecological stack**
 
-Typus consolidates **all domain models** (Taxa, Clades, hierarchical classification
-results, geo‑temporal projections …) along with the data‑access layer that backs
-those models.  Down‑stream repos – `linnaeus`, `pollinalysis‑server`, notebooks –
-import Typus and never re‑implement domain objects.
+Typus centralises every domain object that the rest of our platform —
+`linnaeus`, `pollinalysis‑server`, dashboards — needs: taxon records, clades,
+hierarchical classification results, projection helpers and async database
+services.  Anything that speaks taxonomy imports *Typus* and stays DRY.
 
-* **Instant taxonomy queries**   Async service that talks to the
-  `expanded_taxa` view in Postgres or a lightweight SQLite fixture.
-* **Pydantic v2 data classes**   Type‑safe, JSON‑serialisable, JSON‑Schema
-  auto‑export.
-* **Projection helpers**   Lat/Lon → unit sphere, day‑of‑year/hours
-  sinusoids, elevation multi‑scale sinusoids.
-* **Complete ORM for ColDP**   NameUsage, VernacularName, Media, Reference …
-  ready for analytics and joins.
+---
 
-## Install
+## Features
+
+* **Wide ancestry view** – `expanded_taxa` ORM exposes each rank (L10‑L70) on a
+  single row for constant‑time lineage queries.
+* **Async services** – `PostgresTaxonomyService` (ltree‑based) and
+  `SQLiteTaxonomyService` (fixture) share an abstract interface.
+* **Pydantic v2 models** – `Taxon`, `Clade`, `HierarchicalClassificationResult`,
+  all JSON‑Schema‑exportable.
+* **Projection utils** – lat/lon ↔ unit‑sphere, cyclical time features,
+  multi‑scale elevation sinusoids.
+* **Optional drivers only when you need them** – install `*[postgres]` or
+  `*[sqlite]` extras; core install stays lightweight.
+
+---
+
+## Requirements
+
+* Python **≥ 3.10**
+
+---
+
+## Installation
+
+### Core (no DB drivers)
 
 ```bash
-# editable install with Postgres extras (asyncpg)
-uv pip install -e .[postgres]
+pip install typus
 ```
 
-or from the private index:
+### With Postgres backend
 
 ```bash
-pip install --index-url https://pypi.polli.ai/simple typus==0.1.5a0
+pip install "typus[postgres]"            # adds asyncpg
 ```
+
+### With SQLite only (CI, offline, Codex sandboxes)
+
+```bash
+pip install "typus[sqlite]"
+```
+
+### Development / tests / lint
+
+```bash
+pip install -e ".[dev,sqlite]"   # pytest, pytest-asyncio, ruff, pre-commit, aiosqlite
+```
+
+Using `uv`:
+
+```bash
+uv pip install -e ".[dev,sqlite]"
+```
+
+---
 
 ## Quick start
 
 ```python
-from typus import (
-    PostgresTaxonomyService, RankLevel,
-    latlon_to_unit_sphere, HierarchicalClassificationResult
-)
+from typus import PostgresTaxonomyService, latlon_to_unit_sphere, RankLevel
 
 svc = PostgresTaxonomyService("postgresql+asyncpg://user:pw@host/db")
-bee = await svc.get_taxon(630955)           # Anthophila
-print(bee.rank_level)                       # RankLevel.L30 (family)
+bee = await svc.get_taxon(630955)   # Anthophila
+print(bee.scientific_name, bee.rank_level)  # Anthophila RankLevel.L32
 
-# projections
-a,b,c = latlon_to_unit_sphere(31.5, -110.4)
+print(latlon_to_unit_sphere(31.5, -110.4))  # → x,y,z on S²
 ```
 
-### Offline / tests
+### Offline mode (fixture)
 
-A tiny SQLite fixture with real data ships in `tests/fixture_typus.sqlite`.
-Typus automatically falls back to it if the `POSTGRES_DSN` env‑var is unset.
-
-```bash
-pytest -q               # runs against the fixture
-POSTGRES_DSN=... pytest # runs full integration suite
+```python
+from typus.services import SQLiteTaxonomyService
+svc = SQLiteTaxonomyService()       # uses tests/fixture_typus.sqlite
 ```
 
-## Development
+---
 
-* **Lint / format**: `ruff check . && ruff format .`
-* **Tests**: `pytest -q`
-* **Generate JSON schemas**: `python -m typus.export_schemas`
-* **Rebuild fixture**: `python scripts/gen_fixture_sqlite.py`
+## Developer guide
 
-A `.pre-commit-config.yaml` is provided to automate lint + tests on commit.
+* **Lint & tests** (single command):
+
+  ```bash
+  ruff check . && ruff format . && pytest -q
+  ```
+
+* **Auto-format all files**:
+
+  ```bash
+  ruff format .  # formats both typus/ and tests/
+  ```
+
+* **JSON Schemas**: `python -m typus.export_schemas` → `typus/schemas/`.
+* **SQLite fixture**: `python scripts/gen_fixture_sqlite.py` regenerates
+  `tests/fixture_typus.sqlite` from the TSV snippets.
+* **Pre‑commit**: install hooks with `pre‑commit install`.
+
+---
+
+## Publishing (maintainers)
+
+See `polli‑labs/build/typus_publish.md` for tag → TestPyPI → PyPI workflow.
+
+---
 
 ## License
 
-MIT © 2025 Polli‑Labs
+MIT © 2025 Polli Labs

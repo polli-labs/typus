@@ -18,10 +18,15 @@ from .services.projections import (
     latlon_to_unit_sphere,
     unit_sphere_to_latlon,
 )
+# Core taxonomy service bases
 from .services.taxonomy import (
-    PostgresTaxonomyService,
     AbstractTaxonomyService as TaxonomyService,
 )
+from .services.taxonomy import (
+    PostgresTaxonomyService,
+)
+# Lightweight offline service
+from .services.sqlite import SQLiteTaxonomyService
 
 __all__ = [
     "RankLevel",
@@ -36,6 +41,7 @@ __all__ = [
     "PostgresRasterElevation",
     "TaxonomyService",
     "PostgresTaxonomyService",
+    "SQLiteTaxonomyService",
     "Clade",
     "TaskPrediction",
     "HierarchicalClassificationResult",

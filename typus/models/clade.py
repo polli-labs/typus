@@ -12,9 +12,7 @@ from .taxon import Taxon
 class Clade(CompactJsonMixin):
     """Set‑based clade (may be multi‑root == metaclade)."""
 
-    root_ids: Set[int] = Field(
-        description="taxon_id values designating the clade roots"
-    )
+    root_ids: Set[int] = Field(description="taxon_id values designating the clade roots")
     name: str | None = None
     description: str | None = None
 

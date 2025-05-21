@@ -37,9 +37,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
 
     async def get_taxon(self, taxon_id: int) -> Taxon:
         async with self._Session() as s:
-            row = await s.scalar(
-                select(ExpandedTaxa).where(ExpandedTaxa.taxon_id == taxon_id)
-            )
+            row = await s.scalar(select(ExpandedTaxa).where(ExpandedTaxa.taxon_id == taxon_id))
             if row is None:
                 raise KeyError(taxon_id)
             return self._row_to_taxon(row)
@@ -64,8 +62,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
     async def lca(self, taxon_ids: set[int]) -> Taxon:
         """Compute lowest common ancestor using ltree `@>` operator."""
         path_expr = " & ".join(
-            f"path @> (SELECT path FROM expanded_taxa WHERE taxon_id = {t})"
-            for t in taxon_ids
+            f"path @> (SELECT path FROM expanded_taxa WHERE taxon_id = {t})" for t in taxon_ids
         )
         sql = text(
             f"SELECT taxon_id FROM expanded_taxa WHERE {path_expr} ORDER BY nlevel(path) DESC LIMIT 1"
@@ -107,6 +104,11 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         async with self._Session() as s:
             res = await s.execute(sql)
             return {r.taxon_id: r.parent_id for r in res}
+
+    # Provide a convenience wrapper so tests can call `.subtree(root_id)`
+    # instead of `.fetch_subtree({root_id})`.
+    async def subtree(self, root_id: int) -> dict[int, int | None]:  # pragma: no cover
+        return await self.fetch_subtree({root_id})
 
     def _row_to_taxon(self, row) -> Taxon:
         return Taxon(

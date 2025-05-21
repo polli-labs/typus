@@ -1,11 +1,11 @@
 [project]
-name        = "typus"
-version     = "0.1.5"
-description = "Taxonomic types, projections and async taxonomy services for Polli-Labs."
-readme      = "README.md"
-license     = "MIT"
-authors     = [{ name = "Polli-Labs", email = "caleb@polli.ai" }]
-requires-python = ">=3.9"
+name            = "typus"
+version         = "0.1.6"
+description     = "Taxonomic types, projections and async taxonomy services for Polli-Labs."
+readme          = "README.md"
+license         = "MIT"
+authors         = [{ name = "Polli-Labs", email = "caleb@polli.ai" }]
+requires-python = ">=3.10"
 
 keywords = ["taxonomy", "ecology", "pydantic", "sqlalchemy"]
 
@@ -15,14 +15,13 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 
-# --- runtime dependencies (lightweight) ---
+# --- core runtime (no heavy DB drivers) --------------------------------------
 dependencies = [
   "pydantic>=2.7,<3",
   "sqlalchemy[asyncio]>=2.0,<3",
@@ -30,40 +29,65 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# install with:  pip install typus[postgres]
 postgres = ["asyncpg>=0.29"]
+
+# pip install typus[sqlite]
 sqlite   = ["aiosqlite>=0.19"]
-pgvector = ["psycopg-binary>=3.1"]  # if you later use vector search
+
+# pip install typus[pgvector]
+pgvector = ["psycopg-binary>=3.1"]
+
+# pip install typus[dev]   (ruff, pytest, pre-commit …)
+dev = [
+  "ruff>=0.4.4",
+  "pytest>=8.2",
+  "pytest-asyncio>=0.23",
+  "pre-commit>=3.7",
+  "asyncpg>=0.29",        # allow DB tests locally
+  "aiosqlite>=0.19",
+]
 
 [project.urls]
-Homepage = "https://github.com/polli-labs/typus"
-Issues   = "https://github.com/polli-labs/typus/issues"
+Homepage   = "https://github.com/polli-labs/typus"
+Issues     = "https://github.com/polli-labs/typus/issues"
 
-# ------------------------------------------------------------------
-# Build backend: hatchling
-# ------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Build backend
+# ---------------------------------------------------------------------------
 [build-system]
 requires      = ["hatchling>=1.18"]
 build-backend = "hatchling.build"
 
-# ------------------------------------------------------------------
-# Hatchling settings
-# ------------------------------------------------------------------
 [tool.hatch.metadata]
 allow-plugins = true
 
-[tool.hatch.build.targets.wheel]
-packages = { find = { include = ["typus*"] } }
+[tool.hatch.build]
+exclude = [
+  "/tests",
+  "/scripts",
+  "/.ruff_cache",
+  "/.pytest_cache",
+]
 
-# ------------------------------------------------------------------
-# Ruff & pytest (dev only)
-# ------------------------------------------------------------------
+[tool.hatch.build.targets.wheel]
+packages = ["typus"]  # <-- list form avoids Hatch warning
+
+# ---------------------------------------------------------------------------
+# Ruff & pytest
+# ---------------------------------------------------------------------------
 [tool.ruff]
 line-length    = 100
-target-version = "py39"
-extend-select  = ["I"]          # isort
-extend-ignore  = ["E501"]       # handled by formatter
+target-version = "py310"        # matches requires-python
+lint.extend-select  = ["I"]     # isort
+lint.extend-ignore  = ["E501"]  # long lines handled by formatter
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true
 
 [tool.pytest.ini_options]
-addopts     = "-q"
-minversion  = "7.0"
-pythonpath  = ["."]
+addopts    = "-q"
+minversion = "7.0"
+pythonpath = ["."]
+markers    = ["asyncio"]
