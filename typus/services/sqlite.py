@@ -1,7 +1,6 @@
 import asyncio
 import sqlite3
 from pathlib import Path
-from typing import AsyncGenerator
 
 from typus.constants import RankLevel, is_major
 from typus.models.taxon import Taxon

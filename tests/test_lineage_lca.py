@@ -51,34 +51,14 @@ async def test_lca_distance(taxonomy_service):
     )
     assert distance_with_minors == 4
 
-    # When only major ranks are considered, we need to align the distance with the new implementation
-    # Now we check the actual computed distances rather than hardcoding expected values
+    # When only major ranks are considered:
+    # Anthophila (L32, minor) → filtered out, maps to major ancestry ending at Hymenoptera (L40)
+    # Vespidae (L30, major) → Hymenoptera (L40) = 1 edge
+    # Total distance = 0 + 1 = 1
     distance_major_only = await taxonomy_service.distance(
         BEE_ANTHOPHILA, WASP_VESPIDAE, include_minor_ranks=False
     )
-
-    # Let's inspect the major rank ancestors and compute the expected distance
-    bee_major_ancestry = await taxonomy_service._get_filtered_ancestry(
-        BEE_ANTHOPHILA, include_minor_ranks=False
-    )
-    wasp_major_ancestry = await taxonomy_service._get_filtered_ancestry(
-        WASP_VESPIDAE, include_minor_ranks=False
-    )
-
-    # Both should have Hymenoptera as a common ancestor
-    # Compute the expected distance manually for verification
-    lca_major = await taxonomy_service.lca(
-        {BEE_ANTHOPHILA, WASP_VESPIDAE}, include_minor_ranks=False
-    )
-    idx_lca_in_bee = bee_major_ancestry.index(lca_major.taxon_id)
-    idx_lca_in_wasp = wasp_major_ancestry.index(lca_major.taxon_id)
-
-    expected_distance = (len(bee_major_ancestry) - 1 - idx_lca_in_bee) + (
-        len(wasp_major_ancestry) - 1 - idx_lca_in_wasp
-    )
-
-    # Verify that the distance computation matches our manual calculation
-    assert distance_major_only == expected_distance
+    assert distance_major_only == 1
 
     # ---- NEW: species-level sibling distance inside Vespa ----
     assert (

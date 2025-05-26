@@ -1,8 +1,8 @@
 [project]
-name            = "typus"
-version         = "0.1.6"
+name            = "polli-typus"
+version         = "0.1.7"
 description     = "Taxonomic types, projections and async taxonomy services for Polli-Labs."
-readme          = "README.md"
+readme          = { file = "README.md", content-type = "text/markdown" }
 license         = "MIT"
 authors         = [{ name = "Polli-Labs", email = "caleb@polli.ai" }]
 requires-python = ">=3.10"
@@ -64,8 +64,11 @@ allow-plugins = true
 
 [tool.hatch.build]
 exclude = [
-  "/tests",
-  "/scripts",
+  "tests*",
+  "scripts*", 
+  "**/*.tsv",
+  "**/*.sql", 
+  "**/*.sqlite",
   "/.ruff_cache",
   "/.pytest_cache",
 ]

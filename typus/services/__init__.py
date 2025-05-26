@@ -5,6 +5,6 @@ from .taxonomy import AbstractTaxonomyService, PostgresTaxonomyService
 
 __all__ = [
     "AbstractTaxonomyService",
-    "PostgresTaxonomyService", 
+    "PostgresTaxonomyService",
     "SQLiteTaxonomyService",
 ]
