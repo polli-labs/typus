@@ -16,4 +16,4 @@ class Taxon(BaseModel):
     source: str = Field(default="CoL", description="Originating authority: CoL/iNat/GBIF")
     vernacular: dict[str, list[str]] = Field(default_factory=dict)
 
-    model_config = ConfigDict(frozen=True, extra="ignore", json_schema_extra=True)
+    model_config = ConfigDict(frozen=True, extra="ignore", )

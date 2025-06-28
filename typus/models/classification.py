@@ -32,4 +32,3 @@ class HierarchicalClassificationResult(CompactJsonMixin):
     tasks: List[TaskPrediction]
     subtree_roots: Set[int] | None = None
 
-    model_config = ConfigDict(json_schema_extra=True)

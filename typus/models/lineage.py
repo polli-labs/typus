@@ -13,7 +13,7 @@ class LineageMap(BaseModel):
     """Sparse mapping rank→Taxon along one ancestor chain."""
 
     ranks: Dict[RankLevel, Taxon] = Field(default_factory=dict)
-    model_config = ConfigDict(frozen=True, json_schema_extra=True)
+    model_config = ConfigDict(frozen=True, )
 
     def lowest_present(self) -> Taxon:
         return max(self.ranks.items(), key=lambda kv: kv[0])[1]

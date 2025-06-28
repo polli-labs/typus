@@ -1,0 +1,324 @@
+{
+  "$defs": {
+    "BBox": {
+      "properties": {
+        "coords": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Coords",
+          "type": "array"
+        },
+        "fmt": {
+          "$ref": "#/$defs/BBoxFormat",
+          "default": "xyxyRel"
+        }
+      },
+      "required": [
+        "coords"
+      ],
+      "title": "BBox",
+      "type": "object"
+    },
+    "BBoxFormat": {
+      "enum": [
+        "xyxyRel",
+        "xyxyAbs",
+        "cxcywhRel",
+        "cxcywhAbs"
+      ],
+      "title": "BBoxFormat",
+      "type": "string"
+    },
+    "EncodedMask": {
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Data"
+        },
+        "encoding": {
+          "$ref": "#/$defs/MaskEncoding"
+        },
+        "bboxHint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BBox"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "data",
+        "encoding"
+      ],
+      "title": "EncodedMask",
+      "type": "object"
+    },
+    "HierarchicalClassificationResult": {
+      "properties": {
+        "taxonomyContext": {
+          "$ref": "#/$defs/TaxonomyContext"
+        },
+        "tasks": {
+          "items": {
+            "$ref": "#/$defs/TaskPrediction"
+          },
+          "title": "Tasks",
+          "type": "array"
+        },
+        "subtreeRoots": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtreeroots"
+        }
+      },
+      "required": [
+        "taxonomyContext",
+        "tasks"
+      ],
+      "title": "HierarchicalClassificationResult",
+      "type": "object"
+    },
+    "InstancePrediction": {
+      "properties": {
+        "instanceId": {
+          "minimum": 0,
+          "title": "Instanceid",
+          "type": "integer"
+        },
+        "bbox": {
+          "$ref": "#/$defs/BBox"
+        },
+        "mask": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EncodedMask"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "score": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Score",
+          "type": "number"
+        },
+        "taxonId": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxonid"
+        },
+        "classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HierarchicalClassificationResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "instanceId",
+        "bbox",
+        "score"
+      ],
+      "title": "InstancePrediction",
+      "type": "object"
+    },
+    "MaskEncoding": {
+      "enum": [
+        "rleCoco",
+        "polygon",
+        "pngBase64"
+      ],
+      "title": "MaskEncoding",
+      "type": "string"
+    },
+    "RankLevel": {
+      "enum": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        5,
+        11,
+        12,
+        13,
+        15,
+        24,
+        25,
+        26,
+        27,
+        32,
+        33,
+        335,
+        34,
+        345,
+        35,
+        37,
+        43,
+        44,
+        45,
+        47,
+        53,
+        57,
+        67,
+        100
+      ],
+      "title": "RankLevel",
+      "type": "integer"
+    },
+    "TaskPrediction": {
+      "description": "Top\u2011k probabilities for one rank level.",
+      "properties": {
+        "rankLevel": {
+          "$ref": "#/$defs/RankLevel"
+        },
+        "temperature": {
+          "exclusiveMinimum": 0,
+          "title": "Temperature",
+          "type": "number"
+        },
+        "predictions": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Predictions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rankLevel",
+        "temperature",
+        "predictions"
+      ],
+      "title": "TaskPrediction",
+      "type": "object"
+    },
+    "TaxonomyContext": {
+      "properties": {
+        "source": {
+          "default": "CoL2024",
+          "title": "Source",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "title": "TaxonomyContext",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "width": {
+      "title": "Width",
+      "type": "integer"
+    },
+    "height": {
+      "title": "Height",
+      "type": "integer"
+    },
+    "instances": {
+      "items": {
+        "$ref": "#/$defs/InstancePrediction"
+      },
+      "title": "Instances",
+      "type": "array"
+    },
+    "taxonomyContext": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaxonomyContext"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "width",
+    "height",
+    "instances"
+  ],
+  "title": "ImageDetectionResult",
+  "type": "object"
+}

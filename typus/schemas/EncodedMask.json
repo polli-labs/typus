@@ -1,0 +1,95 @@
+{
+  "$defs": {
+    "BBox": {
+      "properties": {
+        "coords": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Coords",
+          "type": "array"
+        },
+        "fmt": {
+          "$ref": "#/$defs/BBoxFormat",
+          "default": "xyxyRel"
+        }
+      },
+      "required": [
+        "coords"
+      ],
+      "title": "BBox",
+      "type": "object"
+    },
+    "BBoxFormat": {
+      "enum": [
+        "xyxyRel",
+        "xyxyAbs",
+        "cxcywhRel",
+        "cxcywhAbs"
+      ],
+      "title": "BBoxFormat",
+      "type": "string"
+    },
+    "MaskEncoding": {
+      "enum": [
+        "rleCoco",
+        "polygon",
+        "pngBase64"
+      ],
+      "title": "MaskEncoding",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "data": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        }
+      ],
+      "title": "Data"
+    },
+    "encoding": {
+      "$ref": "#/$defs/MaskEncoding"
+    },
+    "bboxHint": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BBox"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "data",
+    "encoding"
+  ],
+  "title": "EncodedMask",
+  "type": "object"
+}
