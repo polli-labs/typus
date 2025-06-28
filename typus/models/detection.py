@@ -1,8 +1,11 @@
 from typing import List
-from pydantic import Field, ConfigDict
-from ..serialise import CompactJsonMixin
-from .geometry import BBox, EncodedMask
+
+from pydantic import ConfigDict, Field
+
+from .serialise import CompactJsonMixin
 from .classification import HierarchicalClassificationResult, TaxonomyContext
+from .geometry import BBox, EncodedMask
+
 
 class InstancePrediction(CompactJsonMixin):
     instance_id: int = Field(ge=0)
@@ -14,7 +17,8 @@ class InstancePrediction(CompactJsonMixin):
     taxon_id: int | None = None
     classification: HierarchicalClassificationResult | None = None
 
-    model_config = ConfigDict(frozen=True, json_schema_extra=True)
+    model_config = ConfigDict(frozen=True)
+
 
 class ImageDetectionResult(CompactJsonMixin):
     width: int
@@ -22,4 +26,3 @@ class ImageDetectionResult(CompactJsonMixin):
     instances: List[InstancePrediction]
     taxonomy_context: TaxonomyContext | None = None
 
-    model_config = ConfigDict(json_schema_extra=True)

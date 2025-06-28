@@ -1,0 +1,135 @@
+{
+  "$defs": {
+    "RankLevel": {
+      "enum": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        5,
+        11,
+        12,
+        13,
+        15,
+        24,
+        25,
+        26,
+        27,
+        32,
+        33,
+        335,
+        34,
+        345,
+        35,
+        37,
+        43,
+        44,
+        45,
+        47,
+        53,
+        57,
+        67,
+        100
+      ],
+      "title": "RankLevel",
+      "type": "integer"
+    },
+    "TaskPrediction": {
+      "description": "Top\u2011k probabilities for one rank level.",
+      "properties": {
+        "rankLevel": {
+          "$ref": "#/$defs/RankLevel"
+        },
+        "temperature": {
+          "exclusiveMinimum": 0,
+          "title": "Temperature",
+          "type": "number"
+        },
+        "predictions": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Predictions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rankLevel",
+        "temperature",
+        "predictions"
+      ],
+      "title": "TaskPrediction",
+      "type": "object"
+    },
+    "TaxonomyContext": {
+      "properties": {
+        "source": {
+          "default": "CoL2024",
+          "title": "Source",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "title": "TaxonomyContext",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "taxonomyContext": {
+      "$ref": "#/$defs/TaxonomyContext"
+    },
+    "tasks": {
+      "items": {
+        "$ref": "#/$defs/TaskPrediction"
+      },
+      "title": "Tasks",
+      "type": "array"
+    },
+    "subtreeRoots": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Subtreeroots"
+    }
+  },
+  "required": [
+    "taxonomyContext",
+    "tasks"
+  ],
+  "title": "HierarchicalClassificationResult",
+  "type": "object"
+}

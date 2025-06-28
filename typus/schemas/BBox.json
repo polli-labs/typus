@@ -1,0 +1,45 @@
+{
+  "$defs": {
+    "BBoxFormat": {
+      "enum": [
+        "xyxyRel",
+        "xyxyAbs",
+        "cxcywhRel",
+        "cxcywhAbs"
+      ],
+      "title": "BBoxFormat",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "coords": {
+      "maxItems": 4,
+      "minItems": 4,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Coords",
+      "type": "array"
+    },
+    "fmt": {
+      "$ref": "#/$defs/BBoxFormat",
+      "default": "xyxyRel"
+    }
+  },
+  "required": [
+    "coords"
+  ],
+  "title": "BBox",
+  "type": "object"
+}

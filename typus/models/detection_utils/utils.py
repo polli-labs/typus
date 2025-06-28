@@ -1,6 +1,13 @@
-from typing import List, Dict
-from typus.models.detection import ImageDetectionResult, InstancePrediction
-from typus.models.geometry import BBox, EncodedMask, BBoxFormat, MaskEncoding # Added BBoxFormat and MaskEncoding
+from typing import Dict, List
+
+from typus.models import ImageDetectionResult, InstancePrediction
+from typus.models.geometry import (  # Added BBoxFormat and MaskEncoding
+    BBox,
+    BBoxFormat,
+    EncodedMask,
+    MaskEncoding,
+)
+
 
 def to_coco(image: ImageDetectionResult, category_map: Dict[int, int]) -> Dict:
     """Return a minimal COCO-style dict for a single image.
@@ -54,11 +61,11 @@ def to_coco(image: ImageDetectionResult, category_map: Dict[int, int]) -> Dict:
             raise ValueError(f"Unsupported bbox format: {instance.bbox.fmt}")
 
         annotation = {
-            "image_id": 0, # Placeholder, COCO expects an image_id
+            "image_id": 0,  # Placeholder, COCO expects an image_id
             "category_id": coco_category_id,
             "bbox": [abs_x, abs_y, abs_w, abs_h],
             "score": instance.score,
-            "id": instance.instance_id, # Using instance_id as annotation id
+            "id": instance.instance_id,  # Using instance_id as annotation id
         }
 
         if instance.mask:
@@ -75,7 +82,10 @@ def to_coco(image: ImageDetectionResult, category_map: Dict[int, int]) -> Dict:
                 # This implies RLE_COCO is also stored as a string.
                 # Let's pass it as is, assuming the user will handle the string format if it's not directly a dict.
                 # A safer bet might be to represent segmentation as polygons if RLE string format is unclear.
-                 segmentation = {"counts": instance.mask.data, "size": [image.height, image.width]} # Placeholder for RLE
+                segmentation = {
+                    "counts": instance.mask.data,
+                    "size": [image.height, image.width],
+                }  # Placeholder for RLE
             elif instance.mask.encoding == MaskEncoding.POLYGON:
                 # COCO polygon is [x1,y1,x2,y2,...]
                 # typus polygon is List[List[float]] -> [[x1,y1], [x2,y2], ...]
@@ -85,7 +95,9 @@ def to_coco(image: ImageDetectionResult, category_map: Dict[int, int]) -> Dict:
                 # Assuming absolute for now. If relative, they'd need image.width/height scaling.
                 # Let's assume they are absolute as per COCO common practice for polygons.
                 polygons = instance.mask.data
-                segmentation = [coord for poly in polygons for point in poly for coord in point] # Flattening [[x,y],[x,y]] to [x,y,x,y]
+                segmentation = [
+                    coord for point in polygons for coord in point
+                ]  # Flattening [[x,y],[x,y]] to [x,y,x,y]
             elif instance.mask.encoding == MaskEncoding.PNG_BASE64:
                 # COCO does not directly support PNG_BASE64 masks in annotation segmentation field.
                 # This would typically be converted to RLE or polygons.
@@ -106,6 +118,7 @@ def to_coco(image: ImageDetectionResult, category_map: Dict[int, int]) -> Dict:
         # "image_info": {"id": 0, "width": image.width, "height": image.height} # Optional: could add image info
     }
 
+
 def from_coco(coco: Dict) -> List[ImageDetectionResult]:
     """Convert standard COCO JSON into a list of ImageDetectionResult.
     NB: This function expects a COCO JSON that might contain info for *multiple* images.
@@ -116,24 +129,24 @@ def from_coco(coco: Dict) -> List[ImageDetectionResult]:
     """
     results = []
 
-    images_map = {img['id']: img for img in coco.get('images', [])}
-    categories_map = {cat['id']: cat for cat in coco.get('categories', [])} # For taxon_id mapping if needed
+    images_map = {img["id"]: img for img in coco.get("images", [])}
+    # categories_map = {cat['id']: cat for cat in coco.get('categories', [])} # For taxon_id mapping if needed
 
     # Group annotations by image_id
     annotations_by_image_id: Dict[int, List[Dict]] = {}
-    for ann in coco.get('annotations', []):
-        img_id = ann['image_id']
+    for ann in coco.get("annotations", []):
+        img_id = ann["image_id"]
         if img_id not in annotations_by_image_id:
             annotations_by_image_id[img_id] = []
         annotations_by_image_id[img_id].append(ann)
 
     for image_id, image_info in images_map.items():
-        image_width = image_info['width']
-        image_height = image_info['height']
+        image_width = image_info["width"]
+        image_height = image_info["height"]
 
         instance_predictions = []
         for ann in annotations_by_image_id.get(image_id, []):
-            coco_bbox = ann['bbox'] # [x,y,width,height] absolute
+            coco_bbox = ann["bbox"]  # [x,y,width,height] absolute
             # Convert to XYXY_REL for typus BBox default
             x1_rel = coco_bbox[0] / image_width
             y1_rel = coco_bbox[1] / image_height
@@ -143,13 +156,19 @@ def from_coco(coco: Dict) -> List[ImageDetectionResult]:
             bbox = BBox(coords=(x1_rel, y1_rel, x2_rel, y2_rel), fmt=BBoxFormat.XYXY_REL)
 
             mask = None
-            segmentation = ann.get('segmentation')
+            segmentation = ann.get("segmentation")
             if segmentation:
-                if isinstance(segmentation, dict) and 'counts' in segmentation and 'size' in segmentation: # RLE
+                if (
+                    isinstance(segmentation, dict)
+                    and "counts" in segmentation
+                    and "size" in segmentation
+                ):  # RLE
                     # Assuming segmentation['counts'] is a string as per EncodedMask.data type hint for RLE
-                    mask_data = segmentation['counts']
-                    mask = EncodedMask(data=mask_data, encoding=MaskEncoding.RLE_COCO, bbox_hint=bbox)
-                elif isinstance(segmentation, list): # Polygons
+                    mask_data = segmentation["counts"]
+                    mask = EncodedMask(
+                        data=mask_data, encoding=MaskEncoding.RLE_COCO, bbox_hint=bbox
+                    )
+                elif isinstance(segmentation, list):  # Polygons
                     # COCO polygons: [[x1,y1,x2,y2,...], [x1,y1,...]] or [x1,y1,x2,y2,...] for simple
                     # typus EncodedMask.data for POLYGON: List[List[float]] -> [[x1,y1], [x2,y2], ...]
                     # This requires careful conversion. Assuming segmentation is list of lists of floats (absolute)
@@ -179,31 +198,43 @@ def from_coco(coco: Dict) -> List[ImageDetectionResult]:
 
                     processed_polygons = []
                     if segmentation and isinstance(segmentation, list):
-                        if segmentation and all(isinstance(el, list) for el in segmentation): # Multi-polygon List[List[coords]]
-                             for poly_coords in segmentation:
+                        if segmentation and all(
+                            isinstance(el, list) for el in segmentation
+                        ):  # Multi-polygon List[List[coords]]
+                            for poly_coords in segmentation:
                                 current_poly = []
-                                if len(poly_coords) % 2 != 0: continue # Invalid polygon
+                                if len(poly_coords) % 2 != 0:
+                                    continue  # Invalid polygon
                                 for i in range(0, len(poly_coords), 2):
-                                    current_poly.append([poly_coords[i], poly_coords[i+1]])
+                                    current_poly.append([poly_coords[i], poly_coords[i + 1]])
                                 if current_poly:
-                                    processed_polygons.append(current_poly) # This results in List[List[List[float]]]
+                                    processed_polygons.append(
+                                        current_poly
+                                    )  # This results in List[List[List[float]]]
                                     # This is not List[List[float]]. Typus spec for polygon data: List[List[float]]
                                     # This likely means a single polygon as a list of [x,y] points.
                                     # For multiple polygons, COCO has list of such lists.
                                     # If typus EncodedMask.data for POLYGON is List of [x,y] points for ONE polygon,
                                     # then we can only take the first polygon from COCO if multiple exist.
 
-                        elif segmentation and all(isinstance(el, (int, float)) for el in segmentation): # Single polygon List[coords]
+                        elif segmentation and all(
+                            isinstance(el, (int, float)) for el in segmentation
+                        ):  # Single polygon List[coords]
                             current_poly = []
                             if len(segmentation) % 2 == 0:
                                 for i in range(0, len(segmentation), 2):
-                                    current_poly.append([segmentation[i], segmentation[i+1]])
+                                    current_poly.append([segmentation[i], segmentation[i + 1]])
                             if current_poly:
-                                processed_polygons = current_poly # This is List[List[float]] as [[x,y], [x,y]...]
+                                processed_polygons = (
+                                    current_poly  # This is List[List[float]] as [[x,y], [x,y]...]
+                                )
 
-                        if processed_polygons: # Only if we got a valid List[List[float]]
-                           mask = EncodedMask(data=processed_polygons, encoding=MaskEncoding.POLYGON, bbox_hint=bbox)
-
+                        if processed_polygons:  # Only if we got a valid List[List[float]]
+                            mask = EncodedMask(
+                                data=processed_polygons,
+                                encoding=MaskEncoding.POLYGON,
+                                bbox_hint=bbox,
+                            )
 
             # COCO category_id to typus taxon_id (optional, might not always be possible or needed)
             # The issue doesn't specify how to map COCO category_id back to taxon_id.
@@ -215,12 +246,12 @@ def from_coco(coco: Dict) -> List[ImageDetectionResult]:
 
             instance_predictions.append(
                 InstancePrediction(
-                    instance_id=ann.get('id', 0), # COCO annotation ID. Need to ensure it's int.
+                    instance_id=ann.get("id", 0),  # COCO annotation ID. Need to ensure it's int.
                     bbox=bbox,
                     mask=mask,
-                    score=ann['score'],
-                    taxon_id=typus_taxon_id, # Requires reverse mapping from category_id
-                    classification=None # Requires more context or a taxon_id
+                    score=ann["score"],
+                    taxon_id=typus_taxon_id,  # Requires reverse mapping from category_id
+                    classification=None,  # Requires more context or a taxon_id
                 )
             )
 
@@ -231,7 +262,7 @@ def from_coco(coco: Dict) -> List[ImageDetectionResult]:
                 width=image_width,
                 height=image_height,
                 instances=instance_predictions,
-                taxonomy_context=None
+                taxonomy_context=None,
             )
         )
 

@@ -2,8 +2,8 @@ import json
 import pytest
 from typus.models.geometry import BBox, EncodedMask, BBoxFormat, MaskEncoding
 from typus.models.detection import InstancePrediction, ImageDetectionResult
-from typus.models.classification import HierarchicalClassificationResult, TaxonomyContext, TaxonClassification
-from typus.models.detection.utils import to_coco, from_coco
+from typus.models.classification import HierarchicalClassificationResult, TaxonomyContext, TaskPrediction
+from typus.models.detection_utils import to_coco, from_coco
 
 # Sample Data
 SAMPLE_BBOX_XYXY_REL = BBox(coords=(0.1, 0.1, 0.5, 0.5), fmt=BBoxFormat.XYXY_REL)
@@ -21,10 +21,18 @@ SAMPLE_MASK_RLE = EncodedMask(
     bbox_hint=SAMPLE_BBOX_XYXY_ABS
 )
 
-SAMPLE_TAXON_CLASSIFICATION = TaxonClassification(taxon_id=123, score=0.9, lineage_path=[(1, "kingdom"), (12, "genus"), (123, "species")])
+# Create a sample task prediction with taxon predictions
+from typus.constants import RankLevel
+SAMPLE_TASK_PREDICTION = TaskPrediction(
+    rank_level=RankLevel.L10,  # species
+    temperature=1.0,
+    predictions=[(123, 0.9), (124, 0.1)]
+)
 
+SAMPLE_TAXONOMY_CONTEXT = TaxonomyContext(source="CoL2024", version="v1.0")
 SAMPLE_HIERARCHICAL_CLASSIFICATION = HierarchicalClassificationResult(
-    classifications=[SAMPLE_TAXON_CLASSIFICATION]
+    taxonomy_context=SAMPLE_TAXONOMY_CONTEXT,
+    tasks=[SAMPLE_TASK_PREDICTION]
 )
 
 SAMPLE_INSTANCE_PREDICTION_FULL = InstancePrediction(
@@ -132,7 +140,7 @@ def test_to_coco_basic():
     ann2 = coco_dict["annotations"][1]
     assert ann2["category_id"] == 2 # Mapped from taxon_id 456
     assert ann2["id"] == 2
-    assert pytest.approx(ann2["bbox"]) == [10.0, 10.0, 30.0, 30.0] # Absolute
+    assert pytest.approx(ann2["bbox"]) == [10.0, 10.0, 20.0, 20.0] # Absolute XYXY(10,10,30,30) -> COCO[x,y,w,h]
 
     ann3 = coco_dict["annotations"][2]
     assert ann3["category_id"] == 1 # Mapped from taxon_id 123

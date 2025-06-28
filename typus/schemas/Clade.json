@@ -1,0 +1,157 @@
+{
+  "$defs": {
+    "RankLevel": {
+      "enum": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        5,
+        11,
+        12,
+        13,
+        15,
+        24,
+        25,
+        26,
+        27,
+        32,
+        33,
+        335,
+        34,
+        345,
+        35,
+        37,
+        43,
+        44,
+        45,
+        47,
+        53,
+        57,
+        67,
+        100
+      ],
+      "title": "RankLevel",
+      "type": "integer"
+    },
+    "Taxon": {
+      "description": "Immutable scientific taxon object.",
+      "properties": {
+        "taxon_id": {
+          "title": "Taxon Id",
+          "type": "integer"
+        },
+        "scientific_name": {
+          "title": "Scientific Name",
+          "type": "string"
+        },
+        "rank_level": {
+          "$ref": "#/$defs/RankLevel"
+        },
+        "parent_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Immediate ancestor taxon_id",
+          "title": "Parent Id"
+        },
+        "ancestry": {
+          "description": "Root\u2192self inclusive",
+          "items": {
+            "type": "integer"
+          },
+          "title": "Ancestry",
+          "type": "array"
+        },
+        "source": {
+          "default": "CoL",
+          "description": "Originating authority: CoL/iNat/GBIF",
+          "title": "Source",
+          "type": "string"
+        },
+        "vernacular": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Vernacular",
+          "type": "object"
+        }
+      },
+      "required": [
+        "taxon_id",
+        "scientific_name",
+        "rank_level"
+      ],
+      "title": "Taxon",
+      "type": "object"
+    }
+  },
+  "description": "Set\u2011based clade (may be multi\u2011root == metaclade).",
+  "properties": {
+    "rootIds": {
+      "description": "taxon_id values designating the clade roots",
+      "items": {
+        "type": "integer"
+      },
+      "title": "Rootids",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Name"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "cache": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/Taxon"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cache"
+    }
+  },
+  "required": [
+    "rootIds"
+  ],
+  "title": "Clade",
+  "type": "object"
+}

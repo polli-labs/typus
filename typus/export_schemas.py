@@ -1,5 +1,6 @@
 """Utility to export JSON Schemas for all Pydantic models."""
 
+import json
 from importlib import import_module
 from pathlib import Path
 
@@ -21,8 +22,9 @@ def main() -> None:
     for dotted in MODELS:
         mod_name, cls_name = dotted.rsplit(".", 1)
         cls = getattr(import_module(mod_name), cls_name)
-        schema = cls.model_json_schema(indent=2)
-        (root / f"{cls_name}.json").write_text(schema + "\n")
+        schema = cls.model_json_schema()
+        schema_json = json.dumps(schema, indent=2)
+        (root / f"{cls_name}.json").write_text(schema_json + "\n")
         print(f"wrote {cls_name}.json")
 
 
