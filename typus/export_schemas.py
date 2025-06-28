@@ -8,6 +8,10 @@ MODELS = [
     "typus.models.lineage.LineageMap",
     "typus.models.clade.Clade",
     "typus.models.classification.HierarchicalClassificationResult",
+    "typus.models.geometry.BBox",
+    "typus.models.geometry.EncodedMask",
+    "typus.models.detection.InstancePrediction",
+    "typus.models.detection.ImageDetectionResult",
 ]
 
 
