@@ -173,6 +173,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+expanded_taxa_06282025.sqlite
+expanded_taxa_06282025.tsv
+
 *_export.txt
 .claude/
 .venv/
