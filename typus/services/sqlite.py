@@ -39,13 +39,18 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
 
     async def get_taxon(self, taxon_id: int) -> Taxon:
         loop = asyncio.get_running_loop()
+        # Uses "immediateAncestor_taxonID" as per new schema plan for fixtures
+        # The ORM handles mapping ExpandedTaxa.parent_id to this.
+        # For raw SQL, we need to use the actual column name that will be in the fixture.
+        # The plan is to make gen_fixture_sqlite.py write "immediateAncestor_taxonID".
+        sql = """
+            SELECT "taxonID", "name", "rankLevel",
+                   "immediateAncestor_taxonID", "ancestry", "commonName", "taxonActive"
+            FROM "expanded_taxa" WHERE "taxonID"=?
+        """
         row = await loop.run_in_executor(
             None,
-            lambda: self._conn.execute(
-                # Select columns created by gen_fixture_sqlite.py
-                'SELECT "taxonID", "name", "rankLevel", "trueParentID", "ancestry", "commonName", "taxonActive" FROM "expanded_taxa" WHERE "taxonID"=?',
-                (taxon_id,),
-            ).fetchone(),
+            lambda: self._conn.execute(sql, (taxon_id,)).fetchone(),
         )
         if row is None:
             raise KeyError(taxon_id)
@@ -55,6 +60,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
             self._rank_cache[row["taxonID"]] = RankLevel(int(row["rankLevel"]))
 
         ancestry_list = []
+        # Note: `ancestry` column is deprecated. Usage should be reviewed.
         if row["ancestry"]:
             try:
                 ancestry_list = list(map(int, str(row["ancestry"]).split("|")))
@@ -64,22 +70,21 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         return Taxon(
             taxon_id=row["taxonID"],
             scientific_name=row["name"],
-            rank_level=RankLevel(int(row["rankLevel"])),  # rankLevel from fixture is int
-            parent_id=row["trueParentID"],
+            rank_level=RankLevel(int(row["rankLevel"])),
+            parent_id=row["immediateAncestor_taxonID"],  # Read directly from the new column name
             ancestry=ancestry_list,
-            # Assuming commonName in fixture is English preferred
             vernacular={"en": [row["commonName"]]} if row["commonName"] else {},
         )
 
     async def children(self, taxon_id: int, *, depth: int = 1) -> list[Taxon]:
         loop = asyncio.get_running_loop()
-        # Recursive CTE using trueParentID
+        # Recursive CTE using "immediateAncestor_taxonID"
         query = """
         WITH RECURSIVE sub(tid, lvl) AS (
             SELECT "taxonID", 0 FROM expanded_taxa WHERE "taxonID" = ?
             UNION ALL
             SELECT et."taxonID", sub.lvl + 1 FROM expanded_taxa et
-            JOIN sub ON et."trueParentID" = sub.tid
+            JOIN sub ON et."immediateAncestor_taxonID" = sub.tid
             WHERE sub.lvl < ?
         )
         SELECT tid FROM sub WHERE lvl > 0;
@@ -200,13 +205,13 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         loop = asyncio.get_running_loop()
 
         placeholders = ",".join("?" * len(root_ids))
-        # Recursive CTE using trueParentID
+        # Recursive CTE using "immediateAncestor_taxonID"
         query = f"""
         WITH RECURSIVE subtree_nodes(tid, tpid) AS (
-            SELECT "taxonID", "trueParentID" FROM expanded_taxa WHERE "taxonID" IN ({placeholders})
+            SELECT "taxonID", "immediateAncestor_taxonID" FROM expanded_taxa WHERE "taxonID" IN ({placeholders})
             UNION ALL
-            SELECT et."taxonID", et."trueParentID" FROM expanded_taxa et
-            JOIN subtree_nodes sn ON et."trueParentID" = sn.tid
+            SELECT et."taxonID", et."immediateAncestor_taxonID" FROM expanded_taxa et
+            JOIN subtree_nodes sn ON et."immediateAncestor_taxonID" = sn.tid
         )
         SELECT tid, tpid FROM subtree_nodes;
         """

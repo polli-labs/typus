@@ -1,4 +1,9 @@
 import pytest
+from sqlalchemy import create_engine as sqlalchemy_create_engine, text
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession # Correct imports for async
+from typus.services.taxonomy import PostgresTaxonomyService # Import the concrete service
+from typus.models.taxon import Taxon # For constructing expected Taxon object
 
 from typus.constants import RankLevel
 
@@ -33,6 +38,83 @@ async def test_lca_distance(taxonomy_service):
     lca_minor = await taxonomy_service.lca(
         {BEE_ANTHOPHILA, WASP_VESPIDAE}, include_minor_ranks=True
     )
+
+
+@pytest.mark.asyncio
+async def test_postgres_lca_fallback_mechanism():
+    """
+    Tests the PostgresTaxonomyService's LCA fallback mechanism (_lca_recursive_fallback)
+    by directly invoking it with a session connected to an in-memory SQLite DB
+    that has the required schema but no ltree capabilities.
+    """
+    # 1. Set up an in-memory SQLite engine (async)
+    async_engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+
+    # 2. Create a minimal expanded_taxa table
+    async with async_engine.connect() as connection:
+        await connection.run_sync(lambda conn: conn.execute(text("""
+            CREATE TABLE expanded_taxa (
+                taxonID INTEGER PRIMARY KEY,
+                name TEXT,
+                rankLevel INTEGER,
+                "immediateAncestor_taxonID" INTEGER,
+                ancestry TEXT,
+                "immediateAncestor_rankLevel" INTEGER,
+                "immediateMajorAncestor_taxonID" INTEGER,
+                "immediateMajorAncestor_rankLevel" INTEGER,
+                "commonName" TEXT,
+                "taxonActive" BOOLEAN,
+                "path" TEXT -- Include to simulate a table that *might* have it (though it won't be used by fallback)
+            );
+        """)))
+        await connection.run_sync(lambda conn: conn.execute(text("""
+            INSERT INTO expanded_taxa (taxonID, name, rankLevel, "immediateAncestor_taxonID", ancestry, path) VALUES
+            (1, 'Life', 70, NULL, '1', '1'),
+            (2, 'PhylumA', 60, 1, '1|2', '1.2'),
+            (3, 'ClassA', 50, 2, '1|2|3', '1.2.3'),
+            (4, 'ClassB', 50, 2, '1|2|4', '1.2.4'),
+            (5, 'OrderA', 40, 3, '1|2|3|5', '1.2.3.5'),
+            (6, 'OrderB', 40, 4, '1|2|4|6', '1.2.4.6'),
+            (7, 'SpeciesA', 10, 5, '1|2|3|5|7', '1.2.3.5.7'),
+            (8, 'SpeciesB', 10, 6, '1|2|4|6|8', '1.2.4.6.8'),
+            (9, 'OrderC', 40, 4, '1|2|4|9', '1.2.4.9'),
+            (10, 'SpeciesC', 10, 9, '1|2|4|9|10', '1.2.4.9.10');
+        """)))
+        await connection.commit()
+
+    # 3. Instantiate PostgresTaxonomyService. The DSN is a placeholder.
+    service_for_test = PostgresTaxonomyService(dsn="postgresql://user:pass@host/db")
+
+    # 4. Create a session and test the fallback method
+    AsyncSessionLocal = sessionmaker(bind=async_engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with AsyncSessionLocal() as session:
+        # Test case 1: LCA of 7 (SpeciesA) and 8 (SpeciesB) should be 2 (PhylumA)
+        lca_id_7_8 = await service_for_test._lca_recursive_fallback(session, {7, 8})
+        assert lca_id_7_8 == 2
+
+        # Test case 2: LCA of 7 (SpeciesA) and 10 (SpeciesC) should be 2 (PhylumA)
+        lca_id_7_10 = await service_for_test._lca_recursive_fallback(session, {7, 10})
+        assert lca_id_7_10 == 2
+
+        # Test case 3: LCA of 5 (OrderA) and 6 (OrderB) should be 2 (PhylumA)
+        lca_id_5_6 = await service_for_test._lca_recursive_fallback(session, {5, 6})
+        assert lca_id_5_6 == 2
+
+        # Test case 4: LCA of 7 (SpeciesA), 8 (SpeciesB), 10 (SpeciesC) should be 2 (PhylumA)
+        lca_id_7_8_10 = await service_for_test._lca_recursive_fallback(session, {7, 8, 10})
+        assert lca_id_7_8_10 == 2
+
+        # Test case 5: LCA of a single ID
+        lca_id_7_only = await service_for_test._lca_recursive_fallback(session, {7})
+        assert lca_id_7_only == 7
+
+        # Test case 6: LCA involving a non-existent ID
+        lca_id_non_existent = await service_for_test._lca_recursive_fallback(session, {7, 999})
+        assert lca_id_non_existent is None
+
+    # Clean up the async engine
+    await async_engine.dispose()
     assert (lca_minor.taxon_id, lca_minor.rank_level) == (LCA_ACULEATA_ID, RankLevel.L35)
     assert lca_minor.scientific_name == "Aculeata"
 
