@@ -19,7 +19,9 @@ class Clade(CompactJsonMixin):
     # private, non‑serialised cache
     cache: Dict[int, Taxon] | None = Field(default=None, exclude=True, repr=False)
 
-    model_config = ConfigDict(frozen=True, )
+    model_config = ConfigDict(
+        frozen=True,
+    )
 
     async def roots(self, svc: AbstractTaxonomyService) -> Set[Taxon]:
         if self.cache is None:

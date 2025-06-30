@@ -121,6 +121,76 @@ def get_parent_info(row_dict: dict) -> tuple[int | None, int | None, int | None,
     return true_parent_id, true_parent_rank_level, major_parent_id, major_parent_rank_level
 
 
+def get_immediate_ancestor_info(
+    row_dict: dict,
+) -> tuple[int | None, int | None]:
+    """
+    Calculates immediateAncestor_taxonID and immediateAncestor_rankLevel.
+    This is equivalent to what was called "true parent" previously.
+    """
+    current_rank_val = int(row_dict["rankLevel"])
+    ancestor_id: int | None = None
+    ancestor_rank_level: int | None = None
+
+    # Find the closest ancestor: Smallest rank_value > current_rank_val that has a non-null taxon_id
+    parent_candidates = []
+    for r_enum_cand in ALL_RANK_ENUMS_SORTED_ASC:  # Iterate from lowest rank value up
+        cand_r_val = r_enum_cand.value
+        if cand_r_val > current_rank_val:  # Parent rank value must be larger
+            db_col_val_str = str(cand_r_val)
+            if cand_r_val == 335:
+                prefix = "L33_5"
+            elif cand_r_val == 345:
+                prefix = "L34_5"
+            else:
+                prefix = f"L{db_col_val_str}"
+
+            tid_at_cand_rank = row_dict.get(f"{prefix}_taxonID")
+            if tid_at_cand_rank is not None and str(tid_at_cand_rank).strip() not in ["", "NULL"]:
+                try:
+                    parent_candidates.append({"id": int(tid_at_cand_rank), "rank_val": cand_r_val})
+                except ValueError:
+                    continue
+
+    if parent_candidates:
+        ancestor_id = parent_candidates[0]["id"]
+        ancestor_rank_level = parent_candidates[0]["rank_val"]
+
+    return ancestor_id, ancestor_rank_level
+
+
+def get_immediate_major_ancestor_info(
+    row_dict: dict,
+) -> tuple[int | None, int | None]:
+    """
+    Calculates immediateMajorAncestor_taxonID and immediateMajorAncestor_rankLevel.
+    This is equivalent to what was called "major parent" previously.
+    """
+    current_rank_val = int(row_dict["rankLevel"])
+    major_ancestor_id: int | None = None
+    major_ancestor_rank_level: int | None = None
+
+    # Find the closest major ancestor: Smallest major_rank_value > current_rank_val that has a non-null taxon_id
+    major_parent_candidates = []
+    for major_r_val in sorted(list(MAJOR_RANK_VALUES)):  # Iterate major ranks from lowest value up
+        if major_r_val > current_rank_val:  # Parent major rank value must be larger
+            prefix = f"L{major_r_val}"
+            tid_at_major_rank = row_dict.get(f"{prefix}_taxonID")
+            if tid_at_major_rank is not None and str(tid_at_major_rank).strip() not in ["", "NULL"]:
+                try:
+                    major_parent_candidates.append(
+                        {"id": int(tid_at_major_rank), "rank_val": major_r_val}
+                    )
+                except ValueError:
+                    continue
+
+    if major_parent_candidates:
+        major_ancestor_id = major_parent_candidates[0]["id"]
+        major_ancestor_rank_level = major_parent_candidates[0]["rank_val"]
+
+    return major_ancestor_id, major_ancestor_rank_level
+
+
 def get_ancestry_str(row_dict: dict) -> str:
     lineage_ids_ordered = []
     current_taxon_rank_val = int(row_dict["rankLevel"])
@@ -164,39 +234,66 @@ def main() -> None:
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    expanded_taxa_final_rows = []
     for tsv in TSV_DIR.glob("*.tsv"):
         print(f"  → importing {tsv.name}")
         if tsv.stem == "expanded_taxa":  # Process the main expanded_taxa.tsv
             with tsv.open(newline="") as fh:
                 reader = csv.DictReader(fh, delimiter="\t")
                 original_header = list(reader.fieldnames or [])
+                current_header = list(original_header)  # Make a mutable copy
 
-                # Add new derived columns to the header for SQLite table creation
-                new_columns_to_add = [
+                # Define new column names
+                new_col_immediate_ancestor_id = "immediateAncestor_taxonID"
+                new_col_immediate_ancestor_rank_level = "immediateAncestor_rankLevel"
+                new_col_immediate_major_ancestor_id = "immediateMajorAncestor_taxonID"
+                new_col_immediate_major_ancestor_rank_level = "immediateMajorAncestor_rankLevel"
+                ancestry_col = "ancestry"  # This one is kept but deprecated
+
+                # Columns to be added to the SQLite table
+                # (and potentially to the TSV if we were regenerating it)
+                db_columns_to_add = [
+                    new_col_immediate_ancestor_id,
+                    new_col_immediate_ancestor_rank_level,
+                    new_col_immediate_major_ancestor_id,
+                    new_col_immediate_major_ancestor_rank_level,
+                    ancestry_col,
+                ]
+
+                # Remove old parent columns from header if they exist from a previous version of the script/TSV
+                # For this script, we assume the input TSV does *not* have these new columns yet,
+                # but it might have the *old* derived parent columns.
+                # The goal is that the *output SQLite table* has the new columns and *not* the old ones.
+                old_parent_cols = [
                     "trueParentID",
                     "trueParentRankLevel",
                     "majorParentID",
                     "majorParentRankLevel",
-                    "ancestry",
                 ]
-                final_header = original_header + [
-                    nc for nc in new_columns_to_add if nc not in original_header
-                ]
-                # Ensure commonName is in the header if not already (it is in sample)
-                if (
-                    "commonName" not in final_header and "commonName" not in original_header
-                ):  # commonName is in sample TSV, but might be empty
-                    final_header.append("commonName")
+                final_db_header = [col for col in current_header if col not in old_parent_cols]
+
+                # Add the new DB columns to the header for SQLite table creation
+                for new_col in db_columns_to_add:
+                    if new_col not in final_db_header:
+                        final_db_header.append(new_col)
+
+                # Ensure commonName is in the header (it is in sample TSV, but could be all empty)
+                if "commonName" not in final_db_header:
+                    final_db_header.append("commonName")
 
                 cur.execute(f"DROP TABLE IF EXISTS {q(tsv.stem)};")
-                # SQLite uses dynamic typing, but TEXT is safe for most things. INTEGER for IDs and ranks.
-                # For boolean taxonActive, store as INTEGER (0 or 1)
                 cols_ddl_parts = []
-                for col_name in final_header:
-                    if "taxonID" in col_name or "ParentID" in col_name:
+                for col_name in final_db_header:
+                    if (
+                        "taxonID" in col_name
+                        or "ParentID" in col_name
+                        or "Ancestor_taxonID" in col_name
+                    ):  # Covers new names
                         cols_ddl_parts.append(f"{q(col_name)} INTEGER")
-                    elif "RankLevel" in col_name or col_name == "rankLevel":
+                    elif (
+                        "RankLevel" in col_name
+                        or col_name == "rankLevel"
+                        or "Ancestor_rankLevel" in col_name
+                    ):  # Covers new names
                         cols_ddl_parts.append(f"{q(col_name)} INTEGER")
                     elif col_name == "taxonActive":
                         cols_ddl_parts.append(f"{q(col_name)} INTEGER")  # 0 or 1
@@ -205,14 +302,19 @@ def main() -> None:
                 cols_ddl = ", ".join(cols_ddl_parts)
                 cur.execute(f"CREATE TABLE {q(tsv.stem)} ({cols_ddl});")
 
+                processed_rows_for_db = []
                 for row_dict in reader:
-                    # 1. Populate common names (base and ancestral)
-                    if not row_dict.get("commonName") and row_dict.get("name"):
-                        row_dict["commonName"] = row_dict["name"] + "_cmn"
+                    # Make a copy to add new computed values for DB insertion
+                    db_row_dict = dict(row_dict)
 
-                    for r_enum in RankLevel:  # Iterate through all RankLevel members
+                    # 1. Populate common names (base and ancestral) - if not already present
+                    if not db_row_dict.get("commonName") and db_row_dict.get("name"):
+                        db_row_dict["commonName"] = (
+                            db_row_dict["name"] + "_cmn"
+                        )  # Suffix for auto-generated
+
+                    for r_enum in RankLevel:
                         val_str = str(r_enum.value)
-                        # Construct pfix based on TSV column naming (L<num>, L<num>_5)
                         if r_enum.value == 335:
                             pfix = "L33_5"
                         elif r_enum.value == 345:
@@ -220,30 +322,40 @@ def main() -> None:
                         else:
                             pfix = f"L{val_str}"
 
-                        if not row_dict.get(f"{pfix}_commonName") and row_dict.get(f"{pfix}_name"):
-                            row_dict[f"{pfix}_commonName"] = row_dict[f"{pfix}_name"] + "_cmn"
+                        common_col = f"{pfix}_commonName"
+                        name_col = f"{pfix}_name"
+                        if not db_row_dict.get(common_col) and db_row_dict.get(name_col):
+                            db_row_dict[common_col] = db_row_dict[name_col] + "_cmn"
 
-                    # 2. Calculate parent info
-                    tp_id, tp_rl, mp_id, mp_rl = get_parent_info(row_dict)
-                    row_dict["trueParentID"] = tp_id
-                    row_dict["trueParentRankLevel"] = tp_rl
-                    row_dict["majorParentID"] = mp_id
-                    row_dict["majorParentRankLevel"] = mp_rl
+                    # 2. Calculate new parent/ancestor info
+                    ia_id, ia_rl = get_immediate_ancestor_info(
+                        row_dict
+                    )  # Use original row_dict from TSV
+                    ima_id, ima_rl = get_immediate_major_ancestor_info(row_dict)
 
-                    # 3. Calculate ancestry string
-                    row_dict["ancestry"] = get_ancestry_str(row_dict)
+                    db_row_dict[new_col_immediate_ancestor_id] = ia_id
+                    db_row_dict[new_col_immediate_ancestor_rank_level] = ia_rl
+                    db_row_dict[new_col_immediate_major_ancestor_id] = ima_id
+                    db_row_dict[new_col_immediate_major_ancestor_rank_level] = ima_rl
+
+                    # 3. Calculate ancestry string (remains as "ancestry" but is deprecated)
+                    db_row_dict[ancestry_col] = get_ancestry_str(row_dict)
 
                     # 4. Handle taxonActive boolean
-                    if "taxonActive" in row_dict:  # 't' or 'f' in sample TSV
-                        row_dict["taxonActive"] = (
-                            1 if str(row_dict["taxonActive"]).lower() == "t" else 0
+                    if "taxonActive" in db_row_dict:  # Check in db_row_dict
+                        db_row_dict["taxonActive"] = (
+                            1 if str(db_row_dict["taxonActive"]).lower() == "t" else 0
                         )
 
-                    expanded_taxa_final_rows.append([row_dict.get(col) for col in final_header])
+                    # Remove old parent columns from the final dict to be inserted into DB
+                    for old_col in old_parent_cols:
+                        db_row_dict.pop(old_col, None)
 
-                placeholders = ", ".join("?" for _ in final_header)
-                insert_sql = f"INSERT INTO {q(tsv.stem)} ({', '.join(map(q, final_header))}) VALUES ({placeholders});"
-                cur.executemany(insert_sql, expanded_taxa_final_rows)
+                    processed_rows_for_db.append([db_row_dict.get(col) for col in final_db_header])
+
+                placeholders = ", ".join("?" for _ in final_db_header)
+                insert_sql = f"INSERT INTO {q(tsv.stem)} ({', '.join(map(q, final_db_header))}) VALUES ({placeholders});"
+                cur.executemany(insert_sql, processed_rows_for_db)
         else:  # For other TSV files like coldp_*, load them as simple tables
             load_table(cur, tsv.stem, tsv)
 

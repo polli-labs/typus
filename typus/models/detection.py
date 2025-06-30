@@ -2,9 +2,9 @@ from typing import List
 
 from pydantic import ConfigDict, Field
 
-from .serialise import CompactJsonMixin
 from .classification import HierarchicalClassificationResult, TaxonomyContext
 from .geometry import BBox, EncodedMask
+from .serialise import CompactJsonMixin
 
 
 class InstancePrediction(CompactJsonMixin):
@@ -25,4 +25,3 @@ class ImageDetectionResult(CompactJsonMixin):
     height: int
     instances: List[InstancePrediction]
     taxonomy_context: TaxonomyContext | None = None
-

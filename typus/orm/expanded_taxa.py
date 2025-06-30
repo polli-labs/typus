@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from sqlalchemy import Boolean, Integer, String
-from sqlalchemy.orm import Mapped, deferred, mapped_column
+from sqlalchemy.orm import Mapped, deferred, mapped_column, synonym
 
 from ..constants import RankLevel
 from .base import Base
@@ -23,14 +23,29 @@ class ExpandedTaxa(Base):
     # core identifiers
     taxon_id: Mapped[int] = mapped_column("taxonID", Integer, primary_key=True)
 
-    # Derived parentage fields (populated by fixture generator for SQLite)
-    true_parent_id: Mapped[int | None] = mapped_column("trueParentID", Integer, nullable=True)
-    true_parent_rank_level: Mapped[int | None] = mapped_column(
-        "trueParentRankLevel", Integer, nullable=True
+    # Parentage fields - mapped to production DB column names
+    parent_id: Mapped[int | None] = mapped_column(
+        "immediateAncestor_taxonID", Integer, nullable=True
     )
-    major_parent_id: Mapped[int | None] = mapped_column("majorParentID", Integer, nullable=True)
+    parent_rank_level: Mapped[int | None] = mapped_column(
+        "immediateAncestor_rankLevel", Integer, nullable=True
+    )
+    major_parent_id: Mapped[int | None] = mapped_column(
+        "immediateMajorAncestor_taxonID", Integer, nullable=True
+    )
     major_parent_rank_level: Mapped[int | None] = mapped_column(
-        "majorParentRankLevel", Integer, nullable=True
+        "immediateMajorAncestor_rankLevel", Integer, nullable=True
+    )
+
+    # Deprecated legacy aliases. These allow code using the old attribute names
+    # (`true_parent_id`, `true_parent_rank_level`) to continue working by
+    # referring to the new primary attributes (`parent_id`, `parent_rank_level`).
+    # The attributes `major_parent_id` and `major_parent_rank_level` were the
+    # Python attribute names used previously and are now directly mapped to the
+    # new `immediateMajorAncestor_*` database columns, so no synonyms are needed for them.
+    true_parent_id: Mapped[int | None] = synonym("parent_id", doc="Deprecated: use parent_id")
+    true_parent_rank_level: Mapped[int | None] = synonym(
+        "parent_rank_level", doc="Deprecated: use parent_rank_level"
     )
 
     rank_level: Mapped[int] = mapped_column(
@@ -44,12 +59,14 @@ class ExpandedTaxa(Base):
     )  # SQLite will use 0/1
 
     # ancestry helpers
-    ancestry_str: Mapped[str | None] = mapped_column(
-        "ancestry", String, nullable=True
-    )  # pipe-delimited IDs, populated by fixture generator
-    path_ltree: Mapped[str | None] = mapped_column(
-        "path", String, nullable=True
-    )  # ltree string from Postgres
+    ancestry_str: Mapped[str | None] = deferred(
+        mapped_column("ancestry", String, nullable=True),
+        doc="Deprecated: pipe-delimited IDs, populated by fixture generator. Production code should not rely on this.",
+    )
+    path_ltree: Mapped[str | None] = deferred(
+        mapped_column("path", String, nullable=True),
+        doc="ltree string from Postgres. May be absent in some environments/tables.",
+    )
 
     # Materialized expanded per-rank columns for ALL ranks in RankLevel
     # These must match the column names in tests/sample_tsv/expanded_taxa.tsv
