@@ -1,19 +1,23 @@
-# Offline Mode & SQLite Fixture Generation
+# Offline mode
 
-This document provides a brief overview of using Typus in an offline mode, particularly concerning the generation and use of the SQLite fixture.
+`load_expanded_taxa` helps you work without a network connection. It downloads a
+prebuilt SQLite dump of the `expanded_taxa` table (or converts a TSV file) and
+caches it locally.
 
-## SQLite Fixture
+```python
+from pathlib import Path
+from typus.services.sqlite_loader import load_expanded_taxa
 
-The `typus` package can utilize an SQLite database as a backend for taxonomy services, which is especially useful for offline environments, testing, or CI pipelines.
+load_expanded_taxa(Path("expanded_taxa.sqlite"))
+```
 
-### Generation
-The primary script for generating this SQLite fixture is `scripts/gen_fixture_sqlite.py`. This script processes data from TSV files (typically found in `tests/sample_tsv/`) to populate the `expanded_taxa` table and others in the SQLite database (`tests/fixture_typus.sqlite`).
+## CLI
 
-Key columns, including parentage information like `immediateAncestor_taxonID` and `immediateMajorAncestor_taxonID`, are derived during this generation process.
+```bash
+typus-load-sqlite --sqlite expanded_taxa.sqlite
+```
 
-### ORM Mapping
-The ORM mappings for the `expanded_taxa` table, including how Python attributes map to database columns, can be found in `typus/orm/expanded_taxa.py`.
+Pass `--replace` to overwrite, `--tsv my.tsv` to use a local dump. Downloads are
+stored in `~/.cache/typus` unless `$TYPUS_CACHE_DIR` is set. Override the source
+URL with `--url` or `$TYPUS_EXPANDED_TAXA_URL`.
 
-For more details on data models, please refer to [Models Documentation](./models.md).
-
-Users intending to work with or regenerate the SQLite fixture should consult these files.

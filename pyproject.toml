@@ -49,8 +49,9 @@ dev = [
   "asyncpg>=0.29",
   "aiosqlite>=0.19",
   "pyarrow>=16,<17",
-  "mkdocs>=1.6,<2", 
-  "mkdocs-material>=9.5,<10"
+  "mkdocs>=1.6,<2",
+  "mkdocs-material>=9.5,<10",
+  "pytest-httpserver>=1.0"
 ]
 
 # Nice explicit extra if you want to keep core tiny:
@@ -62,6 +63,9 @@ docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5,<10"]
 [project.urls]
 Homepage   = "https://github.com/polli-labs/typus"
 Issues     = "https://github.com/polli-labs/typus/issues"
+
+[project.scripts]
+typus-load-sqlite = "typus.services.sqlite_loader:main"
 
 # ---------------------------------------------------------------------------
 # Build backend
