@@ -7,7 +7,7 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from ..constants import RankLevel
+from ..constants import RankLevel, is_major
 from ..models.taxon import Taxon
 from ..orm.expanded_taxa import ExpandedTaxa
 
@@ -24,10 +24,17 @@ class AbstractTaxonomyService(abc.ABC):
     async def children(self, taxon_id: int, *, depth: int = 1): ...
 
     @abc.abstractmethod
-    async def lca(self, taxon_ids: set[int]) -> Taxon: ...
+    async def lca(self, taxon_ids: set[int], *, include_minor_ranks: bool = False) -> Taxon: ...
 
     @abc.abstractmethod
-    async def distance(self, a: int, b: int) -> int: ...
+    async def distance(
+        self,
+        a: int,
+        b: int,
+        *,
+        include_minor_ranks: bool = False,
+        inclusive: bool = False,
+    ) -> int: ...
 
 
 logger = logging.getLogger(__name__)
@@ -115,7 +122,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         lca_tid = await s.scalar(text(recursive_sql))
         return lca_tid
 
-    async def lca(self, taxon_ids: set[int]) -> Taxon:
+    async def lca(self, taxon_ids: set[int], *, include_minor_ranks: bool = False) -> Taxon:
         """Compute lowest common ancestor.
         Tries ltree approach first, falls back to recursive CTE if `path` is missing or ltree fails.
         """
@@ -167,7 +174,14 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
 
         return await self.get_taxon(lca_tid)
 
-    async def distance(self, a: int, b: int, *, inclusive: bool = False) -> int:
+    async def distance(
+        self,
+        a: int,
+        b: int,
+        *,
+        include_minor_ranks: bool = False,
+        inclusive: bool = False,
+    ) -> int:
         # This method originally used 'path' and 'nlevel'.
         # It needs to be updated to work without 'path' or have a fallback.
         # For now, the ticket does not explicitly require a change to distance() fallback,
@@ -182,10 +196,26 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         # Get taxa and their ancestries (respecting ORM mappings)
         taxon_a = await self.get_taxon(a)
         taxon_b = await self.get_taxon(b)
-        lca_taxon = await self.lca({a, b})  # This will use the new lca with fallback
+        lca_taxon = await self.lca({a, b}, include_minor_ranks=include_minor_ranks)
 
-        anc_a = taxon_a.ancestry
-        anc_b = taxon_b.ancestry
+        anc_a = (
+            taxon_a.ancestry
+            if include_minor_ranks
+            else [
+                tid
+                for tid, rl in (await self._get_ancestry_with_ranks(taxon_a.ancestry)).items()
+                if is_major(rl)
+            ]
+        )
+        anc_b = (
+            taxon_b.ancestry
+            if include_minor_ranks
+            else [
+                tid
+                for tid, rl in (await self._get_ancestry_with_ranks(taxon_b.ancestry)).items()
+                if is_major(rl)
+            ]
+        )
 
         try:
             idx_lca_in_a = anc_a.index(lca_taxon.taxon_id)
@@ -202,6 +232,17 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         if inclusive:
             distance += 1
         return distance
+
+    async def _get_ancestry_with_ranks(self, ancestry: list[int]) -> dict[int, RankLevel]:
+        if not ancestry:
+            return {}
+        async with self._Session() as s:
+            res = await s.execute(
+                select(ExpandedTaxa.taxon_id, ExpandedTaxa.rank_level).where(
+                    ExpandedTaxa.taxon_id.in_(ancestry)
+                )
+            )
+            return {row.taxon_id: RankLevel(row.rank_level) for row in res}
 
         # Original SQL using path:
         # sql = text(

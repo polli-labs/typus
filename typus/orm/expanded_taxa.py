@@ -69,7 +69,7 @@ class ExpandedTaxa(Base):
     )
 
     # Materialized expanded per-rank columns for ALL ranks in RankLevel
-    # These must match the column names in tests/sample_tsv/expanded_taxa_lca_sample.tsv
+    # These must match the column names in tests/sample_tsv/expanded_taxa_sample.tsv
     # And the ORM attribute names should be Pythonic (lowercase with underscore)
     for rank_enum_member in RankLevel:
         attr_prefix = rank_enum_member.name.lower()  # e.g., "l10", "l335" for RankLevel.L335

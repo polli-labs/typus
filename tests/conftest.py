@@ -18,19 +18,10 @@ async def taxonomy_service(tmp_path_factory) -> AsyncGenerator[AbstractTaxonomyS
     else:
         tmp_dir = tmp_path_factory.mktemp("sqlite_fixture")
         db_path = tmp_dir / "expanded_taxa.sqlite"
-        load_expanded_taxa(db_path, tsv_path=Path("tests/sample_tsv/expanded_taxa_lca_sample.tsv"))
-        # Ensure parent columns reference available ancestors in the tiny sample
-        import sqlite3
-
-        conn = sqlite3.connect(db_path)
-        conn.execute(
-            """
-            UPDATE expanded_taxa
-            SET "immediateAncestor_taxonID" = "immediateMajorAncestor_taxonID",
-                "immediateAncestor_rankLevel" = "immediateMajorAncestor_rankLevel"
-            """
+        load_expanded_taxa(
+            db_path,
+            tsv_path=Path("tests/sample_tsv/expanded_taxa_sample.tsv"),
+            force_self_consistent=True,
         )
-        conn.commit()
-        conn.close()
 
         yield SQLiteTaxonomyService(db_path)

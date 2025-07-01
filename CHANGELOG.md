@@ -1,7 +1,9 @@
 # Changelog
 
-## 0.1.9-post1
+## 0.1.9
 * completed schema-sync; new authoritative LCA & distance tests
+* `SQLiteTaxonomyService.distance` now defaults to `include_minor_ranks=False` and `inclusive=False`
+* sample TSV renamed to `expanded_taxa_sample.tsv`; fixture generated as `expanded_taxa_sample.sqlite`
 
 ## 0.1.8 – 2025-06-29
 ### Changed

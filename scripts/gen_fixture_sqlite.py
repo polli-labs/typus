@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Regenerate tests/expanded_taxa_lca_sample.sqlite from TSV snippets.
+Regenerate tests/expanded_taxa_sample.sqlite from TSV snippets.
 
 Run:  python scripts/gen_fixture_sqlite.py
 """
@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TSV_DIR = ROOT / "tests" / "sample_tsv"
 TYPUS_CONSTANTS_PATH = ROOT / "typus" / "constants.py"  # Path to typus constants
-DB_PATH = ROOT / "tests" / "expanded_taxa_lca_sample.sqlite"
+DB_PATH = ROOT / "tests" / "expanded_taxa_sample.sqlite"
 
 INT_RE = re.compile(r"^-?\d+$")
 
@@ -236,7 +236,7 @@ def main() -> None:
 
     for tsv in TSV_DIR.glob("*.tsv"):
         print(f"  → importing {tsv.name}")
-        if tsv.stem == "expanded_taxa_lca_sample":
+        if tsv.stem == "expanded_taxa_sample":
             with tsv.open(newline="") as fh:
                 reader = csv.DictReader(fh, delimiter="\t")
                 reader = csv.DictReader(fh, delimiter="\t")
@@ -272,7 +272,8 @@ def main() -> None:
                     ancestry_col,
                 ]
 
-                cur.execute(f"DROP TABLE IF EXISTS {q(tsv.stem)};")
+                table_name = "expanded_taxa" if tsv.stem == "expanded_taxa_sample" else tsv.stem
+                cur.execute(f"DROP TABLE IF EXISTS {q(table_name)};")
                 cols_ddl_parts = []
                 for col_name in final_db_header:
                     if (
@@ -292,7 +293,6 @@ def main() -> None:
                     else:
                         cols_ddl_parts.append(f"{q(col_name)} TEXT")
                 cols_ddl = ", ".join(cols_ddl_parts)
-                table_name = "expanded_taxa" if tsv.stem == "expanded_taxa_lca_sample" else tsv.stem
                 cur.execute(f"CREATE TABLE {q(table_name)} ({cols_ddl});")
 
                 processed_rows_for_db = []
@@ -305,6 +305,20 @@ def main() -> None:
                         db_row_dict["commonName"] = (
                             db_row_dict["name"] + "_cmn"
                         )  # Suffix for auto-generated
+
+                    for r_enum in RankLevel:
+                        val_str = str(r_enum.value)
+                        if r_enum.value == 335:
+                            pfix = "L33_5"
+                        elif r_enum.value == 345:
+                            pfix = "L34_5"
+                        else:
+                            pfix = f"L{val_str}"
+
+                        common_col = f"{pfix}_commonName"
+                        name_col = f"{pfix}_name"
+                        if not db_row_dict.get(common_col) and db_row_dict.get(name_col):
+                            db_row_dict[common_col] = db_row_dict[name_col] + "_cmn"
 
                     # 2. Calculate new parent/ancestor info
                     ia_id, ia_rl = get_immediate_ancestor_info(

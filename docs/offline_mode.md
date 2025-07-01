@@ -24,8 +24,8 @@ URL with `--url` or `$TYPUS_EXPANDED_TAXA_URL`.
 ## Sample LCA dataset & tests
 
 The test-suite uses a tiny dataset defined in
-`tests/sample_tsv/expanded_taxa_lca_sample.tsv`. Build the corresponding
-`expanded_taxa_lca_sample.sqlite` with:
+`tests/sample_tsv/expanded_taxa_sample.tsv`. Build the corresponding
+`expanded_taxa_sample.sqlite` with:
 
 ```bash
 python scripts/gen_fixture_sqlite.py

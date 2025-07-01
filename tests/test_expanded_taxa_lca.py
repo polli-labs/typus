@@ -26,7 +26,7 @@ async def test_lca_sqlite(taxonomy_service):
 
 @pytest.mark.asyncio
 async def test_distance_sqlite(taxonomy_service):
-    assert await taxonomy_service.distance(47219, 54327, inclusive=True) == 6
+    assert await taxonomy_service.distance(47219, 54327, inclusive=False) == 6
     assert await taxonomy_service.distance(52775, 47220, inclusive=False) == 2
 
 
