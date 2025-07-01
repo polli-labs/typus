@@ -1,6 +1,6 @@
 [project]
 name            = "polli-typus"
-version         = "0.1.8"
+version         = "0.1.9"
 description     = "Taxonomic types, projections and async taxonomy services for Polli-Labs."
 readme          = { file = "README.md", content-type = "text/markdown" }
 license         = "MIT"
@@ -23,9 +23,11 @@ classifiers = [
 
 # --- core runtime (no heavy DB drivers) --------------------------------------
 dependencies = [
-  "pydantic>=2.7,<3",
-  "sqlalchemy[asyncio]>=2.0,<3",
-  "rapidfuzz>=3.6,<4",
+    "pydantic>=2.7,<3",
+    "sqlalchemy[asyncio]>=2.0,<3",
+    "rapidfuzz>=3.6,<4",
+    "polars>=0.20,<0.21",      # NEW – core runtime needs it
+    "requests>=2.32,<3",       # NEW – used by load_expanded_taxa helper
 ]
 
 [project.optional-dependencies]
@@ -44,9 +46,18 @@ dev = [
   "pytest>=8.2",
   "pytest-asyncio>=0.23",
   "pre-commit>=3.7",
-  "asyncpg>=0.29",        # allow DB tests locally
+  "asyncpg>=0.29",
   "aiosqlite>=0.19",
+  "pyarrow>=16,<17",
+  "mkdocs>=1.6,<2", 
+  "mkdocs-material>=9.5,<10"
 ]
+
+# Nice explicit extra if you want to keep core tiny:
+parquet = ["pyarrow>=16.1"]
+
+# Docs extra – everything you need to run `mkdocs build` or `mkdocs serve`
+docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5,<10"]
 
 [project.urls]
 Homepage   = "https://github.com/polli-labs/typus"

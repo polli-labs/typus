@@ -1,0 +1,15 @@
+site_name: Typus
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+nav:
+  - Home: index.md         # Create docs/index.md
+  - Taxonomy Service:
+      - Offline mode: offline_mode.md
+      - expanded_taxa schema: expanded_taxa.md
+plugins: []
+markdown_extensions:
+  - tables
+  - admonition
