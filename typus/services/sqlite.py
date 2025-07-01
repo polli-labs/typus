@@ -6,6 +6,17 @@ from typus.constants import RankLevel, is_major
 from typus.models.taxon import Taxon
 from typus.services.taxonomy import AbstractTaxonomyService
 
+_FETCH_SUBTREE_SQL = """
+WITH RECURSIVE subtree_nodes(tid, tpid) AS (
+    SELECT "taxonID", "immediateAncestor_taxonID" FROM expanded_taxa WHERE "taxonID" IN ({})
+    UNION ALL
+    SELECT et."taxonID", et."immediateAncestor_taxonID" FROM expanded_taxa et
+    JOIN subtree_nodes sn ON et."immediateAncestor_taxonID" = sn.tid
+)
+SELECT tid, tpid FROM subtree_nodes;
+"""
+assert "immediateAncestor_taxonID" in _FETCH_SUBTREE_SQL
+
 
 class SQLiteTaxonomyService(AbstractTaxonomyService):
     """
@@ -31,21 +42,36 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         for row in rows:
             self._rank_cache[row["taxonID"]] = RankLevel(int(row["rankLevel"]))
 
-    def __init__(self, path: str | Path = None):
+    def __init__(self, path: str | Path | None = None):
         if path is None:
-            path = Path(__file__).parent.parent.parent / "tests" / "fixture_typus.sqlite"
+            path = Path(__file__).parent.parent.parent / "tests" / "expanded_taxa_sample.sqlite"
+            if not path.exists():
+                sample_tsv = (
+                    Path(__file__).parent.parent.parent
+                    / "tests"
+                    / "sample_tsv"
+                    / "expanded_taxa_sample.tsv"
+                )
+                from .sqlite_loader import load_expanded_taxa
+
+                load_expanded_taxa(path, tsv_path=sample_tsv)
         self._conn = sqlite3.connect(str(path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
 
     async def get_taxon(self, taxon_id: int) -> Taxon:
         loop = asyncio.get_running_loop()
+        # Uses "immediateAncestor_taxonID" as per new schema plan for fixtures
+        # The ORM handles mapping ExpandedTaxa.parent_id to this.
+        # For raw SQL, we need to use the actual column name that will be in the fixture.
+        # The plan is to make gen_fixture_sqlite.py write "immediateAncestor_taxonID".
+        sql = """
+            SELECT "taxonID", "name", "rankLevel",
+                   "immediateAncestor_taxonID", "ancestry", "commonName", "taxonActive"
+            FROM "expanded_taxa" WHERE "taxonID"=?
+        """
         row = await loop.run_in_executor(
             None,
-            lambda: self._conn.execute(
-                # Select columns created by gen_fixture_sqlite.py
-                'SELECT "taxonID", "name", "rankLevel", "trueParentID", "ancestry", "commonName", "taxonActive" FROM "expanded_taxa" WHERE "taxonID"=?',
-                (taxon_id,),
-            ).fetchone(),
+            lambda: self._conn.execute(sql, (taxon_id,)).fetchone(),
         )
         if row is None:
             raise KeyError(taxon_id)
@@ -55,6 +81,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
             self._rank_cache[row["taxonID"]] = RankLevel(int(row["rankLevel"]))
 
         ancestry_list = []
+        # Note: `ancestry` column is deprecated. Usage should be reviewed.
         if row["ancestry"]:
             try:
                 ancestry_list = list(map(int, str(row["ancestry"]).split("|")))
@@ -64,22 +91,21 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         return Taxon(
             taxon_id=row["taxonID"],
             scientific_name=row["name"],
-            rank_level=RankLevel(int(row["rankLevel"])),  # rankLevel from fixture is int
-            parent_id=row["trueParentID"],
+            rank_level=RankLevel(int(row["rankLevel"])),
+            parent_id=row["immediateAncestor_taxonID"],  # Read directly from the new column name
             ancestry=ancestry_list,
-            # Assuming commonName in fixture is English preferred
             vernacular={"en": [row["commonName"]]} if row["commonName"] else {},
         )
 
     async def children(self, taxon_id: int, *, depth: int = 1) -> list[Taxon]:
         loop = asyncio.get_running_loop()
-        # Recursive CTE using trueParentID
+        # Recursive CTE using "immediateAncestor_taxonID"
         query = """
         WITH RECURSIVE sub(tid, lvl) AS (
             SELECT "taxonID", 0 FROM expanded_taxa WHERE "taxonID" = ?
             UNION ALL
             SELECT et."taxonID", sub.lvl + 1 FROM expanded_taxa et
-            JOIN sub ON et."trueParentID" = sub.tid
+            JOIN sub ON et."immediateAncestor_taxonID" = sub.tid
             WHERE sub.lvl < ?
         )
         SELECT tid FROM sub WHERE lvl > 0;
@@ -114,7 +140,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         ]
         return major_ancestry
 
-    async def lca(self, taxon_ids: set[int], *, include_minor_ranks: bool = True) -> Taxon:
+    async def lca(self, taxon_ids: set[int], *, include_minor_ranks: bool = False) -> Taxon:
         if not taxon_ids:
             raise ValueError("taxon_ids set cannot be empty for LCA calculation.")
         if len(taxon_ids) == 1:
@@ -154,7 +180,9 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         # If we couldn't find any common ancestor in the database, raise an error
         raise ValueError(f"No valid LCA found in the database for taxon IDs: {taxon_ids}")
 
-    async def distance(self, a: int, b: int, *, include_minor_ranks: bool = True) -> int:
+    async def distance(
+        self, a: int, b: int, *, include_minor_ranks: bool = False, inclusive: bool = False
+    ) -> int:
         """Calculate the taxonomic distance (number of steps) between two taxa.
 
         The distance is the total number of edges in the path between two taxa,
@@ -191,7 +219,10 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         dist_a_to_lca = len(anc_a) - 1 - idx_lca_in_a
         dist_b_to_lca = len(anc_b) - 1 - idx_lca_in_b
 
-        return dist_a_to_lca + dist_b_to_lca
+        distance = dist_a_to_lca + dist_b_to_lca
+        if inclusive:
+            distance += 1
+        return distance
 
     async def fetch_subtree(self, root_ids: set[int]) -> dict[int, int | None]:
         if not root_ids:
@@ -200,16 +231,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         loop = asyncio.get_running_loop()
 
         placeholders = ",".join("?" * len(root_ids))
-        # Recursive CTE using trueParentID
-        query = f"""
-        WITH RECURSIVE subtree_nodes(tid, tpid) AS (
-            SELECT "taxonID", "trueParentID" FROM expanded_taxa WHERE "taxonID" IN ({placeholders})
-            UNION ALL
-            SELECT et."taxonID", et."trueParentID" FROM expanded_taxa et
-            JOIN subtree_nodes sn ON et."trueParentID" = sn.tid
-        )
-        SELECT tid, tpid FROM subtree_nodes;
-        """
+        query = _FETCH_SUBTREE_SQL.format(placeholders)
 
         rows = await loop.run_in_executor(
             None, lambda: self._conn.execute(query, tuple(root_ids)).fetchall()

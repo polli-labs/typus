@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Set, Tuple
 
-from pydantic import ConfigDict, Field, field_validator
+from pydantic import Field, field_validator
 
 from ..constants import RankLevel
 from .serialise import CompactJsonMixin
@@ -31,4 +31,3 @@ class HierarchicalClassificationResult(CompactJsonMixin):
     taxonomy_context: TaxonomyContext
     tasks: List[TaskPrediction]
     subtree_roots: Set[int] | None = None
-

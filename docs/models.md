@@ -198,3 +198,20 @@ if typus_results:
 ```
 
 This provides a basic structure. Diagrams would need to be created separately and embedded if this were a full Markdown rendering environment.
+
+## ExpandedTaxa ORM columns
+
+| Column | Description |
+|-------|-------------|
+| `taxonID` | primary key |
+| `rankLevel` | numeric rank value |
+| `rank` | canonical rank name |
+| `name` | scientific name |
+| `taxonActive` | boolean active flag |
+| `commonName` | english common name |
+| `immediateAncestor_taxonID` | direct parent taxon ID |
+| `immediateAncestor_rankLevel` | rank level of the parent |
+| `immediateMajorAncestor_taxonID` | nearest major ancestor ID |
+| `immediateMajorAncestor_rankLevel` | rank level of that ancestor |
+
+*Legacy `trueParentID`, `majorParentID`, `path` and `ancestry` columns were removed in v0.1.9.*

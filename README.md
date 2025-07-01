@@ -81,8 +81,12 @@ print(latlon_to_unit_sphere(31.5, -110.4))  # → x, y, z on S²
 ### Offline mode (SQLite fixture)
 
 ```python
-from typus.services import SQLiteTaxonomyService
-svc = SQLiteTaxonomyService()   # uses tests/fixture_typus.sqlite
+from pathlib import Path
+from typus.services import SQLiteTaxonomyService, load_expanded_taxa
+
+db = Path("expanded_taxa.sqlite")
+load_expanded_taxa(db)  # downloads if missing
+svc = SQLiteTaxonomyService(db)
 ```
 
 ---
