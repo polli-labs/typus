@@ -16,13 +16,13 @@ def row_count(db: Path) -> int:
 
 def test_round_trip_tsv(tmp_path: Path) -> None:
     db = tmp_path / "exp.sqlite"
-    tsv = Path("tests/sample_tsv/expanded_taxa.tsv")
+    tsv = Path("tests/sample_tsv/expanded_taxa_lca_sample.tsv")
     load_expanded_taxa(db, tsv_path=tsv)
     assert row_count(db) == sum(1 for _ in tsv.open()) - 1
 
 
 def test_auto_download_fallback(httpserver, tmp_path: Path) -> None:
-    tsv = Path("tests/sample_tsv/expanded_taxa.tsv")
+    tsv = Path("tests/sample_tsv/expanded_taxa_lca_sample.tsv")
     gz = gzip.compress(tsv.read_bytes())
     httpserver.expect_request("/expanded_taxa/latest/expanded_taxa.sqlite").respond_with_data(
         "", status=404
@@ -47,7 +47,7 @@ def test_cache_hit(tmp_path: Path) -> None:
 
 def test_replace_append(tmp_path: Path) -> None:
     db = tmp_path / "exp.sqlite"
-    tsv = Path("tests/sample_tsv/expanded_taxa.tsv")
+    tsv = Path("tests/sample_tsv/expanded_taxa_lca_sample.tsv")
     load_expanded_taxa(db, tsv_path=tsv)
     load_expanded_taxa(db, tsv_path=tsv, if_exists="append")
     assert row_count(db) == 2 * (sum(1 for _ in tsv.open()) - 1)

@@ -27,4 +27,4 @@ COPY (
   WITH (FORMAT CSV, DELIMITER E'\t', HEADER TRUE);
 
 -- Reminder for the fixture generator:
---   mv /tmp/expanded_taxa_lca_sample.tsv tests/sample_tsv/expanded_taxa.tsv
+--   mv /tmp/expanded_taxa_lca_sample.tsv tests/sample_tsv/expanded_taxa_lca_sample.tsv

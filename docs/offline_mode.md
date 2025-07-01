@@ -21,3 +21,15 @@ Pass `--replace` to overwrite, `--tsv my.tsv` to use a local dump. Downloads are
 stored in `~/.cache/typus` unless `$TYPUS_CACHE_DIR` is set. Override the source
 URL with `--url` or `$TYPUS_EXPANDED_TAXA_URL`.
 
+## Sample LCA dataset & tests
+
+The test-suite uses a tiny dataset defined in
+`tests/sample_tsv/expanded_taxa_lca_sample.tsv`. Build the corresponding
+`expanded_taxa_lca_sample.sqlite` with:
+
+```bash
+python scripts/gen_fixture_sqlite.py
+```
+
+The resulting file stays well under 100&nbsp;KB so CI can fetch it quickly.
+
