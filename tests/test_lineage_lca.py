@@ -11,7 +11,7 @@ from typus.constants import RankLevel
 
 DSN = "postgresql+asyncpg://typus:typus@localhost:5432/typus_test"
 
-# Taxon IDs from the sample data (tests/sample_tsv/expanded_taxa.tsv)
+# Taxon IDs from the sample data (tests/sample_tsv/expanded_taxa_lca_sample.tsv)
 BEE_ANTHOPHILA = 630955  # Anthophila, epifamily, L32
 WASP_VESPIDAE = 52747  # Vespidae, family, L30
 LCA_ACULEATA_ID = (
@@ -45,7 +45,6 @@ async def test_lca_distance(taxonomy_service):
 @pytest.mark.asyncio
 async def test_postgres_lca_fallback_mechanism():
     """Test the Postgres fallback mechanism using a simple SQLite DB."""
-    pytest.skip("fallback mechanism not exercised in sandbox")
     # 1. Set up an in-memory SQLite engine (async)
     async_engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 

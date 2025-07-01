@@ -167,7 +167,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
 
         return await self.get_taxon(lca_tid)
 
-    async def distance(self, a: int, b: int) -> int:
+    async def distance(self, a: int, b: int, *, inclusive: bool = False) -> int:
         # This method originally used 'path' and 'nlevel'.
         # It needs to be updated to work without 'path' or have a fallback.
         # For now, the ticket does not explicitly require a change to distance() fallback,
@@ -198,7 +198,10 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         dist_a_to_lca = len(anc_a) - 1 - idx_lca_in_a
         dist_b_to_lca = len(anc_b) - 1 - idx_lca_in_b
 
-        return dist_a_to_lca + dist_b_to_lca
+        distance = dist_a_to_lca + dist_b_to_lca
+        if inclusive:
+            distance += 1
+        return distance
 
         # Original SQL using path:
         # sql = text(
@@ -296,6 +299,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         # and were related to a commented-out block. They are removed to fix indentation.
         # async with self._Session() as s:
         #     return await s.scalar(sql, {"a": a, "b": b})
+
 
 # End of PostgresTaxonomyService class methods.
 # The duplicated methods that caused F811 errors have been removed.

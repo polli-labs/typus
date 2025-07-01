@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Regenerate tests/fixture_typus.sqlite from TSV snippets.
+Regenerate tests/expanded_taxa_lca_sample.sqlite from TSV snippets.
 
 Run:  python scripts/gen_fixture_sqlite.py
 """
@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TSV_DIR = ROOT / "tests" / "sample_tsv"
 TYPUS_CONSTANTS_PATH = ROOT / "typus" / "constants.py"  # Path to typus constants
-DB_PATH = ROOT / "tests" / "fixture_typus.sqlite"
+DB_PATH = ROOT / "tests" / "expanded_taxa_lca_sample.sqlite"
 
 INT_RE = re.compile(r"^-?\d+$")
 
@@ -236,11 +236,10 @@ def main() -> None:
 
     for tsv in TSV_DIR.glob("*.tsv"):
         print(f"  → importing {tsv.name}")
-        if tsv.stem == "expanded_taxa":  # Process the main expanded_taxa.tsv
+        if tsv.stem == "expanded_taxa_lca_sample":
             with tsv.open(newline="") as fh:
                 reader = csv.DictReader(fh, delimiter="\t")
-                original_header = list(reader.fieldnames or [])
-                current_header = list(original_header)  # Make a mutable copy
+                reader = csv.DictReader(fh, delimiter="\t")
 
                 # Define new column names
                 new_col_immediate_ancestor_id = "immediateAncestor_taxonID"
@@ -248,16 +247,6 @@ def main() -> None:
                 new_col_immediate_major_ancestor_id = "immediateMajorAncestor_taxonID"
                 new_col_immediate_major_ancestor_rank_level = "immediateMajorAncestor_rankLevel"
                 ancestry_col = "ancestry"  # This one is kept but deprecated
-
-                # Columns to be added to the SQLite table
-                # (and potentially to the TSV if we were regenerating it)
-                db_columns_to_add = [
-                    new_col_immediate_ancestor_id,
-                    new_col_immediate_ancestor_rank_level,
-                    new_col_immediate_major_ancestor_id,
-                    new_col_immediate_major_ancestor_rank_level,
-                    ancestry_col,
-                ]
 
                 # Remove old parent columns from header if they exist from a previous version of the script/TSV
                 # For this script, we assume the input TSV does *not* have these new columns yet,
@@ -269,16 +258,19 @@ def main() -> None:
                     "majorParentID",
                     "majorParentRankLevel",
                 ]
-                final_db_header = [col for col in current_header if col not in old_parent_cols]
-
-                # Add the new DB columns to the header for SQLite table creation
-                for new_col in db_columns_to_add:
-                    if new_col not in final_db_header:
-                        final_db_header.append(new_col)
-
-                # Ensure commonName is in the header (it is in sample TSV, but could be all empty)
-                if "commonName" not in final_db_header:
-                    final_db_header.append("commonName")
+                final_db_header = [
+                    "taxonID",
+                    "rankLevel",
+                    "rank",
+                    "name",
+                    "taxonActive",
+                    "commonName",
+                    new_col_immediate_ancestor_id,
+                    new_col_immediate_ancestor_rank_level,
+                    new_col_immediate_major_ancestor_id,
+                    new_col_immediate_major_ancestor_rank_level,
+                    ancestry_col,
+                ]
 
                 cur.execute(f"DROP TABLE IF EXISTS {q(tsv.stem)};")
                 cols_ddl_parts = []
@@ -300,7 +292,8 @@ def main() -> None:
                     else:
                         cols_ddl_parts.append(f"{q(col_name)} TEXT")
                 cols_ddl = ", ".join(cols_ddl_parts)
-                cur.execute(f"CREATE TABLE {q(tsv.stem)} ({cols_ddl});")
+                table_name = "expanded_taxa" if tsv.stem == "expanded_taxa_lca_sample" else tsv.stem
+                cur.execute(f"CREATE TABLE {q(table_name)} ({cols_ddl});")
 
                 processed_rows_for_db = []
                 for row_dict in reader:
@@ -312,20 +305,6 @@ def main() -> None:
                         db_row_dict["commonName"] = (
                             db_row_dict["name"] + "_cmn"
                         )  # Suffix for auto-generated
-
-                    for r_enum in RankLevel:
-                        val_str = str(r_enum.value)
-                        if r_enum.value == 335:
-                            pfix = "L33_5"
-                        elif r_enum.value == 345:
-                            pfix = "L34_5"
-                        else:
-                            pfix = f"L{val_str}"
-
-                        common_col = f"{pfix}_commonName"
-                        name_col = f"{pfix}_name"
-                        if not db_row_dict.get(common_col) and db_row_dict.get(name_col):
-                            db_row_dict[common_col] = db_row_dict[name_col] + "_cmn"
 
                     # 2. Calculate new parent/ancestor info
                     ia_id, ia_rl = get_immediate_ancestor_info(
@@ -354,7 +333,7 @@ def main() -> None:
                     processed_rows_for_db.append([db_row_dict.get(col) for col in final_db_header])
 
                 placeholders = ", ".join("?" for _ in final_db_header)
-                insert_sql = f"INSERT INTO {q(tsv.stem)} ({', '.join(map(q, final_db_header))}) VALUES ({placeholders});"
+                insert_sql = f"INSERT INTO {q(table_name)} ({', '.join(map(q, final_db_header))}) VALUES ({placeholders});"
                 cur.executemany(insert_sql, processed_rows_for_db)
         else:  # For other TSV files like coldp_*, load them as simple tables
             load_table(cur, tsv.stem, tsv)

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.9-post1
+* completed schema-sync; new authoritative LCA & distance tests
+
 ## 0.1.8 – 2025-06-29
 ### Changed
 * **BREAKING (DB fixture only)** – parent columns in `expanded_taxa` (both SQLite fixture and expected in source TSVs for fixture generation) renamed to `immediateAncestor_taxonID`, `immediateAncestor_rankLevel`, `immediateMajorAncestor_taxonID`, `immediateMajorAncestor_rankLevel`. The `scripts/gen_fixture_sqlite.py` script now generates these columns and expects source TSVs to be compatible with this structure if they contain pre-computed parentage (though it primarily derives them from L*_taxonID columns).

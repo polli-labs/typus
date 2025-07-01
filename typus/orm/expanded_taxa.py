@@ -43,9 +43,9 @@ class ExpandedTaxa(Base):
     # The attributes `major_parent_id` and `major_parent_rank_level` were the
     # Python attribute names used previously and are now directly mapped to the
     # new `immediateMajorAncestor_*` database columns, so no synonyms are needed for them.
-    true_parent_id: Mapped[int | None] = synonym("parent_id", doc="Deprecated: use parent_id")
+    true_parent_id: Mapped[int | None] = synonym("parent_id", doc="deprecated alias for parent_id")
     true_parent_rank_level: Mapped[int | None] = synonym(
-        "parent_rank_level", doc="Deprecated: use parent_rank_level"
+        "parent_rank_level", doc="deprecated alias for parent_rank_level"
     )
 
     rank_level: Mapped[int] = mapped_column(
@@ -61,7 +61,7 @@ class ExpandedTaxa(Base):
     # ancestry helpers
     ancestry_str: Mapped[str | None] = deferred(
         mapped_column("ancestry", String, nullable=True),
-        doc="Deprecated: pipe-delimited IDs, populated by fixture generator. Production code should not rely on this.",
+        doc="deprecated — replaced by immediate* columns",
     )
     path_ltree: Mapped[str | None] = deferred(
         mapped_column("path", String, nullable=True),
@@ -69,7 +69,7 @@ class ExpandedTaxa(Base):
     )
 
     # Materialized expanded per-rank columns for ALL ranks in RankLevel
-    # These must match the column names in tests/sample_tsv/expanded_taxa.tsv
+    # These must match the column names in tests/sample_tsv/expanded_taxa_lca_sample.tsv
     # And the ORM attribute names should be Pythonic (lowercase with underscore)
     for rank_enum_member in RankLevel:
         attr_prefix = rank_enum_member.name.lower()  # e.g., "l10", "l335" for RankLevel.L335
