@@ -44,13 +44,13 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
 
     def __init__(self, path: str | Path | None = None):
         if path is None:
-            path = Path(__file__).parent.parent.parent / "tests" / "expanded_taxa_lca_sample.sqlite"
+            path = Path(__file__).parent.parent.parent / "tests" / "expanded_taxa_sample.sqlite"
             if not path.exists():
                 sample_tsv = (
                     Path(__file__).parent.parent.parent
                     / "tests"
                     / "sample_tsv"
-                    / "expanded_taxa_lca_sample.tsv"
+                    / "expanded_taxa_sample.tsv"
                 )
                 from .sqlite_loader import load_expanded_taxa
 

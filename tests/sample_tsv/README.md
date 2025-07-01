@@ -18,8 +18,7 @@ These files contain samples from the Catalog of Life Data Package (ColDP) tables
 ### Mapping and Taxa Tables
 
 - `inat_to_coldp_taxon_map.tsv`: Crosswalk between iNaturalist taxa and Catalog of Life taxa
-- `expanded_taxa_sample.tsv`: Basic sample of the expanded_taxa table with taxonomic hierarchies and common names
-- `expanded_taxa_lca_sample.tsv`: Specialized sample containing the full taxonomy for bees (Anthophila) and wasps (Vespoidea), designed for testing Lowest Common Ancestor (LCA) algorithms and taxonomic distance calculations
+- `expanded_taxa_sample.tsv`: Sample of the expanded_taxa table with common names and a focused subset of bees and wasps for LCA and distance tests
 
 ## Usage for SQLite Testing
 
@@ -40,7 +39,7 @@ for table_name in ['coldp_name_usage', 'coldp_vernacular_name', 'coldp_distribut
     df.to_sql(table_name, conn, if_exists='replace', index=False)
     
 # Optionally load the specialized LCA sample data
-df_lca = pd.read_csv('expanded_taxa_lca_sample.tsv', sep='\t')
+df_lca = pd.read_csv('expanded_taxa_sample.tsv', sep='\t')
 df_lca.to_sql('expanded_taxa', conn, if_exists='replace', index=False)
 
 # Create view for expanded_taxa_cmn if needed
@@ -73,7 +72,7 @@ The relationships between these tables mirror those in the full database:
 
 ## Lowest Common Ancestor (LCA) Testing
 
-The `expanded_taxa_lca_sample.tsv` file contains a carefully selected set of taxa from the honey bee (Apis) and wasp (Vespa/Vespula) lineages, which can be used to test:
+The `expanded_taxa_sample.tsv` file contains a carefully selected set of taxa from the honey bee (Apis) and wasp (Vespa/Vespula) lineages, which can be used to test:
 
 1. **Lowest Common Ancestor (LCA) functionality** - For example:
    - LCA of Apis mellifera (47219) and Vespa crabro (54327) is Hymenoptera (47201)
@@ -107,7 +106,7 @@ COPY (
         t."taxonID" IN (630955, 47201, 47216, 47337, 47338, 184884, 47369, 47218, 52747, 52775, 295935)
         OR t."name" IN ('Hymenoptera', 'Anthophila', 'Apis', 'Apis mellifera', 'Apidae', 'Animalia', 'Arthropoda', 'Insecta',
                         'Vespidae', 'Vespa', 'Vespa mandarinia', 'Vespoidea', 'Scoliidae', 'Vespa crabro', 'Vespinae', 'Vespula', 'Vespula vulgaris')
-) TO '/tmp/expanded_taxa_lca_sample.tsv' WITH (FORMAT CSV, DELIMITER E'\t', HEADER TRUE);
+) TO '/tmp/expanded_taxa_sample.tsv' WITH (FORMAT CSV, DELIMITER E'\t', HEADER TRUE);
 ```
 
 To run this query and generate the sample data:
@@ -120,7 +119,7 @@ docker cp docs/sample_data/generate_lca_sample.sql ibridaDB:/tmp/
 docker exec ibridaDB psql -U postgres -d ibrida-v0-r1 -f /tmp/generate_lca_sample.sql
 
 # Copy the results back from the container
-docker cp ibridaDB:/tmp/expanded_taxa_lca_sample.tsv docs/sample_data/expanded_taxa_lca_sample.tsv
+docker cp ibridaDB:/tmp/expanded_taxa_sample.tsv docs/sample_data/expanded_taxa_sample.tsv
 ```
 
 This process ensures the sample includes all columns from the expanded_taxa table, including all rank levels (L5 through L70) with their taxonID, name, and commonName fields, which is critical for accurate LCA testing.

@@ -31,6 +31,21 @@ def _schema_ok(conn: sqlite3.Connection) -> bool:
     return required.issubset(cols)
 
 
+def _ensure_self_consistent(db: Path) -> None:
+    conn = sqlite3.connect(str(db))
+    conn.execute(
+        """
+        UPDATE expanded_taxa
+        SET "immediateAncestor_taxonID" = "immediateMajorAncestor_taxonID",
+            "immediateAncestor_rankLevel" = "immediateMajorAncestor_rankLevel"
+        WHERE "immediateAncestor_taxonID" IS NULL
+           OR "immediateAncestor_taxonID" NOT IN (SELECT "taxonID" FROM expanded_taxa)
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
 def _download(url: str, dest: Path) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     resp = requests.get(url, stream=True)
@@ -129,6 +144,7 @@ def load_expanded_taxa(
     if_exists: Literal["fail", "replace", "append"] = "fail",
     *,
     cache_dir: Path | None = None,
+    force_self_consistent: bool = False,
 ) -> Path:
     if cache_dir is None:
         cache_dir = Path(os.getenv("TYPUS_CACHE_DIR", Path.home() / ".cache" / "typus"))
@@ -145,7 +161,13 @@ def load_expanded_taxa(
             with gzip.open(tsv_path, "rb") as r, (cache_dir / tsv_path.stem).open("wb") as w:
                 w.write(r.read())
             tsv_path = cache_dir / tsv_path.stem
-        _tsv_to_sqlite(tsv_path, sqlite_path, "replace" if not sqlite_path.exists() else if_exists)
+        _tsv_to_sqlite(
+            tsv_path,
+            sqlite_path,
+            "replace" if not sqlite_path.exists() else if_exists,
+        )
+        if force_self_consistent:
+            _ensure_self_consistent(sqlite_path)
         return sqlite_path
     # download
     file_name = Path(url).name
@@ -162,8 +184,12 @@ def load_expanded_taxa(
                 w.write(r.read())
             tsv_path = cache_dir / "expanded_taxa.tsv"
             _tsv_to_sqlite(tsv_path, sqlite_path, "replace")
+            if force_self_consistent:
+                _ensure_self_consistent(sqlite_path)
             return sqlite_path
     sqlite_path.write_bytes(cached.read_bytes())
+    if force_self_consistent:
+        _ensure_self_consistent(sqlite_path)
     return sqlite_path
 
 
