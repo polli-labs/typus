@@ -1,9 +1,14 @@
 # Changelog
 
+## 0.1.10
+* relaxed dependency constraints for `polars` (<2) and `requests` (<4)
+
 ## 0.1.9
-* completed schema-sync; new authoritative LCA & distance tests
-* `SQLiteTaxonomyService.distance` now defaults to `include_minor_ranks=False` and `inclusive=False`
-* sample TSV renamed to `expanded_taxa_sample.tsv`; fixture generated as `expanded_taxa_sample.sqlite`
+* NEW: `sqlite_loader` service with `typus-load-sqlite` CLI for offline databases
+* CHG: Postgres service falls back to recursive CTEs when path columns missing
+* DOC: Added MkDocs site with `offline_mode.md` and `expanded_taxa.md`
+* TEST: expanded suite covering offline loader and LCA cases
+* DEP: optional extras for PyArrow and MkDocs
 
 ## 0.1.8 – 2025-06-29
 ### Changed

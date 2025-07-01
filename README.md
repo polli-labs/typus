@@ -23,6 +23,7 @@ database services. Anything that speaks taxonomy imports **Typus** and stays DRY
   multi‑scale elevation sinusoids.
 * **Optional drivers only when you need them** – install
   `polli-typus[postgres]` or `[sqlite]`; core install stays lightweight.
+* **Offline SQLite loader** – `typus-load-sqlite` CLI builds and caches the offline dataset
 
 ---
 
@@ -87,6 +88,9 @@ from typus.services import SQLiteTaxonomyService, load_expanded_taxa
 db = Path("expanded_taxa.sqlite")
 load_expanded_taxa(db)  # downloads if missing
 svc = SQLiteTaxonomyService(db)
+```
+```bash
+typus-load-sqlite --sqlite expanded_taxa.sqlite
 ```
 
 ---
