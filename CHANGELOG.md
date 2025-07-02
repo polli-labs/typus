@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.11
+* added automated docs deployment to docs.polli.ai/typus/
+
 ## 0.1.10
 * relaxed dependency constraints for `polars` (<2) and `requests` (<4)
 
