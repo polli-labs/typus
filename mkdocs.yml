@@ -9,6 +9,7 @@ nav:
   - Taxonomy Service:
       - Offline mode: offline_mode.md
       - expanded_taxa schema: expanded_taxa.md
+  - Models: models.md
 plugins: []
 markdown_extensions:
   - tables
