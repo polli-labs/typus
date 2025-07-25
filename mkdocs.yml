@@ -5,8 +5,9 @@ theme:
     - navigation.sections
     - navigation.top
 nav:
-  - Home: index.md         # Create docs/index.md
+  - Home: index.md
   - Taxonomy Service:
+      - Overview: taxonomy_service.md
       - Offline mode: offline_mode.md
       - expanded_taxa schema: expanded_taxa.md
   - Models: models.md
