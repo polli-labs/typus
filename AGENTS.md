@@ -22,6 +22,9 @@ Obey these rules when modifying Typus.
    * Use the `taxonomy_service` fixture provided by `conftest.py`
      (auto-selects Postgres or SQLite).
         * Note: becuase Codex environments are sandboxed, you must generate the sqlite fixture via `scripts/gen_fixture_sqlite.py` (postgres not an option without network access).
+   * **Optional Database Tests**: Some tests in `test_async_compatibility.py` require
+     a real PostgreSQL database and will be skipped in CI unless `TYPUS_TEST_DSN` is set.
+     CI-friendly mock versions are provided in `test_async_compatibility_ci.py`.
 
 
 5. **Docs**  

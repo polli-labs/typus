@@ -81,16 +81,10 @@ def _tsv_to_sqlite(tsv_path: Path, sqlite_path: Path, mode: Literal["replace", "
     if mode == "replace":
         conn.execute("DROP TABLE IF EXISTS expanded_taxa;")
     if not _schema_ok(conn):
-        # create schema from header + ancestry column
+        # create schema from header
         with tsv_path.open("r") as fh:
             header = fh.readline().rstrip("\n").split("\t")
-        cols = header + [
-            c
-            for c in [
-                "ancestry",
-            ]
-            if c not in header
-        ]
+        cols = header
         col_defs = []
         for c in cols:
             if (
@@ -109,27 +103,6 @@ def _tsv_to_sqlite(tsv_path: Path, sqlite_path: Path, mode: Literal["replace", "
         pdf = batch.to_pandas()
         if "taxonActive" in pdf.columns:
             pdf["taxonActive"] = pdf["taxonActive"].map(lambda x: 1 if str(x).lower() == "t" else 0)
-        # compute ancestry if absent
-        if "ancestry" not in pdf.columns:
-            ancestry_values = []
-            rank_cols = [c for c in pdf.columns if c.startswith("L") and c.endswith("_taxonID")]
-            rank_nums = [float(c[1:-8].replace("_", ".")) for c in rank_cols]
-            ordered = [x for _, x in sorted(zip(rank_nums, rank_cols), reverse=True)]
-            for _idx, row in pdf.iterrows():
-                lineage = []
-                current = int(row["rankLevel"])
-                for col, num in zip(ordered, sorted(rank_nums, reverse=True)):
-                    if num >= current:
-                        val = row[col]
-                        if val not in [None, "", "NULL"]:
-                            try:
-                                v = int(val)
-                                if v not in lineage:
-                                    lineage.append(v)
-                            except ValueError:
-                                pass
-                ancestry_values.append("|".join(map(str, lineage)))
-            pdf["ancestry"] = ancestry_values
         pdf.to_sql(
             "expanded_taxa", conn, if_exists="append", index=False, method="multi", chunksize=50000
         )
