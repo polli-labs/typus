@@ -191,41 +191,7 @@ def get_immediate_major_ancestor_info(
     return major_ancestor_id, major_ancestor_rank_level
 
 
-def get_ancestry_str(row_dict: dict) -> str:
-    lineage_ids_ordered = []
-    current_taxon_rank_val = int(row_dict["rankLevel"])
-
-    # Iterate all RankLevels from highest (e.g. L70 Kingdom) down to current_taxon_rank_val inclusive
-    for r_enum_anc in ALL_RANK_ENUMS_SORTED_DESC:  # High rank value to low rank value
-        anc_r_val = r_enum_anc.value
-        if anc_r_val >= current_taxon_rank_val:
-            db_col_val_str = str(anc_r_val)
-            if anc_r_val == 335:
-                prefix = "L33_5"  # Match TSV column names
-            elif anc_r_val == 345:
-                prefix = "L34_5"
-            else:
-                prefix = f"L{db_col_val_str}"
-
-            id_val = row_dict.get(f"{prefix}_taxonID")
-            if id_val is not None and str(id_val).strip() not in ["", "NULL"]:
-                try:
-                    id_int = int(id_val)
-                    # The L{X}_taxonID for rank X is the ancestor at that rank.
-                    # The list forms from highest rank to lowest for self.
-                    # We want root -> self. This order is correct if L-cols are populated correctly.
-                    lineage_ids_ordered.append(id_int)
-                except ValueError:
-                    pass  # Skip if not a valid integer
-
-    # Remove duplicates while preserving order (from highest rank to current rank)
-    # The L{X}_taxonID columns are supposed to represent the *unique* ancestor at that rank level.
-    # So, theoretically, all IDs in lineage_ids_ordered should already be unique if the source expanded_taxa is correct.
-    # However, a simple unique pass is safe.
-    seen = set()
-    unique_lineage_ids = [x for x in lineage_ids_ordered if not (x in seen or seen.add(x))]
-
-    return "|".join(map(str, unique_lineage_ids))
+# Function get_ancestry_str removed - no longer needed since ancestry column is deprecated
 
 
 def main() -> None:
@@ -246,7 +212,6 @@ def main() -> None:
                 new_col_immediate_ancestor_rank_level = "immediateAncestor_rankLevel"
                 new_col_immediate_major_ancestor_id = "immediateMajorAncestor_taxonID"
                 new_col_immediate_major_ancestor_rank_level = "immediateMajorAncestor_rankLevel"
-                ancestry_col = "ancestry"  # This one is kept but deprecated
 
                 # Remove old parent columns from header if they exist from a previous version of the script/TSV
                 # For this script, we assume the input TSV does *not* have these new columns yet,
@@ -257,6 +222,7 @@ def main() -> None:
                     "trueParentRankLevel",
                     "majorParentID",
                     "majorParentRankLevel",
+                    "ancestry",  # Remove ancestry column as well
                 ]
                 final_db_header = [
                     "taxonID",
@@ -269,7 +235,7 @@ def main() -> None:
                     new_col_immediate_ancestor_rank_level,
                     new_col_immediate_major_ancestor_id,
                     new_col_immediate_major_ancestor_rank_level,
-                    ancestry_col,
+                    # ancestry column removed - no longer generated
                 ]
 
                 table_name = "expanded_taxa" if tsv.stem == "expanded_taxa_sample" else tsv.stem
@@ -331,8 +297,7 @@ def main() -> None:
                     db_row_dict[new_col_immediate_major_ancestor_id] = ima_id
                     db_row_dict[new_col_immediate_major_ancestor_rank_level] = ima_rl
 
-                    # 3. Calculate ancestry string (remains as "ancestry" but is deprecated)
-                    db_row_dict[ancestry_col] = get_ancestry_str(row_dict)
+                    # 3. ancestry column removed - no longer generated
 
                     # 4. Handle taxonActive boolean
                     if "taxonActive" in db_row_dict:  # Check in db_row_dict

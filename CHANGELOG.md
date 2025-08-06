@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0
+### Changed
+* **BREAKING**: `ancestry` column deprecated in favor of immediate ancestor columns and expanded hierarchy columns
+  - PostgreSQL databases without `ancestry` column are now fully supported
+  - `distance()` method now works without ancestry by traversing parent relationships
+  - All raw SQL queries updated to use correct production column names (`taxonID` not `taxon_id`)
+* **FIX**: Resolved MissingGreenlet error in pure asyncio contexts (FastAPI/uvicorn)
+  - Service no longer attempts to access deferred columns that may not exist
+  - Gracefully handles both legacy (with ancestry) and modern (without ancestry) database schemas
+* **NEW**: CI-friendly mock tests for async compatibility verification
+* **NEW**: Enhanced documentation for expanded_taxa table structure
+* **CHG**: Updated all column references to match production database schema
+* **TEST**: Added comprehensive async compatibility test suite
+
 ## 0.1.11
 * added automated docs deployment to docs.polli.ai/typus/
 

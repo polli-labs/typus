@@ -1,6 +1,6 @@
 [project]
 name            = "polli-typus"
-version         = "0.1.12"
+version         = "0.2.0"
 description     = "Taxonomic types, projections and async taxonomy services for Polli-Labs."
 readme          = { file = "README.md", content-type = "text/markdown" }
 license         = "MIT"

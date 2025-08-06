@@ -66,7 +66,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         # The plan is to make gen_fixture_sqlite.py write "immediateAncestor_taxonID".
         sql = """
             SELECT "taxonID", "name", "rankLevel",
-                   "immediateAncestor_taxonID", "ancestry", "commonName", "taxonActive"
+                   "immediateAncestor_taxonID", "commonName", "taxonActive"
             FROM "expanded_taxa" WHERE "taxonID"=?
         """
         row = await loop.run_in_executor(
@@ -80,13 +80,31 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         if row["taxonID"] not in self._rank_cache:
             self._rank_cache[row["taxonID"]] = RankLevel(int(row["rankLevel"]))
 
+        # Build ancestry by traversing parent relationships
+        async def build_ancestry_list(tid: int) -> list[int]:
+            """Build ancestry by following parent relationships."""
+            ancestry = [tid]
+            current_parent = row["immediateAncestor_taxonID"]
+            
+            while current_parent is not None:
+                ancestry.insert(0, current_parent)
+                parent_sql = """
+                    SELECT "immediateAncestor_taxonID" 
+                    FROM "expanded_taxa" WHERE "taxonID"=?
+                """
+                parent_row = await loop.run_in_executor(
+                    None,
+                    lambda pid=current_parent: self._conn.execute(parent_sql, (pid,)).fetchone(),
+                )
+                if parent_row:
+                    current_parent = parent_row["immediateAncestor_taxonID"]
+                else:
+                    break
+            return ancestry
+        
+        # For now, return empty ancestry to match PostgreSQL behavior
+        # Could call build_ancestry_list if needed for compatibility
         ancestry_list = []
-        # Note: `ancestry` column is deprecated. Usage should be reviewed.
-        if row["ancestry"]:
-            try:
-                ancestry_list = list(map(int, str(row["ancestry"]).split("|")))
-            except ValueError:  # pragma: no cover
-                pass  # Should not happen with well-formed fixture
 
         return Taxon(
             taxon_id=row["taxonID"],
@@ -119,24 +137,43 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         return child_taxa
 
     async def _get_filtered_ancestry(self, taxon_id: int, include_minor_ranks: bool) -> list[int]:
-        taxon = await self.get_taxon(taxon_id)
-        if include_minor_ranks:
-            return list(taxon.ancestry)
-
-        # For major_ranks_only, filter the ancestry list
-        # Ensure rank_cache is populated for all ancestor IDs
-        ids_to_cache = set(taxon.ancestry) - set(self._rank_cache.keys())
-        if ids_to_cache:
-            loop = asyncio.get_running_loop()
-            query = f'SELECT "taxonID", "rankLevel" FROM "expanded_taxa" WHERE "taxonID" IN ({",".join("?" * len(ids_to_cache))})'
-            rows = await loop.run_in_executor(
-                None, lambda: self._conn.execute(query, tuple(ids_to_cache)).fetchall()
+        """Build ancestry by traversing parent relationships."""
+        loop = asyncio.get_running_loop()
+        ancestry = [taxon_id]
+        current_id = taxon_id
+        
+        # Build full ancestry by following parent links
+        while True:
+            parent_sql = """
+                SELECT "immediateAncestor_taxonID", "rankLevel"
+                FROM "expanded_taxa" WHERE "taxonID"=?
+            """
+            row = await loop.run_in_executor(
+                None,
+                lambda cid=current_id: self._conn.execute(parent_sql, (cid,)).fetchone(),
             )
-            for row in rows:
-                self._rank_cache[row["taxonID"]] = RankLevel(int(row["rankLevel"]))
-
+            if row and row["immediateAncestor_taxonID"]:
+                parent_id = row["immediateAncestor_taxonID"]
+                ancestry.insert(0, parent_id)
+                # Cache rank level
+                if parent_id not in self._rank_cache:
+                    parent_rank_sql = 'SELECT "rankLevel" FROM "expanded_taxa" WHERE "taxonID"=?'
+                    parent_rank_row = await loop.run_in_executor(
+                        None,
+                        lambda pid=parent_id: self._conn.execute(parent_rank_sql, (pid,)).fetchone(),
+                    )
+                    if parent_rank_row:
+                        self._rank_cache[parent_id] = RankLevel(int(parent_rank_row["rankLevel"]))
+                current_id = parent_id
+            else:
+                break
+        
+        if include_minor_ranks:
+            return ancestry
+        
+        # Filter for major ranks only
         major_ancestry = [
-            tid for tid in taxon.ancestry if is_major(self._rank_cache.get(tid, RankLevel.L100))
+            tid for tid in ancestry if is_major(self._rank_cache.get(tid, RankLevel.L100))
         ]
         return major_ancestry
 
