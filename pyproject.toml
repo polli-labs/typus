@@ -51,7 +51,8 @@ dev = [
   "pyarrow>=16,<17",
   "mkdocs>=1.6,<2",
   "mkdocs-material>=9.5,<10",
-  "pytest-httpserver>=1.0"
+  "pytest-httpserver>=1.0",
+  "tqdm>=4.66"
 ]
 
 # Nice explicit extra if you want to keep core tiny:

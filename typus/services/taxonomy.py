@@ -50,6 +50,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
     async def get_taxon(self, taxon_id: int) -> Taxon:
         async with self._Session() as s:
             # ORM mapping ExpandedTaxa.parent_id to immediateAncestor_taxonID handles this
+            # Note: We don't use undefer for ancestry_str since it may not exist in all databases
             stmt = select(ExpandedTaxa).where(ExpandedTaxa.taxon_id == taxon_id)
             row = await s.scalar(stmt)
             if row is None:
@@ -63,10 +64,10 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         sql = text(
             """
             WITH RECURSIVE sub AS (
-              SELECT *, 0 AS lvl FROM expanded_taxa WHERE taxon_id = :tid
+              SELECT *, 0 AS lvl FROM expanded_taxa WHERE "taxonID" = :tid
               UNION ALL
               SELECT et.*, sub.lvl + 1 FROM expanded_taxa et
-                JOIN sub ON et."immediateAncestor_taxonID" = sub.taxon_id
+                JOIN sub ON et."immediateAncestor_taxonID" = sub."taxonID"
               WHERE sub.lvl < :d )
             SELECT * FROM sub WHERE lvl > 0;
             """
@@ -99,7 +100,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         anchor_parts = []
         for i, tid in enumerate(taxon_ids):
             anchor_parts.append(
-                f'SELECT {tid} AS query_taxon_id, taxon_id, "immediateAncestor_taxonID" AS parent_id, 0 AS lvl FROM expanded_taxa WHERE taxon_id = {tid}'
+                f'SELECT {tid} AS query_taxon_id, "taxonID" as taxon_id, "immediateAncestor_taxonID" AS parent_id, 0 AS lvl FROM expanded_taxa WHERE "taxonID" = {tid}'
             )
         anchor_sql = " UNION ALL ".join(anchor_parts)
 
@@ -107,9 +108,9 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
             WITH RECURSIVE taxon_ancestors (query_taxon_id, taxon_id, parent_id, lvl) AS (
                 {anchor_sql}
                 UNION ALL
-                SELECT ta.query_taxon_id, et.taxon_id, et."immediateAncestor_taxonID", ta.lvl + 1
+                SELECT ta.query_taxon_id, et."taxonID" as taxon_id, et."immediateAncestor_taxonID", ta.lvl + 1
                 FROM expanded_taxa et
-                JOIN taxon_ancestors ta ON et.taxon_id = ta.parent_id
+                JOIN taxon_ancestors ta ON et."taxonID" = ta.parent_id
                 WHERE ta.parent_id IS NOT NULL
             )
             SELECT taxon_id
@@ -269,9 +270,9 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         sql = text(
             f"""
             WITH RECURSIVE sub AS (
-              SELECT taxon_id, "immediateAncestor_taxonID" AS parent_id FROM expanded_taxa WHERE taxon_id IN ({roots_sql})
+              SELECT "taxonID" as taxon_id, "immediateAncestor_taxonID" AS parent_id FROM expanded_taxa WHERE "taxonID" IN ({roots_sql})
               UNION ALL 
-              SELECT et.taxon_id, et."immediateAncestor_taxonID" FROM expanded_taxa et
+              SELECT et."taxonID" as taxon_id, et."immediateAncestor_taxonID" FROM expanded_taxa et
                 JOIN sub ON et."immediateAncestor_taxonID" = sub.taxon_id
             )
             SELECT taxon_id, parent_id FROM sub;
@@ -289,14 +290,21 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
     def _row_to_taxon(self, row: ExpandedTaxa) -> Taxon:
         # This method expects an ORM row object (ExpandedTaxa instance)
         ancestry_list = []
-        if row.ancestry_str:  # Use the ORM attribute for ancestry string
-            try:
-                ancestry_list = list(map(int, str(row.ancestry_str).split("|")))
-            except ValueError:  # pragma: no cover
-                logger.warning(
-                    f"Could not parse ancestry string: {row.ancestry_str} for taxon {row.taxon_id}"
-                )
-                pass
+        # Check if ancestry_str attribute is loaded (it may not exist in all databases)
+        try:
+            # Try to access ancestry_str - if the column doesn't exist in the DB,
+            # or if it wasn't loaded, this will be None or raise an exception
+            ancestry_str = getattr(row, 'ancestry_str', None)
+            if ancestry_str:
+                try:
+                    ancestry_list = list(map(int, str(ancestry_str).split("|")))
+                except ValueError:  # pragma: no cover
+                    logger.warning(
+                        f"Could not parse ancestry string: {ancestry_str} for taxon {row.taxon_id}"
+                    )
+        except Exception:
+            # If we can't access ancestry_str, just use empty ancestry
+            pass
 
         return Taxon(
             taxon_id=row.taxon_id,
@@ -325,7 +333,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
                 pass
 
         return Taxon(
-            taxon_id=row_mapping["taxon_id"],
+            taxon_id=row_mapping.get("taxon_id") or row_mapping.get("taxonID"),
             scientific_name=row_mapping[
                 "name"
             ],  # Assuming 'name' is the col name for scientific_name
