@@ -60,10 +60,6 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
 
     async def get_taxon(self, taxon_id: int) -> Taxon:
         loop = asyncio.get_running_loop()
-        # Uses "immediateAncestor_taxonID" as per new schema plan for fixtures
-        # The ORM handles mapping ExpandedTaxa.parent_id to this.
-        # For raw SQL, we need to use the actual column name that will be in the fixture.
-        # The plan is to make gen_fixture_sqlite.py write "immediateAncestor_taxonID".
         sql = """
             SELECT "taxonID", "name", "rankLevel",
                    "immediateAncestor_taxonID", "commonName", "taxonActive"
@@ -80,38 +76,13 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         if row["taxonID"] not in self._rank_cache:
             self._rank_cache[row["taxonID"]] = RankLevel(int(row["rankLevel"]))
 
-        # Build ancestry by traversing parent relationships
-        async def build_ancestry_list(tid: int) -> list[int]:
-            """Build ancestry by following parent relationships."""
-            ancestry = [tid]
-            current_parent = row["immediateAncestor_taxonID"]
-            
-            while current_parent is not None:
-                ancestry.insert(0, current_parent)
-                parent_sql = """
-                    SELECT "immediateAncestor_taxonID" 
-                    FROM "expanded_taxa" WHERE "taxonID"=?
-                """
-                parent_row = await loop.run_in_executor(
-                    None,
-                    lambda pid=current_parent: self._conn.execute(parent_sql, (pid,)).fetchone(),
-                )
-                if parent_row:
-                    current_parent = parent_row["immediateAncestor_taxonID"]
-                else:
-                    break
-            return ancestry
-        
-        # For now, return empty ancestry to match PostgreSQL behavior
-        # Could call build_ancestry_list if needed for compatibility
-        ancestry_list = []
-
+        # Return with empty ancestry list - computed on demand if needed
         return Taxon(
             taxon_id=row["taxonID"],
             scientific_name=row["name"],
             rank_level=RankLevel(int(row["rankLevel"])),
-            parent_id=row["immediateAncestor_taxonID"],  # Read directly from the new column name
-            ancestry=ancestry_list,
+            parent_id=row["immediateAncestor_taxonID"],
+            ancestry=[],  # Empty - matches PostgreSQL behavior
             vernacular={"en": [row["commonName"]]} if row["commonName"] else {},
         )
 
@@ -178,88 +149,160 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         return major_ancestry
 
     async def lca(self, taxon_ids: set[int], *, include_minor_ranks: bool = False) -> Taxon:
+        """Compute lowest common ancestor using efficient algorithms.
+        
+        For major ranks only: Uses expanded L*_taxonID columns.
+        For all ranks: Uses ancestry traversal.
+        """
         if not taxon_ids:
             raise ValueError("taxon_ids set cannot be empty for LCA calculation.")
         if len(taxon_ids) == 1:
             return await self.get_taxon(list(taxon_ids)[0])
 
-        ancestries = []
-        for tid in taxon_ids:
-            anc_path = await self._get_filtered_ancestry(tid, include_minor_ranks)
-            ancestries.append(anc_path)
-
-        if not ancestries:
-            return await self.get_taxon(list(taxon_ids)[0])
-
-        common_prefix = ancestries[0]
-        for i in range(1, len(ancestries)):
-            current_common = []
-            for j in range(min(len(common_prefix), len(ancestries[i]))):
-                if common_prefix[j] == ancestries[i][j]:
-                    current_common.append(common_prefix[j])
-                else:
-                    break
-            common_prefix = current_common
-
-        if not common_prefix:
-            # This means no common root, which shouldn't happen if 'Life' is an ancestor.
-            # Fallback or error. For tests, this implies data issue or algorithm error.
+        loop = asyncio.get_running_loop()
+        
+        if not include_minor_ranks:
+            # Use expanded columns for major ranks
+            # From MAJOR_LEVELS: 10=species, 20=genus, 30=tribe, 40=order, 50=class, 60=subphylum, 70=kingdom
+            major_levels = [10, 20, 30, 40, 50, 60, 70]  # species to kingdom
+            
+            # Build query to fetch major rank columns
+            taxon_list = list(taxon_ids)
+            placeholders = ",".join(["?" for _ in taxon_list])
+            
+            # Build column list
+            column_names = []
+            for level in major_levels:
+                column_names.append(f'"L{level}_taxonID"')
+            column_names.append('"taxonID"')
+            
+            columns_str = ", ".join(column_names)
+            
+            sql = f"""
+                SELECT {columns_str}
+                FROM expanded_taxa
+                WHERE "taxonID" IN ({placeholders})
+            """
+            
+            rows = await loop.run_in_executor(
+                None,
+                lambda: self._conn.execute(sql, taxon_list).fetchall(),
+            )
+            
+            if len(rows) != len(taxon_ids):
+                raise ValueError(f"Some taxa not found: {taxon_ids}")
+            
+            # Find deepest common ancestor
+            for level in major_levels:
+                col_name = f"L{level}_taxonID"
+                
+                values_at_level = set()
+                for row in rows:
+                    val = row[col_name]
+                    if val is not None:
+                        values_at_level.add(val)
+                
+                # If all taxa have the same non-null value, that's our LCA
+                if len(values_at_level) == 1:
+                    lca_id = values_at_level.pop()
+                    return await self.get_taxon(lca_id)
+                    
             raise ValueError(f"No common ancestor found for taxon IDs: {taxon_ids}")
+            
+        else:
+            # Use ancestry traversal for all ranks
+            ancestries = []
+            for tid in taxon_ids:
+                anc_path = await self._get_filtered_ancestry(tid, include_minor_ranks)
+                ancestries.append(anc_path)
 
-        # Try to get the LCA taxon starting from the end of the common prefix
-        # and moving backwards until we find a taxon that exists in the database
-        for lca_id in reversed(common_prefix):
-            try:
-                return await self.get_taxon(lca_id)
-            except KeyError:
-                continue
+            if not ancestries:
+                return await self.get_taxon(list(taxon_ids)[0])
 
-        # If we couldn't find any common ancestor in the database, raise an error
-        raise ValueError(f"No valid LCA found in the database for taxon IDs: {taxon_ids}")
+            common_prefix = ancestries[0]
+            for i in range(1, len(ancestries)):
+                current_common = []
+                for j in range(min(len(common_prefix), len(ancestries[i]))):
+                    if common_prefix[j] == ancestries[i][j]:
+                        current_common.append(common_prefix[j])
+                    else:
+                        break
+                common_prefix = current_common
+
+            if not common_prefix:
+                raise ValueError(f"No common ancestor found for taxon IDs: {taxon_ids}")
+
+            # Get the deepest common ancestor
+            for lca_id in reversed(common_prefix):
+                try:
+                    return await self.get_taxon(lca_id)
+                except KeyError:
+                    continue
+
+            raise ValueError(f"No valid LCA found in the database for taxon IDs: {taxon_ids}")
 
     async def distance(
         self, a: int, b: int, *, include_minor_ranks: bool = False, inclusive: bool = False
     ) -> int:
-        """Calculate the taxonomic distance (number of steps) between two taxa.
-
-        The distance is the total number of edges in the path between two taxa,
-        calculated as the sum of the distances from each taxon to their lowest common ancestor.
-
-        For taxa that are directly related (one is an ancestor of the other), the distance
-        is simply the number of steps between them.
-
-        For identical taxa, the distance is 0.
+        """Calculate the taxonomic distance between two taxa.
+        
+        Efficiently counts steps via parent traversal without building full ancestry.
         """
-        # Identity check - if the same taxon, distance is 0
         if a == b:
             return 0
 
-        # Find the lowest common ancestor
+        # Find the LCA first
         lca_taxon = await self.lca({a, b}, include_minor_ranks=include_minor_ranks)
-
-        # Get the ancestry paths for both taxa
-        anc_a = await self._get_filtered_ancestry(a, include_minor_ranks)
-        anc_b = await self._get_filtered_ancestry(b, include_minor_ranks)
-
-        # Find the position of the LCA in each ancestry path
-        try:
-            idx_lca_in_a = anc_a.index(lca_taxon.taxon_id)
-            idx_lca_in_b = anc_b.index(lca_taxon.taxon_id)
-        except ValueError:
-            raise ValueError(
-                f"LCA {lca_taxon.taxon_id} not found in ancestry paths for {a} or {b}."
-            )
-
-        # Calculate the distance from each taxon to the LCA
-        # The distance is the number of steps/edges, which is (len(path_segment) - 1)
-        # where path_segment is the part of the ancestry from the taxon to the LCA (inclusive)
-        dist_a_to_lca = len(anc_a) - 1 - idx_lca_in_a
-        dist_b_to_lca = len(anc_b) - 1 - idx_lca_in_b
-
-        distance = dist_a_to_lca + dist_b_to_lca
+        lca_id = lca_taxon.taxon_id
+        
+        # If one is the LCA of the other, calculate direct distance
+        if lca_id == a:
+            dist = await self._distance_to_ancestor(b, a, include_minor_ranks)
+            return dist + (1 if inclusive else 0)
+        if lca_id == b:
+            dist = await self._distance_to_ancestor(a, b, include_minor_ranks)
+            return dist + (1 if inclusive else 0)
+        
+        # Calculate distance from each to LCA
+        dist_a = await self._distance_to_ancestor(a, lca_id, include_minor_ranks)
+        dist_b = await self._distance_to_ancestor(b, lca_id, include_minor_ranks)
+        
+        distance = dist_a + dist_b
         if inclusive:
             distance += 1
         return distance
+    
+    async def _distance_to_ancestor(
+        self, descendant: int, ancestor: int, include_minor_ranks: bool
+    ) -> int:
+        """Count steps from descendant to ancestor."""
+        loop = asyncio.get_running_loop()
+        
+        if include_minor_ranks:
+            parent_col = '"immediateAncestor_taxonID"'
+        else:
+            parent_col = '"immediateMajorAncestor_taxonID"'
+        
+        # Use recursive CTE to count steps
+        sql = f"""
+            WITH RECURSIVE path AS (
+                SELECT "taxonID", {parent_col} as parent, 0 as distance
+                FROM expanded_taxa WHERE "taxonID" = ?
+                UNION ALL
+                SELECT p.parent, et.{parent_col}, p.distance + 1
+                FROM path p
+                JOIN expanded_taxa et ON et."taxonID" = p.parent
+                WHERE p.parent IS NOT NULL
+            )
+            SELECT distance + 1 as distance FROM path WHERE parent = ?
+        """
+        
+        result = await loop.run_in_executor(
+            None,
+            lambda: self._conn.execute(sql, (descendant, ancestor)).fetchone(),
+        )
+        
+        return result["distance"] if result else 0
 
     async def fetch_subtree(self, root_ids: set[int]) -> dict[int, int | None]:
         if not root_ids:
