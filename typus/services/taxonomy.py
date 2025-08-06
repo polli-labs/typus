@@ -183,51 +183,90 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         include_minor_ranks: bool = False,
         inclusive: bool = False,
     ) -> int:
-        # This method originally used 'path' and 'nlevel'.
-        # It needs to be updated to work without 'path' or have a fallback.
-        # For now, the ticket does not explicitly require a change to distance() fallback,
-        # but it's related to lca() and path column.
-        # Let's assume for now that if lca() works (even with fallback),
-        # distance can be calculated using ancestry paths from get_taxon, similar to SQLite's version.
-        # This makes it independent of the 'path' column.
+        # For databases without ancestry column, we need to build the ancestry path
+        # by traversing parent relationships
 
         if a == b:
             return 0
 
-        # Get taxa and their ancestries (respecting ORM mappings)
+        # Get taxa
         taxon_a = await self.get_taxon(a)
         taxon_b = await self.get_taxon(b)
-        lca_taxon = await self.lca({a, b}, include_minor_ranks=include_minor_ranks)
 
-        anc_a = (
-            taxon_a.ancestry
-            if include_minor_ranks
-            else [
-                tid
-                for tid, rl in (await self._get_ancestry_with_ranks(taxon_a.ancestry)).items()
-                if is_major(rl)
-            ]
-        )
-        anc_b = (
-            taxon_b.ancestry
-            if include_minor_ranks
-            else [
-                tid
-                for tid, rl in (await self._get_ancestry_with_ranks(taxon_b.ancestry)).items()
-                if is_major(rl)
-            ]
-        )
+        # If ancestry is populated, use the original method
+        if taxon_a.ancestry and taxon_b.ancestry:
+            lca_taxon = await self.lca({a, b}, include_minor_ranks=include_minor_ranks)
 
-        try:
-            idx_lca_in_a = anc_a.index(lca_taxon.taxon_id)
-            idx_lca_in_b = anc_b.index(lca_taxon.taxon_id)
-        except ValueError:  # Should not happen if LCA is correct and part of ancestries
-            raise ValueError(
-                f"LCA {lca_taxon.taxon_id} not found in ancestry paths for {a} or {b}."
+            anc_a = (
+                taxon_a.ancestry
+                if include_minor_ranks
+                else [
+                    tid
+                    for tid, rl in (await self._get_ancestry_with_ranks(taxon_a.ancestry)).items()
+                    if is_major(rl)
+                ]
+            )
+            anc_b = (
+                taxon_b.ancestry
+                if include_minor_ranks
+                else [
+                    tid
+                    for tid, rl in (await self._get_ancestry_with_ranks(taxon_b.ancestry)).items()
+                    if is_major(rl)
+                ]
             )
 
-        dist_a_to_lca = len(anc_a) - 1 - idx_lca_in_a
-        dist_b_to_lca = len(anc_b) - 1 - idx_lca_in_b
+            try:
+                idx_lca_in_a = anc_a.index(lca_taxon.taxon_id)
+                idx_lca_in_b = anc_b.index(lca_taxon.taxon_id)
+            except ValueError:
+                raise ValueError(
+                    f"LCA {lca_taxon.taxon_id} not found in ancestry paths for {a} or {b}."
+                )
+
+            dist_a_to_lca = len(anc_a) - 1 - idx_lca_in_a
+            dist_b_to_lca = len(anc_b) - 1 - idx_lca_in_b
+        else:
+            # Fallback: Build ancestry by traversing parent relationships
+            async def build_ancestry(taxon_id: int) -> list[int]:
+                """Build ancestry path by following parent_id relationships."""
+                path = [taxon_id]
+                current = await self.get_taxon(taxon_id)
+                while current.parent_id is not None:
+                    path.insert(0, current.parent_id)
+                    current = await self.get_taxon(current.parent_id)
+                return path
+
+            anc_a = await build_ancestry(a)
+            anc_b = await build_ancestry(b)
+
+            # Filter for major ranks if needed
+            if not include_minor_ranks:
+                ranks_a = await self._get_ancestry_with_ranks(anc_a)
+                ranks_b = await self._get_ancestry_with_ranks(anc_b)
+                anc_a = [tid for tid in anc_a if tid in ranks_a and is_major(ranks_a[tid])]
+                anc_b = [tid for tid in anc_b if tid in ranks_b and is_major(ranks_b[tid])]
+
+            # Find LCA by finding the last common ancestor in the paths
+            lca_id = None
+            for tid_a, tid_b in zip(anc_a, anc_b):
+                if tid_a == tid_b:
+                    lca_id = tid_a
+                else:
+                    break
+
+            if lca_id is None:
+                raise ValueError(f"No common ancestor found for {a} and {b}")
+
+            # Calculate distances
+            idx_lca_in_a = anc_a.index(lca_id) if lca_id in anc_a else -1
+            idx_lca_in_b = anc_b.index(lca_id) if lca_id in anc_b else -1
+
+            if idx_lca_in_a == -1 or idx_lca_in_b == -1:
+                raise ValueError(f"LCA {lca_id} not found in ancestry paths")
+
+            dist_a_to_lca = len(anc_a) - 1 - idx_lca_in_a
+            dist_b_to_lca = len(anc_b) - 1 - idx_lca_in_b
 
         distance = dist_a_to_lca + dist_b_to_lca
         if inclusive:
@@ -294,7 +333,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         try:
             # Try to access ancestry_str - if the column doesn't exist in the DB,
             # or if it wasn't loaded, this will be None or raise an exception
-            ancestry_str = getattr(row, 'ancestry_str', None)
+            ancestry_str = getattr(row, "ancestry_str", None)
             if ancestry_str:
                 try:
                     ancestry_list = list(map(int, str(ancestry_str).split("|")))
