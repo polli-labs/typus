@@ -495,3 +495,354 @@ class TestTrack:
         assert track.track_id == "legacy_001"
         assert track.validation_status == "pending"  # Default value
         assert track.smoothing_applied is False  # Default value
+
+    def test_duration_property(self, sample_detections):
+        """Test the duration property alias."""
+        track = Track(
+            track_id="track_001",
+            clip_id="video_20240108",
+            detections=sample_detections,
+            start_frame=100,
+            end_frame=102,
+            duration_frames=3,
+            duration_seconds=0.1,
+            confidence=0.92
+        )
+        assert track.duration == 0.1
+        assert track.duration == track.duration_seconds
+
+    def test_frame_to_time(self, sample_detections):
+        """Test frame to time conversion."""
+        track = Track(
+            track_id="track_001",
+            clip_id="video_20240108",
+            detections=sample_detections,
+            start_frame=100,
+            end_frame=102,
+            duration_frames=3,
+            duration_seconds=0.1,
+            confidence=0.92
+        )
+        
+        # Test conversion at different frames
+        assert track.frame_to_time(100, fps=30) == 0.0  # Start frame
+        assert track.frame_to_time(101, fps=30) == pytest.approx(1/30)
+        assert track.frame_to_time(102, fps=30) == pytest.approx(2/30)
+        
+        # Test with different fps
+        assert track.frame_to_time(102, fps=60) == pytest.approx(2/60)
+        
+        # Test outside range
+        with pytest.raises(ValueError) as exc_info:
+            track.frame_to_time(99, fps=30)
+        assert "outside track range" in str(exc_info.value)
+        
+        with pytest.raises(ValueError):
+            track.frame_to_time(103, fps=30)
+
+    def test_merge_tracks_basic(self):
+        """Test basic track merging."""
+        # Create two sequential tracks
+        track1 = Track(
+            track_id="track_001",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=100, bbox=[10, 20, 50, 60], confidence=0.90),
+                Detection(frame_number=101, bbox=[11, 21, 50, 60], confidence=0.92),
+            ],
+            start_frame=100,
+            end_frame=101,
+            duration_frames=2,
+            duration_seconds=0.067,
+            confidence=0.91,
+            taxon_id=47219,
+            scientific_name="Apis mellifera"
+        )
+        
+        track2 = Track(
+            track_id="track_002",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=103, bbox=[13, 23, 50, 60], confidence=0.93),
+                Detection(frame_number=104, bbox=[14, 24, 50, 60], confidence=0.94),
+            ],
+            start_frame=103,
+            end_frame=104,
+            duration_frames=2,
+            duration_seconds=0.067,
+            confidence=0.935,
+            taxon_id=47219,
+            scientific_name="Apis mellifera"
+        )
+        
+        # Merge tracks
+        merged = Track.merge_tracks([track1, track2], "merged_001")
+        
+        assert merged.track_id == "merged_001"
+        assert merged.clip_id == "video_20240108"
+        assert len(merged.detections) == 4
+        assert merged.start_frame == 100
+        assert merged.end_frame == 104
+        assert merged.duration_frames == 5
+        assert merged.taxon_id == 47219
+        assert merged.scientific_name == "Apis mellifera"
+        assert merged.validation_status == "pending"
+
+    def test_merge_tracks_with_gap(self):
+        """Test merging tracks with acceptable gap."""
+        track1 = Track(
+            track_id="track_001",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=100, bbox=[10, 20, 50, 60], confidence=0.90),
+            ],
+            start_frame=100,
+            end_frame=100,
+            duration_frames=1,
+            duration_seconds=0.033,
+            confidence=0.90
+        )
+        
+        track2 = Track(
+            track_id="track_002",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=105, bbox=[15, 25, 50, 60], confidence=0.95),
+            ],
+            start_frame=105,
+            end_frame=105,
+            duration_frames=1,
+            duration_seconds=0.033,
+            confidence=0.95
+        )
+        
+        # Should succeed with gap of 4 frames (default threshold is 10)
+        merged = Track.merge_tracks([track1, track2], "merged_001")
+        assert merged.start_frame == 100
+        assert merged.end_frame == 105
+        assert len(merged.detections) == 2
+
+    def test_merge_tracks_large_gap_fails(self):
+        """Test that merging with large gap fails."""
+        track1 = Track(
+            track_id="track_001",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=100, bbox=[10, 20, 50, 60], confidence=0.90),
+            ],
+            start_frame=100,
+            end_frame=100,
+            duration_frames=1,
+            duration_seconds=0.033,
+            confidence=0.90
+        )
+        
+        track2 = Track(
+            track_id="track_002",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=115, bbox=[15, 25, 50, 60], confidence=0.95),
+            ],
+            start_frame=115,
+            end_frame=115,
+            duration_frames=1,
+            duration_seconds=0.033,
+            confidence=0.95
+        )
+        
+        # Should fail with gap of 14 frames (> default threshold of 10)
+        with pytest.raises(ValueError) as exc_info:
+            Track.merge_tracks([track1, track2], "merged_001")
+        assert "exceeds threshold" in str(exc_info.value)
+        
+        # Should succeed with higher threshold
+        merged = Track.merge_tracks([track1, track2], "merged_001", gap_threshold=15)
+        assert merged.start_frame == 100
+        assert merged.end_frame == 115
+
+    def test_merge_tracks_overlap_fails(self):
+        """Test that merging overlapping tracks fails."""
+        track1 = Track(
+            track_id="track_001",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=100, bbox=[10, 20, 50, 60], confidence=0.90),
+                Detection(frame_number=101, bbox=[11, 21, 50, 60], confidence=0.91),
+            ],
+            start_frame=100,
+            end_frame=101,
+            duration_frames=2,
+            duration_seconds=0.067,
+            confidence=0.905
+        )
+        
+        track2 = Track(
+            track_id="track_002",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=101, bbox=[11, 21, 50, 60], confidence=0.92),  # Overlaps!
+                Detection(frame_number=102, bbox=[12, 22, 50, 60], confidence=0.93),
+            ],
+            start_frame=101,
+            end_frame=102,
+            duration_frames=2,
+            duration_seconds=0.067,
+            confidence=0.925
+        )
+        
+        with pytest.raises(ValueError) as exc_info:
+            Track.merge_tracks([track1, track2], "merged_001")
+        assert "overlap" in str(exc_info.value).lower()
+
+    def test_merge_tracks_different_clips_fails(self):
+        """Test that merging tracks from different clips fails."""
+        track1 = Track(
+            track_id="track_001",
+            clip_id="video_001",
+            detections=[
+                Detection(frame_number=100, bbox=[10, 20, 50, 60], confidence=0.90),
+            ],
+            start_frame=100,
+            end_frame=100,
+            duration_frames=1,
+            duration_seconds=0.033,
+            confidence=0.90
+        )
+        
+        track2 = Track(
+            track_id="track_002",
+            clip_id="video_002",  # Different clip!
+            detections=[
+                Detection(frame_number=101, bbox=[11, 21, 50, 60], confidence=0.91),
+            ],
+            start_frame=101,
+            end_frame=101,
+            duration_frames=1,
+            duration_seconds=0.033,
+            confidence=0.91
+        )
+        
+        with pytest.raises(ValueError) as exc_info:
+            Track.merge_tracks([track1, track2], "merged_001")
+        assert "different clips" in str(exc_info.value)
+
+    def test_merge_tracks_single_track(self):
+        """Test merging a single track returns copy with new ID."""
+        track = Track(
+            track_id="track_001",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=100, bbox=[10, 20, 50, 60], confidence=0.90),
+            ],
+            start_frame=100,
+            end_frame=100,
+            duration_frames=1,
+            duration_seconds=0.033,
+            confidence=0.90
+        )
+        
+        merged = Track.merge_tracks([track], "new_id")
+        assert merged.track_id == "new_id"
+        assert merged.clip_id == track.clip_id
+        assert len(merged.detections) == 1
+
+    def test_merge_tracks_empty_list_fails(self):
+        """Test that merging empty list fails."""
+        with pytest.raises(ValueError) as exc_info:
+            Track.merge_tracks([], "merged_001")
+        assert "empty track list" in str(exc_info.value).lower()
+
+    def test_merge_tracks_taxonomy_consensus(self):
+        """Test that merged track uses most common taxonomy."""
+        track1 = Track(
+            track_id="track_001",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=100, bbox=[10, 20, 50, 60], confidence=0.90),
+                Detection(frame_number=101, bbox=[11, 21, 50, 60], confidence=0.91),
+            ],
+            start_frame=100,
+            end_frame=101,
+            duration_frames=2,
+            duration_seconds=0.067,
+            confidence=0.905,
+            taxon_id=47219,
+            scientific_name="Apis mellifera"
+        )
+        
+        track2 = Track(
+            track_id="track_002",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=102, bbox=[12, 22, 50, 60], confidence=0.92),
+            ],
+            start_frame=102,
+            end_frame=102,
+            duration_frames=1,
+            duration_seconds=0.033,
+            confidence=0.92,
+            taxon_id=54327,  # Different taxon
+            scientific_name="Vespa crabro"
+        )
+        
+        track3 = Track(
+            track_id="track_003",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=103, bbox=[13, 23, 50, 60], confidence=0.93),
+                Detection(frame_number=104, bbox=[14, 24, 50, 60], confidence=0.94),
+            ],
+            start_frame=103,
+            end_frame=104,
+            duration_frames=2,
+            duration_seconds=0.067,
+            confidence=0.935,
+            taxon_id=47219,  # Same as track1
+            scientific_name="Apis mellifera"
+        )
+        
+        # Merge - should use taxon 47219 (appears in 4 detections vs 1)
+        merged = Track.merge_tracks([track1, track2, track3], "merged_001")
+        assert merged.taxon_id == 47219
+        assert merged.scientific_name == "Apis mellifera"
+
+    def test_merge_tracks_processing_metadata(self):
+        """Test that merged track preserves processing metadata."""
+        track1 = Track(
+            track_id="track_001",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=100, bbox=[10, 20, 50, 60], confidence=0.90),
+            ],
+            start_frame=100,
+            end_frame=100,
+            duration_frames=1,
+            duration_seconds=0.033,
+            confidence=0.90,
+            detector="yolov8",
+            tracker="bytetrack",
+            smoothing_applied=False
+        )
+        
+        track2 = Track(
+            track_id="track_002",
+            clip_id="video_20240108",
+            detections=[
+                Detection(frame_number=101, bbox=[11, 21, 50, 60], confidence=0.91),
+            ],
+            start_frame=101,
+            end_frame=101,
+            duration_frames=1,
+            duration_seconds=0.033,
+            confidence=0.91,
+            detector="yolov8",
+            tracker="bytetrack",
+            smoothing_applied=True,
+            smoothing_method="kalman"
+        )
+        
+        merged = Track.merge_tracks([track1, track2], "merged_001")
+        assert merged.detector == "yolov8"
+        assert merged.tracker == "bytetrack"
+        assert merged.smoothing_applied is True  # Any track had smoothing
+        assert merged.smoothing_method == "kalman"

@@ -356,3 +356,179 @@ class Track(BaseModel):
             if gap > max_gap:
                 return False
         return True
+
+    @property
+    def duration(self) -> float:
+        """Alias for duration_seconds for API compatibility.
+        
+        Returns:
+            Duration in seconds
+        """
+        return self.duration_seconds
+
+    def frame_to_time(self, frame_number: int, fps: float = 30.0) -> float:
+        """Convert frame number to time in seconds relative to track start.
+        
+        Args:
+            frame_number: The frame number to convert
+            fps: Frames per second (default: 30.0)
+            
+        Returns:
+            Time in seconds from start of track
+            
+        Raises:
+            ValueError: If frame_number is outside track range
+        """
+        if frame_number < self.start_frame or frame_number > self.end_frame:
+            raise ValueError(
+                f"Frame {frame_number} outside track range "
+                f"[{self.start_frame}, {self.end_frame}]"
+            )
+        return (frame_number - self.start_frame) / fps
+
+    @classmethod
+    def merge_tracks(
+        cls,
+        tracks: list['Track'],
+        new_track_id: str,
+        gap_threshold: int = 10
+    ) -> 'Track':
+        """Merge multiple tracks into one continuous track.
+        
+        This is useful for re-connecting tracks that were incorrectly split
+        by the tracking algorithm.
+        
+        Args:
+            tracks: List of tracks to merge (must be from same clip)
+            new_track_id: ID for the merged track
+            gap_threshold: Maximum frame gap to allow between tracks
+            
+        Returns:
+            Merged track with combined detections
+            
+        Raises:
+            ValueError: If tracks are from different clips or have large gaps
+        """
+        if not tracks:
+            raise ValueError("Cannot merge empty track list")
+        
+        if len(tracks) == 1:
+            # Single track, just return copy with new ID
+            track = tracks[0].model_copy()
+            track.track_id = new_track_id
+            return track
+        
+        # Verify all tracks are from same clip
+        clip_ids = {t.clip_id for t in tracks}
+        if len(clip_ids) > 1:
+            raise ValueError(f"Cannot merge tracks from different clips: {clip_ids}")
+        
+        # Sort tracks by start frame
+        sorted_tracks = sorted(tracks, key=lambda t: t.start_frame)
+        
+        # Check for overlaps or large gaps
+        for i in range(1, len(sorted_tracks)):
+            prev_track = sorted_tracks[i-1]
+            curr_track = sorted_tracks[i]
+            
+            # Check for overlap
+            if prev_track.end_frame >= curr_track.start_frame:
+                raise ValueError(
+                    f"Tracks overlap: {prev_track.track_id} ends at {prev_track.end_frame}, "
+                    f"{curr_track.track_id} starts at {curr_track.start_frame}"
+                )
+            
+            # Check gap size
+            gap = curr_track.start_frame - prev_track.end_frame - 1
+            if gap > gap_threshold:
+                raise ValueError(
+                    f"Gap of {gap} frames between tracks exceeds threshold {gap_threshold}"
+                )
+        
+        # Merge detections
+        all_detections = []
+        for track in sorted_tracks:
+            all_detections.extend(track.detections)
+        
+        # Sort detections by frame number
+        all_detections.sort(key=lambda d: d.frame_number)
+        
+        # Compute merged track properties
+        first_track = sorted_tracks[0]
+        last_track = sorted_tracks[-1]
+        
+        start_frame = first_track.start_frame
+        end_frame = last_track.end_frame
+        duration_frames = end_frame - start_frame + 1
+        
+        # Estimate duration based on first track's fps
+        if first_track.duration_seconds > 0 and first_track.duration_frames > 0:
+            fps = first_track.duration_frames / first_track.duration_seconds
+            duration_seconds = duration_frames / fps
+        else:
+            duration_seconds = duration_frames / 30.0  # Default to 30 fps
+        
+        # Compute overall confidence
+        all_confidences = [d.confidence for d in all_detections]
+        overall_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+        
+        # Merge taxonomy (use most common or highest confidence)
+        taxon_counts = {}
+        for track in sorted_tracks:
+            if track.taxon_id:
+                taxon_counts[track.taxon_id] = taxon_counts.get(track.taxon_id, 0) + len(track.detections)
+        
+        merged_taxon_id = None
+        merged_scientific_name = None
+        merged_common_name = None
+        
+        if taxon_counts:
+            # Use taxon with most detections
+            merged_taxon_id = max(taxon_counts, key=taxon_counts.get)
+            # Find the track with this taxon to get names
+            for track in sorted_tracks:
+                if track.taxon_id == merged_taxon_id:
+                    merged_scientific_name = track.scientific_name
+                    merged_common_name = track.common_name
+                    break
+        
+        # Merge processing metadata (use first track's metadata)
+        detector = first_track.detector
+        tracker = first_track.tracker
+        
+        # Check if any track had smoothing
+        smoothing_applied = any(t.smoothing_applied for t in sorted_tracks)
+        smoothing_methods = {t.smoothing_method for t in sorted_tracks if t.smoothing_method}
+        smoothing_method = ", ".join(smoothing_methods) if smoothing_methods else None
+        
+        # Create merged track
+        merged_track = cls(
+            track_id=new_track_id,
+            clip_id=first_track.clip_id,
+            detections=all_detections,
+            start_frame=start_frame,
+            end_frame=end_frame,
+            duration_frames=duration_frames,
+            duration_seconds=duration_seconds,
+            confidence=overall_confidence,
+            taxon_id=merged_taxon_id,
+            scientific_name=merged_scientific_name,
+            common_name=merged_common_name,
+            validation_status="pending",  # Reset validation for merged track
+            detector=detector,
+            tracker=tracker,
+            smoothing_applied=smoothing_applied,
+            smoothing_method=smoothing_method
+        )
+        
+        # Compute stats for merged track
+        if all_confidences:
+            import statistics
+            merged_track.stats = TrackStats(
+                confidence_mean=overall_confidence,
+                confidence_std=statistics.stdev(all_confidences) if len(all_confidences) > 1 else 0.0,
+                confidence_min=min(all_confidences),
+                confidence_max=max(all_confidences)
+            )
+        
+        return merged_track

@@ -116,6 +116,53 @@ frame_numbers = track.get_frame_numbers()  # [100, 101, 102]
 is_continuous = track.is_continuous(max_gap=1)  # True if no gaps > 1 frame
 ```
 
+### Convenience Properties and Methods
+
+```python
+# Duration property (alias for duration_seconds)
+duration = track.duration  # Same as track.duration_seconds
+
+# Convert frame number to time relative to track start
+time_at_frame = track.frame_to_time(101, fps=30.0)  # Returns seconds from track start
+```
+
+## Merging Tracks
+
+The `merge_tracks()` class method allows you to reconnect tracks that were incorrectly split by the tracking algorithm:
+
+```python
+# Merge multiple tracks into one
+merged_track = Track.merge_tracks(
+    tracks=[track1, track2, track3],
+    new_track_id="merged_001",
+    gap_threshold=10  # Maximum allowed gap between tracks (default: 10 frames)
+)
+```
+
+Key features of track merging:
+- **Validation**: Ensures tracks are from the same clip and don't overlap
+- **Gap handling**: Configurable threshold for acceptable gaps between tracks
+- **Taxonomy consensus**: Uses the most common taxon_id across all detections
+- **Metadata preservation**: Maintains processing metadata from source tracks
+- **Statistics recomputation**: Recalculates confidence stats for the merged track
+
+Example with error handling:
+
+```python
+try:
+    merged = Track.merge_tracks([track1, track2], "merged_001", gap_threshold=5)
+except ValueError as e:
+    if "exceeds threshold" in str(e):
+        # Gap between tracks is too large
+        print(f"Tracks have too large a gap: {e}")
+    elif "overlap" in str(e):
+        # Tracks overlap in time
+        print(f"Tracks overlap: {e}")
+    elif "different clips" in str(e):
+        # Tracks are from different video clips
+        print(f"Cannot merge tracks from different clips: {e}")
+```
+
 ## Validation Workflow
 
 Tracks support a complete validation workflow for human review:
