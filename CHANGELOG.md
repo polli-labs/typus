@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.1
+### Added
+* **NEW**: Track models for video object tracking (`Detection`, `Track`, `TrackStats`)
+  - Standardized data models for representing object trajectories through video
+  - Support for raw detections, smoothed data, and enriched taxonomy information
+  - Built-in validation workflow with status tracking (pending/validated/rejected)
+  - Processing metadata for reproducibility (detector, tracker, smoothing methods)
+  - Helper methods for track analysis (`is_continuous()`, `get_detection_at_frame()`)
+  - Class method `from_raw_detections()` for easy track creation from dictionaries
+  - **Track merging**: `merge_tracks()` method to reconnect incorrectly split tracks
+  - **Convenience methods**: `duration` property, `frame_to_time()` conversion
+* **NEW**: Comprehensive track model documentation in `docs/tracks.md`
+* **TEST**: Full test suite for track models with 31 test cases including merge scenarios
+
+### Changed
+* Updated exports in `__init__.py` to include new track models
+
 ## 0.2.0
 ### Changed
 * **BREAKING**: Complete removal of `ancestry` column from database operations

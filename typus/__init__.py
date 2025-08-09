@@ -11,6 +11,7 @@ from .models.classification import (
 )
 from .models.lineage import LineageMap
 from .models.taxon import Taxon
+from .models.tracks import Detection, Track, TrackStats
 from .services.elevation import ElevationService, PostgresRasterElevation
 from .services.projections import (
     datetime_to_temporal_sinusoids,
@@ -35,6 +36,9 @@ __all__ = [
     "Taxon",
     "infer_rank",
     "LineageMap",
+    "Detection",
+    "Track",
+    "TrackStats",
     "latlon_to_unit_sphere",
     "unit_sphere_to_latlon",
     "datetime_to_temporal_sinusoids",
