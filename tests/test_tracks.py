@@ -14,11 +14,7 @@ class TestDetection:
 
     def test_detection_basic(self):
         """Test basic Detection creation."""
-        det = Detection(
-            frame_number=100,
-            bbox=[10.5, 20.5, 50.0, 60.0],
-            confidence=0.95
-        )
+        det = Detection(frame_number=100, bbox=[10.5, 20.5, 50.0, 60.0], confidence=0.95)
         assert det.frame_number == 100
         assert det.bbox == [10.5, 20.5, 50.0, 60.0]
         assert det.confidence == 0.95
@@ -33,7 +29,7 @@ class TestDetection:
             confidence=0.95,
             taxon_id=47219,
             scientific_name="Apis mellifera",
-            common_name="Western honey bee"
+            common_name="Western honey bee",
         )
         assert det.taxon_id == 47219
         assert det.scientific_name == "Apis mellifera"
@@ -46,7 +42,7 @@ class TestDetection:
             bbox=[10, 20, 50, 60],
             confidence=0.95,
             smoothed_bbox=[11, 21, 49, 59],
-            velocity=[2.5, -1.0]
+            velocity=[2.5, -1.0],
         )
         assert det.smoothed_bbox == [11, 21, 49, 59]
         assert det.velocity == [2.5, -1.0]
@@ -55,11 +51,7 @@ class TestDetection:
         """Test Detection validation errors."""
         # Invalid confidence (> 1.0)
         with pytest.raises(ValidationError) as exc_info:
-            Detection(
-                frame_number=100,
-                bbox=[10, 20, 50, 60],
-                confidence=1.5
-            )
+            Detection(frame_number=100, bbox=[10, 20, 50, 60], confidence=1.5)
         assert "less than or equal to 1" in str(exc_info.value)
 
         # Invalid bbox (wrong length)
@@ -67,26 +59,19 @@ class TestDetection:
             Detection(
                 frame_number=100,
                 bbox=[10, 20, 50],  # Only 3 elements
-                confidence=0.95
+                confidence=0.95,
             )
         assert "at least 4 items" in str(exc_info.value)
 
         # Negative frame number
         with pytest.raises(ValidationError) as exc_info:
-            Detection(
-                frame_number=-1,
-                bbox=[10, 20, 50, 60],
-                confidence=0.95
-            )
+            Detection(frame_number=-1, bbox=[10, 20, 50, 60], confidence=0.95)
         assert "greater than or equal to 0" in str(exc_info.value)
 
     def test_detection_json_serialization(self):
         """Test Detection JSON serialization."""
         det = Detection(
-            frame_number=100,
-            bbox=[10.5, 20.5, 50.0, 60.0],
-            confidence=0.95,
-            taxon_id=47219
+            frame_number=100, bbox=[10.5, 20.5, 50.0, 60.0], confidence=0.95, taxon_id=47219
         )
         json_str = det.model_dump_json()
         data = json.loads(json_str)
@@ -106,10 +91,7 @@ class TestTrackStats:
     def test_track_stats_basic(self):
         """Test basic TrackStats creation."""
         stats = TrackStats(
-            confidence_mean=0.92,
-            confidence_std=0.05,
-            confidence_min=0.85,
-            confidence_max=0.98
+            confidence_mean=0.92, confidence_std=0.05, confidence_min=0.85, confidence_max=0.98
         )
         assert stats.confidence_mean == 0.92
         assert stats.confidence_std == 0.05
@@ -124,7 +106,7 @@ class TestTrackStats:
             confidence_std=0.05,
             confidence_min=0.85,
             confidence_max=0.98,
-            bbox_stability=0.88
+            bbox_stability=0.88,
         )
         assert stats.bbox_stability == 0.88
 
@@ -136,7 +118,7 @@ class TestTrackStats:
                 confidence_mean=1.5,  # > 1.0
                 confidence_std=0.05,
                 confidence_min=0.85,
-                confidence_max=0.98
+                confidence_max=0.98,
             )
 
         # Negative std deviation
@@ -145,7 +127,7 @@ class TestTrackStats:
                 confidence_mean=0.92,
                 confidence_std=-0.05,  # Negative
                 confidence_min=0.85,
-                confidence_max=0.98
+                confidence_max=0.98,
             )
 
 
@@ -165,10 +147,7 @@ class TestTrack:
     def sample_stats(self):
         """Create sample stats for testing."""
         return TrackStats(
-            confidence_mean=0.92,
-            confidence_std=0.025,
-            confidence_min=0.90,
-            confidence_max=0.95
+            confidence_mean=0.92, confidence_std=0.025, confidence_min=0.90, confidence_max=0.95
         )
 
     def test_track_basic(self, sample_detections, sample_stats):
@@ -182,7 +161,7 @@ class TestTrack:
             duration_frames=3,
             duration_seconds=0.1,
             confidence=0.92,
-            stats=sample_stats
+            stats=sample_stats,
         )
         assert track.track_id == "track_001"
         assert track.clip_id == "video_20240108"
@@ -205,7 +184,7 @@ class TestTrack:
             confidence=0.92,
             taxon_id=47219,
             scientific_name="Apis mellifera",
-            common_name="Western honey bee"
+            common_name="Western honey bee",
         )
         assert track.taxon_id == 47219
         assert track.scientific_name == "Apis mellifera"
@@ -226,7 +205,7 @@ class TestTrack:
             validation_status="validated",
             validation_notes="Clear bee identification",
             validated_by="user123",
-            validated_at=validated_at
+            validated_at=validated_at,
         )
         assert track.validation_status == "validated"
         assert track.validation_notes == "Clear bee identification"
@@ -247,7 +226,7 @@ class TestTrack:
             detector="yolov8",
             tracker="bytetrack",
             smoothing_applied=True,
-            smoothing_method="kalman"
+            smoothing_method="kalman",
         )
         assert track.detector == "yolov8"
         assert track.tracker == "bytetrack"
@@ -261,19 +240,19 @@ class TestTrack:
             Detection(frame_number=110, bbox=[11, 21, 50, 60], confidence=0.92),
             Detection(frame_number=115, bbox=[12, 22, 50, 60], confidence=0.95),
         ]
-        
+
         # Create track with incorrect frame ranges
         track = Track(
             track_id="track_001",
             clip_id="video_20240108",
             detections=detections,
             start_frame=100,  # Wrong
-            end_frame=120,    # Wrong
+            end_frame=120,  # Wrong
             duration_frames=21,  # Wrong
             duration_seconds=0.7,
-            confidence=0.92
+            confidence=0.92,
         )
-        
+
         # post_init should correct these
         assert track.start_frame == 105
         assert track.end_frame == 115
@@ -287,15 +266,15 @@ class TestTrack:
             {"frame_number": 102, "bbox": [12, 22, 50, 60], "confidence": 0.95},
             {"frame_number": 103, "bbox": [13, 23, 50, 60], "confidence": 0.93},
         ]
-        
+
         track = Track.from_raw_detections(
             track_id="track_002",
             clip_id="video_20240109",
             detections=raw_detections,
             fps=30.0,
-            detector="yolov8"
+            detector="yolov8",
         )
-        
+
         assert track.track_id == "track_002"
         assert track.clip_id == "video_20240109"
         assert len(track.detections) == 4
@@ -318,14 +297,14 @@ class TestTrack:
             end_frame=102,
             duration_frames=3,
             duration_seconds=0.1,
-            confidence=0.92
+            confidence=0.92,
         )
-        
+
         det = track.get_detection_at_frame(101)
         assert det is not None
         assert det.frame_number == 101
         assert det.confidence == 0.92
-        
+
         # Non-existent frame
         det = track.get_detection_at_frame(105)
         assert det is None
@@ -338,7 +317,7 @@ class TestTrack:
             Detection(frame_number=100, bbox=[11, 21, 50, 60], confidence=0.92),
             Detection(frame_number=110, bbox=[12, 22, 50, 60], confidence=0.95),
         ]
-        
+
         track = Track(
             track_id="track_001",
             clip_id="video_20240108",
@@ -347,9 +326,9 @@ class TestTrack:
             end_frame=110,
             duration_frames=11,
             duration_seconds=0.37,
-            confidence=0.92
+            confidence=0.92,
         )
-        
+
         frame_numbers = track.get_frame_numbers()
         assert frame_numbers == [100, 105, 110]
 
@@ -369,7 +348,7 @@ class TestTrack:
             end_frame=102,
             duration_frames=3,
             duration_seconds=0.1,
-            confidence=0.92
+            confidence=0.92,
         )
         assert track.is_continuous(max_gap=0) is True
         assert track.is_continuous(max_gap=1) is True
@@ -388,7 +367,7 @@ class TestTrack:
             end_frame=103,
             duration_frames=4,
             duration_seconds=0.13,
-            confidence=0.92
+            confidence=0.92,
         )
         assert track.is_continuous(max_gap=0) is False
         assert track.is_continuous(max_gap=1) is True
@@ -406,7 +385,7 @@ class TestTrack:
             end_frame=110,
             duration_frames=11,
             duration_seconds=0.37,
-            confidence=0.91
+            confidence=0.91,
         )
         assert track.is_continuous(max_gap=5) is False
         assert track.is_continuous(max_gap=10) is True
@@ -423,7 +402,7 @@ class TestTrack:
                 end_frame=102,
                 duration_frames=3,
                 duration_seconds=0.1,
-                confidence=0.92
+                confidence=0.92,
             )
         assert "at least 1 item" in str(exc_info.value)
 
@@ -438,7 +417,7 @@ class TestTrack:
                 duration_frames=1,
                 duration_seconds=0.03,
                 confidence=0.90,
-                validation_status="invalid_status"  # Not in allowed values
+                validation_status="invalid_status",  # Not in allowed values
             )
 
     def test_track_json_serialization(self, sample_detections):
@@ -453,18 +432,18 @@ class TestTrack:
             duration_seconds=0.1,
             confidence=0.92,
             taxon_id=47219,
-            detector="yolov8"
+            detector="yolov8",
         )
-        
+
         json_str = track.model_dump_json()
         data = json.loads(json_str)
-        
+
         assert data["track_id"] == "track_001"
         assert data["clip_id"] == "video_20240108"
         assert len(data["detections"]) == 3
         assert data["taxon_id"] == 47219
         assert data["detector"] == "yolov8"
-        
+
         # Deserialize back
         track2 = Track.model_validate_json(json_str)
         assert track2.track_id == track.track_id
@@ -476,20 +455,14 @@ class TestTrack:
         legacy_data = {
             "track_id": "legacy_001",
             "clip_id": "video_legacy",
-            "detections": [
-                {
-                    "frame_number": 50,
-                    "bbox": [100, 200, 50, 60],
-                    "confidence": 0.85
-                }
-            ],
+            "detections": [{"frame_number": 50, "bbox": [100, 200, 50, 60], "confidence": 0.85}],
             "start_frame": 50,
             "end_frame": 50,
             "duration_frames": 1,
             "duration_seconds": 0.033,
-            "confidence": 0.85
+            "confidence": 0.85,
         }
-        
+
         # Should be able to create Track from legacy data
         track = Track(**legacy_data)
         assert track.track_id == "legacy_001"
@@ -506,7 +479,7 @@ class TestTrack:
             end_frame=102,
             duration_frames=3,
             duration_seconds=0.1,
-            confidence=0.92
+            confidence=0.92,
         )
         assert track.duration == 0.1
         assert track.duration == track.duration_seconds
@@ -521,22 +494,22 @@ class TestTrack:
             end_frame=102,
             duration_frames=3,
             duration_seconds=0.1,
-            confidence=0.92
+            confidence=0.92,
         )
-        
+
         # Test conversion at different frames
         assert track.frame_to_time(100, fps=30) == 0.0  # Start frame
-        assert track.frame_to_time(101, fps=30) == pytest.approx(1/30)
-        assert track.frame_to_time(102, fps=30) == pytest.approx(2/30)
-        
+        assert track.frame_to_time(101, fps=30) == pytest.approx(1 / 30)
+        assert track.frame_to_time(102, fps=30) == pytest.approx(2 / 30)
+
         # Test with different fps
-        assert track.frame_to_time(102, fps=60) == pytest.approx(2/60)
-        
+        assert track.frame_to_time(102, fps=60) == pytest.approx(2 / 60)
+
         # Test outside range
         with pytest.raises(ValueError) as exc_info:
             track.frame_to_time(99, fps=30)
         assert "outside track range" in str(exc_info.value)
-        
+
         with pytest.raises(ValueError):
             track.frame_to_time(103, fps=30)
 
@@ -556,9 +529,9 @@ class TestTrack:
             duration_seconds=0.067,
             confidence=0.91,
             taxon_id=47219,
-            scientific_name="Apis mellifera"
+            scientific_name="Apis mellifera",
         )
-        
+
         track2 = Track(
             track_id="track_002",
             clip_id="video_20240108",
@@ -572,12 +545,12 @@ class TestTrack:
             duration_seconds=0.067,
             confidence=0.935,
             taxon_id=47219,
-            scientific_name="Apis mellifera"
+            scientific_name="Apis mellifera",
         )
-        
+
         # Merge tracks
         merged = Track.merge_tracks([track1, track2], "merged_001")
-        
+
         assert merged.track_id == "merged_001"
         assert merged.clip_id == "video_20240108"
         assert len(merged.detections) == 4
@@ -600,9 +573,9 @@ class TestTrack:
             end_frame=100,
             duration_frames=1,
             duration_seconds=0.033,
-            confidence=0.90
+            confidence=0.90,
         )
-        
+
         track2 = Track(
             track_id="track_002",
             clip_id="video_20240108",
@@ -613,9 +586,9 @@ class TestTrack:
             end_frame=105,
             duration_frames=1,
             duration_seconds=0.033,
-            confidence=0.95
+            confidence=0.95,
         )
-        
+
         # Should succeed with gap of 4 frames (default threshold is 10)
         merged = Track.merge_tracks([track1, track2], "merged_001")
         assert merged.start_frame == 100
@@ -634,9 +607,9 @@ class TestTrack:
             end_frame=100,
             duration_frames=1,
             duration_seconds=0.033,
-            confidence=0.90
+            confidence=0.90,
         )
-        
+
         track2 = Track(
             track_id="track_002",
             clip_id="video_20240108",
@@ -647,14 +620,14 @@ class TestTrack:
             end_frame=115,
             duration_frames=1,
             duration_seconds=0.033,
-            confidence=0.95
+            confidence=0.95,
         )
-        
+
         # Should fail with gap of 14 frames (> default threshold of 10)
         with pytest.raises(ValueError) as exc_info:
             Track.merge_tracks([track1, track2], "merged_001")
         assert "exceeds threshold" in str(exc_info.value)
-        
+
         # Should succeed with higher threshold
         merged = Track.merge_tracks([track1, track2], "merged_001", gap_threshold=15)
         assert merged.start_frame == 100
@@ -673,9 +646,9 @@ class TestTrack:
             end_frame=101,
             duration_frames=2,
             duration_seconds=0.067,
-            confidence=0.905
+            confidence=0.905,
         )
-        
+
         track2 = Track(
             track_id="track_002",
             clip_id="video_20240108",
@@ -687,9 +660,9 @@ class TestTrack:
             end_frame=102,
             duration_frames=2,
             duration_seconds=0.067,
-            confidence=0.925
+            confidence=0.925,
         )
-        
+
         with pytest.raises(ValueError) as exc_info:
             Track.merge_tracks([track1, track2], "merged_001")
         assert "overlap" in str(exc_info.value).lower()
@@ -706,9 +679,9 @@ class TestTrack:
             end_frame=100,
             duration_frames=1,
             duration_seconds=0.033,
-            confidence=0.90
+            confidence=0.90,
         )
-        
+
         track2 = Track(
             track_id="track_002",
             clip_id="video_002",  # Different clip!
@@ -719,9 +692,9 @@ class TestTrack:
             end_frame=101,
             duration_frames=1,
             duration_seconds=0.033,
-            confidence=0.91
+            confidence=0.91,
         )
-        
+
         with pytest.raises(ValueError) as exc_info:
             Track.merge_tracks([track1, track2], "merged_001")
         assert "different clips" in str(exc_info.value)
@@ -738,9 +711,9 @@ class TestTrack:
             end_frame=100,
             duration_frames=1,
             duration_seconds=0.033,
-            confidence=0.90
+            confidence=0.90,
         )
-        
+
         merged = Track.merge_tracks([track], "new_id")
         assert merged.track_id == "new_id"
         assert merged.clip_id == track.clip_id
@@ -767,9 +740,9 @@ class TestTrack:
             duration_seconds=0.067,
             confidence=0.905,
             taxon_id=47219,
-            scientific_name="Apis mellifera"
+            scientific_name="Apis mellifera",
         )
-        
+
         track2 = Track(
             track_id="track_002",
             clip_id="video_20240108",
@@ -782,9 +755,9 @@ class TestTrack:
             duration_seconds=0.033,
             confidence=0.92,
             taxon_id=54327,  # Different taxon
-            scientific_name="Vespa crabro"
+            scientific_name="Vespa crabro",
         )
-        
+
         track3 = Track(
             track_id="track_003",
             clip_id="video_20240108",
@@ -798,9 +771,9 @@ class TestTrack:
             duration_seconds=0.067,
             confidence=0.935,
             taxon_id=47219,  # Same as track1
-            scientific_name="Apis mellifera"
+            scientific_name="Apis mellifera",
         )
-        
+
         # Merge - should use taxon 47219 (appears in 4 detections vs 1)
         merged = Track.merge_tracks([track1, track2, track3], "merged_001")
         assert merged.taxon_id == 47219
@@ -821,9 +794,9 @@ class TestTrack:
             confidence=0.90,
             detector="yolov8",
             tracker="bytetrack",
-            smoothing_applied=False
+            smoothing_applied=False,
         )
-        
+
         track2 = Track(
             track_id="track_002",
             clip_id="video_20240108",
@@ -838,9 +811,9 @@ class TestTrack:
             detector="yolov8",
             tracker="bytetrack",
             smoothing_applied=True,
-            smoothing_method="kalman"
+            smoothing_method="kalman",
         )
-        
+
         merged = Track.merge_tracks([track1, track2], "merged_001")
         assert merged.detector == "yolov8"
         assert merged.tracker == "bytetrack"

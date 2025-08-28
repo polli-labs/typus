@@ -4,10 +4,9 @@ import abc
 import logging
 
 from sqlalchemy import select, text
-from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from ..constants import RankLevel, is_major
+from ..constants import RankLevel
 from ..models.taxon import Taxon
 from ..orm.expanded_taxa import ExpandedTaxa
 
@@ -91,6 +90,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
                 # Let's adjust _row_to_taxon or how we call it.
                 # The ticket's `_row_to_taxon` expects `row.taxon_id`, `row.parent_id`, etc.
                 # `res.mappings().all()` gives list of dict-like objects.
+                # TODO Review and clean this up. Is this the best way to do this? If so, great, but clean up the code and comments
                 yield self._row_to_taxon_from_mapping(row_mapping)
 
     async def _lca_via_expanded_columns(self, s, taxon_ids: set[int]) -> int | None:
@@ -98,50 +98,50 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         # Major rank levels in descending order (deepest to shallowest)
         # From MAJOR_LEVELS: 10=species, 20=genus, 30=tribe, 40=order, 50=class, 60=subphylum, 70=kingdom
         major_levels = [10, 20, 30, 40, 50, 60, 70]  # species to kingdom
-        
+
         # Build query to fetch all major rank columns for all taxa
         taxon_list = list(taxon_ids)
         placeholders = ",".join([f":tid{i}" for i in range(len(taxon_list))])
-        
+
         # Build column list for major ranks
         column_names = []
         for level in major_levels:
             column_names.append(f'"L{level}_taxonID"')
         column_names.append('"taxonID"')
-        
+
         columns_str = ", ".join(column_names)
-        
+
         # Raw SQL to fetch expanded columns
         sql = text(f"""
             SELECT {columns_str}
             FROM expanded_taxa
             WHERE "taxonID" IN ({placeholders})
         """)
-        
+
         # Create parameter dict
         params = {f"tid{i}": tid for i, tid in enumerate(taxon_list)}
         result = await s.execute(sql, params)
         rows = result.mappings().all()
-        
+
         if len(rows) != len(taxon_ids):
             # Some taxa not found
             return None
-            
+
         # Find deepest common ancestor by checking each level
         for level in major_levels:
             col_name = f"L{level}_taxonID"
-            
+
             # Get the value at this level for all taxa
             values_at_level = set()
             for row in rows:
                 val = row.get(col_name)
                 if val is not None:
                     values_at_level.add(val)
-            
+
             # If all taxa have the same non-null value at this level, that's our LCA
             if len(values_at_level) == 1:
                 return values_at_level.pop()
-        
+
         return None  # No common ancestor found
 
     async def _lca_recursive_fallback(self, s, taxon_ids: set[int]) -> int | None:
@@ -176,7 +176,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
 
     async def lca(self, taxon_ids: set[int], *, include_minor_ranks: bool = False) -> Taxon:
         """Compute lowest common ancestor using expanded taxonomy columns.
-        
+
         For major ranks only: Uses indexed L*_taxonID columns for O(1) lookup.
         For all ranks: Uses recursive CTE traversal.
         """
@@ -207,7 +207,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         inclusive: bool = False,
     ) -> int:
         """Calculate taxonomic distance between two taxa.
-        
+
         Uses recursive CTEs to count steps from each taxon to their LCA.
         Avoids building full ancestry paths for efficiency.
         """
@@ -217,22 +217,26 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         # First find the LCA
         lca_taxon = await self.lca({a, b}, include_minor_ranks=include_minor_ranks)
         lca_id = lca_taxon.taxon_id
-        
+
         # If one taxon is the LCA, calculate direct distance
         if lca_id == a:
-            return await self._distance_to_ancestor(b, a, include_minor_ranks) + (1 if inclusive else 0)
+            return await self._distance_to_ancestor(b, a, include_minor_ranks) + (
+                1 if inclusive else 0
+            )
         if lca_id == b:
-            return await self._distance_to_ancestor(a, b, include_minor_ranks) + (1 if inclusive else 0)
-        
+            return await self._distance_to_ancestor(a, b, include_minor_ranks) + (
+                1 if inclusive else 0
+            )
+
         # Calculate distance from each taxon to LCA using recursive CTEs
         async with self._Session() as s:
             if include_minor_ranks:
                 # Count all steps using immediateAncestor_taxonID
                 parent_col = '"immediateAncestor_taxonID"'
             else:
-                # Count only major rank steps using immediateMajorAncestor_taxonID  
+                # Count only major rank steps using immediateMajorAncestor_taxonID
                 parent_col = '"immediateMajorAncestor_taxonID"'
-            
+
             # Query to count steps from taxon to ancestor
             distance_sql = text(f"""
                 WITH RECURSIVE path AS (
@@ -246,22 +250,22 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
                 )
                 SELECT MAX(distance) + 1 as distance FROM path WHERE parent = :lca_id
             """)
-            
+
             # Get distance from a to LCA
             dist_a = await s.scalar(distance_sql, {"taxon_id": a, "lca_id": lca_id})
             if dist_a is None:
                 dist_a = 0  # Direct child of LCA
-                
-            # Get distance from b to LCA  
+
+            # Get distance from b to LCA
             dist_b = await s.scalar(distance_sql, {"taxon_id": b, "lca_id": lca_id})
             if dist_b is None:
                 dist_b = 0  # Direct child of LCA
-                
+
         distance = dist_a + dist_b
         if inclusive:
             distance += 1
         return distance
-    
+
     async def _distance_to_ancestor(
         self, descendant: int, ancestor: int, include_minor_ranks: bool
     ) -> int:
@@ -271,7 +275,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
                 parent_col = '"immediateAncestor_taxonID"'
             else:
                 parent_col = '"immediateMajorAncestor_taxonID"'
-                
+
             sql = text(f"""
                 WITH RECURSIVE path AS (
                     SELECT "taxonID", {parent_col} as parent, 0 as distance
@@ -284,7 +288,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
                 )
                 SELECT distance + 1 as distance FROM path WHERE parent = :ancestor
             """)
-            
+
             dist = await s.scalar(sql, {"descendant": descendant, "ancestor": ancestor})
             return dist if dist is not None else 0
 
@@ -343,7 +347,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
 
     def _row_to_taxon(self, row: ExpandedTaxa) -> Taxon:
         """Convert ORM row to Taxon model.
-        
+
         Note: ancestry list is always empty as modern databases don't have ancestry column.
         The Taxon model can compute ancestry if needed via its property.
         """
@@ -351,7 +355,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         vernacular = {}
         if common_name and isinstance(common_name, str):
             vernacular = {"en": [common_name]}
-        
+
         return Taxon(
             taxon_id=row.taxon_id,
             scientific_name=row.scientific_name,
@@ -363,14 +367,14 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
 
     def _row_to_taxon_from_mapping(self, row_mapping) -> Taxon:
         """Convert a RowMapping from raw SQL to Taxon model.
-        
+
         Note: ancestry list is always empty as modern databases don't have ancestry column.
         """
         common_name = row_mapping.get("commonName")
         vernacular = {}
         if common_name and isinstance(common_name, str):
             vernacular = {"en": [common_name]}
-            
+
         return Taxon(
             taxon_id=row_mapping.get("taxon_id") or row_mapping.get("taxonID"),
             scientific_name=row_mapping["name"],

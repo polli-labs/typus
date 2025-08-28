@@ -112,7 +112,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         loop = asyncio.get_running_loop()
         ancestry = [taxon_id]
         current_id = taxon_id
-        
+
         # Build full ancestry by following parent links
         while True:
             parent_sql = """
@@ -131,17 +131,19 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
                     parent_rank_sql = 'SELECT "rankLevel" FROM "expanded_taxa" WHERE "taxonID"=?'
                     parent_rank_row = await loop.run_in_executor(
                         None,
-                        lambda pid=parent_id: self._conn.execute(parent_rank_sql, (pid,)).fetchone(),
+                        lambda pid=parent_id: self._conn.execute(
+                            parent_rank_sql, (pid,)
+                        ).fetchone(),
                     )
                     if parent_rank_row:
                         self._rank_cache[parent_id] = RankLevel(int(parent_rank_row["rankLevel"]))
                 current_id = parent_id
             else:
                 break
-        
+
         if include_minor_ranks:
             return ancestry
-        
+
         # Filter for major ranks only
         major_ancestry = [
             tid for tid in ancestry if is_major(self._rank_cache.get(tid, RankLevel.L100))
@@ -150,7 +152,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
 
     async def lca(self, taxon_ids: set[int], *, include_minor_ranks: bool = False) -> Taxon:
         """Compute lowest common ancestor using efficient algorithms.
-        
+
         For major ranks only: Uses expanded L*_taxonID columns.
         For all ranks: Uses ancestry traversal.
         """
@@ -160,55 +162,55 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
             return await self.get_taxon(list(taxon_ids)[0])
 
         loop = asyncio.get_running_loop()
-        
+
         if not include_minor_ranks:
             # Use expanded columns for major ranks
             # From MAJOR_LEVELS: 10=species, 20=genus, 30=tribe, 40=order, 50=class, 60=subphylum, 70=kingdom
             major_levels = [10, 20, 30, 40, 50, 60, 70]  # species to kingdom
-            
+
             # Build query to fetch major rank columns
             taxon_list = list(taxon_ids)
             placeholders = ",".join(["?" for _ in taxon_list])
-            
+
             # Build column list
             column_names = []
             for level in major_levels:
                 column_names.append(f'"L{level}_taxonID"')
             column_names.append('"taxonID"')
-            
+
             columns_str = ", ".join(column_names)
-            
+
             sql = f"""
                 SELECT {columns_str}
                 FROM expanded_taxa
                 WHERE "taxonID" IN ({placeholders})
             """
-            
+
             rows = await loop.run_in_executor(
                 None,
                 lambda: self._conn.execute(sql, taxon_list).fetchall(),
             )
-            
+
             if len(rows) != len(taxon_ids):
                 raise ValueError(f"Some taxa not found: {taxon_ids}")
-            
+
             # Find deepest common ancestor
             for level in major_levels:
                 col_name = f"L{level}_taxonID"
-                
+
                 values_at_level = set()
                 for row in rows:
                     val = row[col_name]
                     if val is not None:
                         values_at_level.add(val)
-                
+
                 # If all taxa have the same non-null value, that's our LCA
                 if len(values_at_level) == 1:
                     lca_id = values_at_level.pop()
                     return await self.get_taxon(lca_id)
-                    
+
             raise ValueError(f"No common ancestor found for taxon IDs: {taxon_ids}")
-            
+
         else:
             # Use ancestry traversal for all ranks
             ancestries = []
@@ -245,7 +247,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         self, a: int, b: int, *, include_minor_ranks: bool = False, inclusive: bool = False
     ) -> int:
         """Calculate the taxonomic distance between two taxa.
-        
+
         Efficiently counts steps via parent traversal without building full ancestry.
         """
         if a == b:
@@ -254,7 +256,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         # Find the LCA first
         lca_taxon = await self.lca({a, b}, include_minor_ranks=include_minor_ranks)
         lca_id = lca_taxon.taxon_id
-        
+
         # If one is the LCA of the other, calculate direct distance
         if lca_id == a:
             dist = await self._distance_to_ancestor(b, a, include_minor_ranks)
@@ -262,27 +264,27 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         if lca_id == b:
             dist = await self._distance_to_ancestor(a, b, include_minor_ranks)
             return dist + (1 if inclusive else 0)
-        
+
         # Calculate distance from each to LCA
         dist_a = await self._distance_to_ancestor(a, lca_id, include_minor_ranks)
         dist_b = await self._distance_to_ancestor(b, lca_id, include_minor_ranks)
-        
+
         distance = dist_a + dist_b
         if inclusive:
             distance += 1
         return distance
-    
+
     async def _distance_to_ancestor(
         self, descendant: int, ancestor: int, include_minor_ranks: bool
     ) -> int:
         """Count steps from descendant to ancestor."""
         loop = asyncio.get_running_loop()
-        
+
         if include_minor_ranks:
             parent_col = '"immediateAncestor_taxonID"'
         else:
             parent_col = '"immediateMajorAncestor_taxonID"'
-        
+
         # Use recursive CTE to count steps
         sql = f"""
             WITH RECURSIVE path AS (
@@ -296,12 +298,12 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
             )
             SELECT distance + 1 as distance FROM path WHERE parent = ?
         """
-        
+
         result = await loop.run_in_executor(
             None,
             lambda: self._conn.execute(sql, (descendant, ancestor)).fetchone(),
         )
-        
+
         return result["distance"] if result else 0
 
     async def fetch_subtree(self, root_ids: set[int]) -> dict[int, int | None]:
