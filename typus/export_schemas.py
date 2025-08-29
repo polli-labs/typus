@@ -11,6 +11,10 @@ MODELS = [
     "typus.models.classification.HierarchicalClassificationResult",
     "typus.models.geometry.BBox",
     "typus.models.geometry.EncodedMask",
+    "typus.models.geometry.BBoxXYWHNorm",
+    "typus.models.tracks.Detection",
+    "typus.models.tracks.Track",
+    "typus.models.tracks.TrackStats",
     "typus.models.detection.InstancePrediction",
     "typus.models.detection.ImageDetectionResult",
 ]

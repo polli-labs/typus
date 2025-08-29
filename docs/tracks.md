@@ -4,6 +4,8 @@
 
 The `typus.models.tracks` module provides standardized data models for representing object tracks in video analysis. These models are designed to support the complete lifecycle of tracking data, from raw detections through smoothing, enrichment with taxonomic information, and human validation.
 
+**As of v0.3.0**, track models use [canonical geometry](geometry.md) for all bounding box coordinates, ensuring consistent coordinate systems across all Polli-Labs repositories.
+
 ## Core Models
 
 ### Detection
@@ -11,20 +13,30 @@ The `typus.models.tracks` module provides standardized data models for represent
 Represents a single detection of an object at a specific frame in a video.
 
 ```python
-from typus import Detection
+from typus.models.tracks import Detection
+from typus import BBoxXYWHNorm
 
+# Preferred: Use canonical normalized bbox
 detection = Detection(
     frame_number=100,
-    bbox=[10.5, 20.5, 50.0, 60.0],  # [x, y, width, height]
+    bbox_norm=BBoxXYWHNorm(x=0.1, y=0.2, w=0.5, h=0.6),  # Canonical format
     confidence=0.95,
     taxon_id=47219,  # Optional
     scientific_name="Apis mellifera",  # Optional
     common_name="Western honey bee"  # Optional
 )
+
+# Legacy support (deprecated)
+detection_legacy = Detection(
+    frame_number=100,
+    bbox=[10.5, 20.5, 50.0, 60.0],  # Pixel coordinates - DEPRECATED
+    confidence=0.95
+)
 ```
 
 **Key Features:**
-- Bounding box validation (must be exactly 4 elements)
+- **Canonical bbox support** - Use `bbox_norm` with `BBoxXYWHNorm` type
+- **Legacy compatibility** - Still accepts pixel `bbox` field (deprecated) 
 - Confidence score validation (0.0 to 1.0)
 - Optional taxonomy fields for post-detection enrichment
 - Optional smoothed bbox and velocity for processed data
@@ -76,10 +88,23 @@ track = Track(
 The `Track.from_raw_detections()` class method provides a convenient way to create tracks from raw detection dictionaries:
 
 ```python
+# Using canonical normalized bboxes
 raw_detections = [
-    {"frame_number": 100, "bbox": [10, 20, 50, 60], "confidence": 0.90},
-    {"frame_number": 101, "bbox": [11, 21, 50, 60], "confidence": 0.92},
-    {"frame_number": 102, "bbox": [12, 22, 50, 60], "confidence": 0.95},
+    {
+        "frame_number": 100, 
+        "bbox_norm": {"x": 0.1, "y": 0.2, "w": 0.5, "h": 0.6}, 
+        "confidence": 0.90
+    },
+    {
+        "frame_number": 101, 
+        "bbox_norm": {"x": 0.11, "y": 0.21, "w": 0.5, "h": 0.6}, 
+        "confidence": 0.92
+    },
+    {
+        "frame_number": 102, 
+        "bbox_norm": {"x": 0.12, "y": 0.22, "w": 0.5, "h": 0.6}, 
+        "confidence": 0.95
+    },
 ]
 
 track = Track.from_raw_detections(
@@ -92,10 +117,36 @@ track = Track.from_raw_detections(
 ```
 
 This method automatically:
-- Converts raw dictionaries to Detection objects
+- Converts raw dictionaries to Detection objects  
 - Calculates frame ranges and duration
 - Computes confidence statistics
 - Creates a TrackStats object
+
+### Converting from Provider-Specific Formats
+
+When working with different vision APIs (like Gemini), use the factory method with provider mapping:
+
+```python  
+from typus.models.tracks import Detection
+
+# Raw detection from Gemini API (bottom-right origin)
+gemini_detection = {
+    "frame_number": 100,
+    "bbox": [50, 50, 80, 90],  # Gemini BR coordinates
+    "confidence": 0.95
+}
+
+# Convert to canonical format
+detection = Detection.from_raw_detection(
+    gemini_detection,
+    upload_w=100, upload_h=100,
+    provider="gemini_br_xyxy"  # Converts BR->TL and normalizes
+)
+
+# Now has canonical bbox_norm and preserves original bbox
+assert detection.bbox_norm is not None  # Canonical format
+assert detection.bbox == [50, 50, 80, 90]  # Original preserved
+```
 
 ## Track Methods
 

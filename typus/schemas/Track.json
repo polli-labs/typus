@@ -1,0 +1,157 @@
+{
+  "$defs": {
+    "BBoxXYWHNorm": {
+      "additionalProperties": false,
+      "description": "Canonical TL-normalized bbox: [x, y, w, h] with invariants.",
+      "properties": {
+        "x": {
+          "description": "Left coordinate (0-1, normalized)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "Top coordinate (0-1, normalized)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Y",
+          "type": "number"
+        },
+        "w": {
+          "description": "Width (0-1, normalized)",
+          "exclusiveMinimum": 0.0,
+          "maximum": 1.0,
+          "title": "W",
+          "type": "number"
+        },
+        "h": {
+          "description": "Height (0-1, normalized)",
+          "exclusiveMinimum": 0.0,
+          "maximum": 1.0,
+          "title": "H",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "title": "BBoxXYWHNorm",
+      "type": "object"
+    },
+    "Detection": {
+      "$ref": "./Detection.json"
+    },
+    "TrackStats": {
+      "$ref": "./TrackStats.json"
+    }
+  },
+  "additionalProperties": true,
+  "description": "Complete track representing an object's journey through a video.\n\nA track consists of multiple detections linked across frames,\nrepresenting the same object as it moves through the video.\nIncludes aggregate metrics, taxonomic consensus, and validation metadata.",
+  "properties": {
+    "track_id": {
+      "description": "Unique identifier for this track",
+      "title": "Track Id",
+      "type": "string"
+    },
+    "clip_id": {
+      "description": "ID of the video clip containing this track",
+      "title": "Clip Id",
+      "type": "string"
+    },
+    "detections": {
+      "description": "List of detections forming this track",
+      "items": {
+        "$ref": "#/$defs/Detection"
+      },
+      "minItems": 1,
+      "title": "Detections",
+      "type": "array"
+    },
+    "start_frame": {
+      "description": "First frame of the track",
+      "minimum": 0,
+      "title": "Start Frame",
+      "type": "integer"
+    },
+    "end_frame": {
+      "description": "Last frame of the track",
+      "minimum": 0,
+      "title": "End Frame",
+      "type": "integer"
+    },
+    "duration_frames": {
+      "description": "Total frames in track",
+      "minimum": 1,
+      "title": "Duration Frames",
+      "type": "integer"
+    },
+    "duration_seconds": {
+      "description": "Duration in seconds",
+      "exclusiveMinimum": 0.0,
+      "title": "Duration Seconds",
+      "type": "number"
+    },
+    "confidence": {
+      "description": "Overall track confidence score",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "stats": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/TrackStats"
+        }
+      ],
+      "default": null,
+      "description": "Statistical summary of track metrics",
+      "title": "Stats"
+    },
+    "taxon_id": {
+      "default": null,
+      "description": "Consensus taxonomic ID for the track",
+      "title": "Taxon Id",
+      "type": "integer"
+    },
+    "scientific_name": {
+      "default": null,
+      "description": "Consensus scientific name",
+      "title": "Scientific Name",
+      "type": "string"
+    },
+    "common_name": {
+      "default": null,
+      "description": "Consensus common name",
+      "title": "Common Name",
+      "type": "string"
+    },
+    "validation_status": {
+      "default": "pending",
+      "description": "Human validation status",
+      "enum": [
+        "pending",
+        "validated",
+        "rejected"
+      ],
+      "title": "Validation Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "track_id",
+    "clip_id",
+    "detections",
+    "start_frame",
+    "end_frame",
+    "duration_frames",
+    "duration_seconds",
+    "confidence"
+  ],
+  "title": "Track",
+  "type": "object"
+}

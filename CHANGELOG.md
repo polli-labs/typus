@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.3.0
+### Added - Canonical Geometry
+* **NEW**: `BBoxXYWHNorm` - Canonical top-left normalized bbox type with strict invariant validation
+  - Immutable Pydantic model enforcing `[x, y, w, h]` format with `0 ≤ x,y ≤ 1`, `0 < w,h ≤ 1`
+  - Coordinate bounds checking: `x + w ≤ 1`, `y + h ≤ 1`
+  - Non-finite value rejection (NaN, Infinity)
+* **NEW**: Provider-specific bbox mapping registry (`BBoxMapper`)
+  - Built-in support for Gemini bottom-right origin conversion (`gemini_br_xyxy` mapper)
+  - Pluggable architecture for custom coordinate system mappings
+* **NEW**: Pixel ↔ normalized coordinate conversion utilities
+  - `to_xyxy_px()` and `from_xyxy_px()` functions for round-trip conversion
+  - Sub-pixel accuracy (≤0.5px error) across different image dimensions
+* **NEW**: Enhanced Track models with canonical geometry support
+  - `Detection` model supports both `bbox_norm` (canonical) and `bbox` (legacy) fields
+  - Factory method `Detection.from_raw_detection()` with provider mapping
+  - Updated examples and validation to use canonical format
+* **NEW**: JSON Schemas for canonical geometry types
+  - Auto-generated schemas for `BBoxXYWHNorm`, `Detection`, `Track`, `TrackStats`
+  - Available in `typus/schemas/` directory for API documentation
+* **NEW**: Comprehensive documentation for canonical geometry
+  - New `docs/geometry.md` with usage examples and migration guide
+  - Updated `docs/models.md` to highlight canonical types over legacy formats
+  - Updated `docs/tracks.md` with canonical bbox examples and provider mapping
+
+### Changed
+* **API**: Detection model now requires either `bbox_norm` or `bbox` field (validation enforced)
+* **EXPORT**: Added canonical geometry types to public API exports
+  - `from typus import BBoxXYWHNorm, BBoxMapper, to_xyxy_px, from_xyxy_px`
+* **DOCS**: Legacy geometry types demoted to "Legacy" section with deprecation notices
+* **EXAMPLES**: All documentation examples updated to use canonical format
+
+### Backwards Compatibility
+* **MAINTAINED**: All existing `bbox` (pixel) fields continue to work
+* **MAINTAINED**: Existing `BBox` and geometry enums unchanged
+* **MAINTAINED**: No breaking changes to public APIs
+
 ## 0.2.1
 ### Added
 * **NEW**: Track models for video object tracking (`Detection`, `Track`, `TrackStats`)

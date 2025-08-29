@@ -10,7 +10,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+from .geometry import BBoxXYWHNorm, BBoxMapper
 
 
 class Detection(BaseModel):
@@ -22,9 +24,18 @@ class Detection(BaseModel):
     """
 
     frame_number: int = Field(..., ge=0, description="Frame number in the video")
-    bbox: list[float] = Field(
-        ..., min_length=4, max_length=4, description="Bounding box [x, y, width, height] in pixels"
+    
+    # Canonical bbox (preferred)
+    bbox_norm: BBoxXYWHNorm | None = Field(
+        None, description="Canonical bounding box [x, y, w, h] - top-left origin, normalized [0,1]"
     )
+    
+    # Legacy bbox field (deprecated)
+    bbox: list[float] | None = Field(
+        None, min_length=4, max_length=4, 
+        description="Legacy pixel bbox [x, y, width, height] - DEPRECATED, use bbox_norm"
+    )
+    
     confidence: float = Field(..., ge=0.0, le=1.0, description="Detection confidence score")
 
     # Optional taxonomy info (may be enriched post-detection)
@@ -36,15 +47,54 @@ class Detection(BaseModel):
     smoothed_bbox: Optional[list[float]] = Field(
         None, min_length=4, max_length=4, description="Smoothed bounding box after post-processing"
     )
+    smoothed_bbox_norm: Optional[BBoxXYWHNorm] = Field(
+        None, description="Smoothed canonical bbox after post-processing"
+    )
     velocity: Optional[list[float]] = Field(
         None, min_length=2, max_length=2, description="Velocity [vx, vy] in pixels/frame"
     )
+
+    @model_validator(mode='after')
+    def validate_bbox_fields(self) -> 'Detection':
+        """Ensure at least one bbox field is provided."""
+        if self.bbox_norm is None and self.bbox is None:
+            raise ValueError("Either bbox_norm or bbox must be provided")
+        return self
+
+    @classmethod
+    def from_raw_detection(cls, raw: dict, *, upload_w: int | None = None, upload_h: int | None = None, provider: str | None = None) -> 'Detection':
+        """Create Detection from raw bbox data with optional provider mapping.
+        
+        Args:
+            raw: Raw detection dictionary
+            upload_w, upload_h: Image dimensions for provider mapping
+            provider: Provider hint for bbox format conversion (e.g., 'gemini_br_xyxy')
+            
+        Returns:
+            Detection instance with canonical bbox_norm
+        """
+        detection_data = raw.copy()
+        
+        # Handle bbox conversion if provider is specified
+        if 'bbox' in raw and provider is not None:
+            if upload_w is None or upload_h is None:
+                raise ValueError("upload_w and upload_h required for provider mapping")
+            
+            mapper_fn = BBoxMapper.get(provider)
+            bbox_data = raw['bbox']
+            if len(bbox_data) == 4:
+                canonical_bbox = mapper_fn(*bbox_data, upload_w, upload_h)
+                detection_data['bbox_norm'] = canonical_bbox
+                # Keep legacy bbox for compatibility
+                detection_data['bbox'] = bbox_data
+            
+        return cls(**detection_data)
 
     model_config = {
         "json_schema_extra": {
             "example": {
                 "frame_number": 100,
-                "bbox": [10.5, 20.5, 50.0, 60.0],
+                "bbox_norm": {"x": 0.1, "y": 0.2, "w": 0.5, "h": 0.6},
                 "confidence": 0.95,
                 "taxon_id": 47219,
                 "scientific_name": "Apis mellifera",
@@ -152,7 +202,7 @@ class Track(BaseModel):
                 "detections": [
                     {
                         "frame_number": 100,
-                        "bbox": [10, 20, 50, 60],
+                        "bbox_norm": {"x": 0.1, "y": 0.2, "w": 0.5, "h": 0.6},
                         "confidence": 0.95,
                         "taxon_id": 47219,
                     }

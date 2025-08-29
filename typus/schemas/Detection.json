@@ -1,0 +1,140 @@
+{
+  "$defs": {
+    "BBoxXYWHNorm": {
+      "additionalProperties": false,
+      "description": "Canonical TL-normalized bbox: [x, y, w, h] with invariants.",
+      "properties": {
+        "x": {
+          "description": "Left coordinate (0-1, normalized)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "Top coordinate (0-1, normalized)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Y",
+          "type": "number"
+        },
+        "w": {
+          "description": "Width (0-1, normalized)",
+          "exclusiveMinimum": 0.0,
+          "maximum": 1.0,
+          "title": "W",
+          "type": "number"
+        },
+        "h": {
+          "description": "Height (0-1, normalized)",
+          "exclusiveMinimum": 0.0,
+          "maximum": 1.0,
+          "title": "H",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "title": "BBoxXYWHNorm",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "Single detection within a track.\n\nRepresents one observation of an object at a specific frame,\nincluding its bounding box, confidence score, and optional\ntaxonomic identification.",
+  "properties": {
+    "frame_number": {
+      "description": "Frame number in the video",
+      "minimum": 0,
+      "title": "Frame Number",
+      "type": "integer"
+    },
+    "bbox_norm": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BBoxXYWHNorm"
+        }
+      ],
+      "default": null,
+      "description": "Canonical bounding box [x, y, w, h] - top-left origin, normalized [0,1]",
+      "title": "Bbox Norm"
+    },
+    "bbox": {
+      "default": null,
+      "description": "Legacy pixel bbox [x, y, width, height] - DEPRECATED, use bbox_norm",
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Bbox",
+      "type": "array"
+    },
+    "confidence": {
+      "description": "Detection confidence score",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "taxon_id": {
+      "default": null,
+      "description": "Taxonomic ID from taxonomy service",
+      "title": "Taxon Id",
+      "type": "integer"
+    },
+    "scientific_name": {
+      "default": null,
+      "description": "Scientific name of detected organism",
+      "title": "Scientific Name",
+      "type": "string"
+    },
+    "common_name": {
+      "default": null,
+      "description": "Common name of detected organism",
+      "title": "Common Name",
+      "type": "string"
+    },
+    "smoothed_bbox": {
+      "default": null,
+      "description": "Smoothed bounding box after post-processing",
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Smoothed Bbox",
+      "type": "array"
+    },
+    "smoothed_bbox_norm": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BBoxXYWHNorm"
+        }
+      ],
+      "default": null,
+      "description": "Smoothed canonical bbox after post-processing",
+      "title": "Smoothed Bbox Norm"
+    },
+    "velocity": {
+      "default": null,
+      "description": "Velocity [vx, vy] in pixels/frame",
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Velocity",
+      "type": "array"
+    }
+  },
+  "required": [
+    "frame_number",
+    "confidence"
+  ],
+  "title": "Detection",
+  "type": "object"
+}
