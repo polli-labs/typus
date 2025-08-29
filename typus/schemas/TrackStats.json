@@ -1,0 +1,62 @@
+{
+  "description": "Statistical summary of track metrics.\n\nProvides aggregate statistics about a track's confidence scores\nand optionally other metrics like bounding box stability.",
+  "example": {
+    "bbox_stability": 0.88,
+    "confidence_max": 0.98,
+    "confidence_mean": 0.92,
+    "confidence_min": 0.85,
+    "confidence_std": 0.05
+  },
+  "properties": {
+    "confidence_mean": {
+      "description": "Mean confidence across all detections",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence Mean",
+      "type": "number"
+    },
+    "confidence_std": {
+      "description": "Standard deviation of confidence scores",
+      "minimum": 0.0,
+      "title": "Confidence Std",
+      "type": "number"
+    },
+    "confidence_min": {
+      "description": "Minimum confidence score in track",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence Min",
+      "type": "number"
+    },
+    "confidence_max": {
+      "description": "Maximum confidence score in track",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence Max",
+      "type": "number"
+    },
+    "bbox_stability": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Measure of bounding box consistency (0=unstable, 1=stable)",
+      "title": "Bbox Stability"
+    }
+  },
+  "required": [
+    "confidence_mean",
+    "confidence_std",
+    "confidence_min",
+    "confidence_max"
+  ],
+  "title": "TrackStats",
+  "type": "object"
+}

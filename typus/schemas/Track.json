@@ -1,0 +1,508 @@
+{
+  "$defs": {
+    "BBoxXYWHNorm": {
+      "description": "Canonical TL-normalized bbox: [x, y, w, h] with invariants.",
+      "properties": {
+        "x": {
+          "description": "Left coordinate (0-1, normalized)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "Top coordinate (0-1, normalized)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Y",
+          "type": "number"
+        },
+        "w": {
+          "description": "Width (0-1, normalized)",
+          "exclusiveMinimum": 0.0,
+          "maximum": 1.0,
+          "title": "W",
+          "type": "number"
+        },
+        "h": {
+          "description": "Height (0-1, normalized)",
+          "exclusiveMinimum": 0.0,
+          "maximum": 1.0,
+          "title": "H",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "title": "BBoxXYWHNorm",
+      "type": "object"
+    },
+    "Detection": {
+      "description": "Single detection within a track.\n\nRepresents one observation of an object at a specific frame,\nincluding its bounding box, confidence score, and optional\ntaxonomic identification.",
+      "example": {
+        "bbox_norm": {
+          "h": 0.6,
+          "w": 0.5,
+          "x": 0.1,
+          "y": 0.2
+        },
+        "common_name": "Western honey bee",
+        "confidence": 0.95,
+        "frame_number": 100,
+        "scientific_name": "Apis mellifera",
+        "taxon_id": 47219
+      },
+      "properties": {
+        "frame_number": {
+          "description": "Frame number in the video",
+          "minimum": 0,
+          "title": "Frame Number",
+          "type": "integer"
+        },
+        "bbox_norm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BBoxXYWHNorm"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Canonical bounding box [x, y, w, h] - top-left origin, normalized [0,1]"
+        },
+        "bbox": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Legacy pixel bbox [x, y, width, height] - DEPRECATED, use bbox_norm",
+          "title": "Bbox"
+        },
+        "confidence": {
+          "description": "Detection confidence score",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "taxon_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Taxonomic ID from taxonomy service",
+          "title": "Taxon Id"
+        },
+        "scientific_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Scientific name of detected organism",
+          "title": "Scientific Name"
+        },
+        "common_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Common name of detected organism",
+          "title": "Common Name"
+        },
+        "smoothed_bbox": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Smoothed bounding box after post-processing",
+          "title": "Smoothed Bbox"
+        },
+        "smoothed_bbox_norm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BBoxXYWHNorm"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Smoothed canonical bbox after post-processing"
+        },
+        "velocity": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Velocity [vx, vy] in pixels/frame",
+          "title": "Velocity"
+        }
+      },
+      "required": [
+        "frame_number",
+        "confidence"
+      ],
+      "title": "Detection",
+      "type": "object"
+    },
+    "TrackStats": {
+      "description": "Statistical summary of track metrics.\n\nProvides aggregate statistics about a track's confidence scores\nand optionally other metrics like bounding box stability.",
+      "example": {
+        "bbox_stability": 0.88,
+        "confidence_max": 0.98,
+        "confidence_mean": 0.92,
+        "confidence_min": 0.85,
+        "confidence_std": 0.05
+      },
+      "properties": {
+        "confidence_mean": {
+          "description": "Mean confidence across all detections",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence Mean",
+          "type": "number"
+        },
+        "confidence_std": {
+          "description": "Standard deviation of confidence scores",
+          "minimum": 0.0,
+          "title": "Confidence Std",
+          "type": "number"
+        },
+        "confidence_min": {
+          "description": "Minimum confidence score in track",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence Min",
+          "type": "number"
+        },
+        "confidence_max": {
+          "description": "Maximum confidence score in track",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence Max",
+          "type": "number"
+        },
+        "bbox_stability": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Measure of bounding box consistency (0=unstable, 1=stable)",
+          "title": "Bbox Stability"
+        }
+      },
+      "required": [
+        "confidence_mean",
+        "confidence_std",
+        "confidence_min",
+        "confidence_max"
+      ],
+      "title": "TrackStats",
+      "type": "object"
+    }
+  },
+  "description": "Complete track representing an object's journey through a video.\n\nA track consists of multiple detections linked across frames,\nrepresenting the same object as it moves through the video.\nIncludes aggregate metrics, taxonomic consensus, and validation metadata.",
+  "example": {
+    "clip_id": "video_20240108_1234",
+    "common_name": "Western honey bee",
+    "confidence": 0.92,
+    "detections": [
+      {
+        "bbox_norm": {
+          "h": 0.6,
+          "w": 0.5,
+          "x": 0.1,
+          "y": 0.2
+        },
+        "confidence": 0.95,
+        "frame_number": 100,
+        "taxon_id": 47219
+      }
+    ],
+    "detector": "yolov8",
+    "duration_frames": 150,
+    "duration_seconds": 5.0,
+    "end_frame": 250,
+    "scientific_name": "Apis mellifera",
+    "start_frame": 100,
+    "taxon_id": 47219,
+    "track_id": "track_001",
+    "tracker": "bytetrack",
+    "validation_status": "validated"
+  },
+  "properties": {
+    "track_id": {
+      "description": "Unique identifier for this track",
+      "title": "Track Id",
+      "type": "string"
+    },
+    "clip_id": {
+      "description": "ID of the video clip containing this track",
+      "title": "Clip Id",
+      "type": "string"
+    },
+    "detections": {
+      "description": "List of detections forming this track",
+      "items": {
+        "$ref": "#/$defs/Detection"
+      },
+      "minItems": 1,
+      "title": "Detections",
+      "type": "array"
+    },
+    "start_frame": {
+      "description": "First frame of the track",
+      "minimum": 0,
+      "title": "Start Frame",
+      "type": "integer"
+    },
+    "end_frame": {
+      "description": "Last frame of the track",
+      "minimum": 0,
+      "title": "End Frame",
+      "type": "integer"
+    },
+    "duration_frames": {
+      "description": "Total frames in track",
+      "minimum": 1,
+      "title": "Duration Frames",
+      "type": "integer"
+    },
+    "duration_seconds": {
+      "description": "Duration in seconds",
+      "exclusiveMinimum": 0,
+      "title": "Duration Seconds",
+      "type": "number"
+    },
+    "confidence": {
+      "description": "Overall track confidence score",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "stats": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TrackStats"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Statistical summary of track metrics"
+    },
+    "taxon_id": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Consensus taxonomic ID for the track",
+      "title": "Taxon Id"
+    },
+    "scientific_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Consensus scientific name",
+      "title": "Scientific Name"
+    },
+    "common_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Consensus common name",
+      "title": "Common Name"
+    },
+    "validation_status": {
+      "anyOf": [
+        {
+          "enum": [
+            "pending",
+            "validated",
+            "rejected"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": "pending",
+      "description": "Human validation status",
+      "title": "Validation Status"
+    },
+    "validation_notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Notes from validation process",
+      "title": "Validation Notes"
+    },
+    "validated_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Username/ID of validator",
+      "title": "Validated By"
+    },
+    "validated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Timestamp of validation",
+      "title": "Validated At"
+    },
+    "detector": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Detection model used (e.g., 'yolov8', 'clip21')",
+      "title": "Detector"
+    },
+    "tracker": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Tracking algorithm used (e.g., 'sort', 'bytetrack')",
+      "title": "Tracker"
+    },
+    "smoothing_applied": {
+      "default": false,
+      "description": "Whether smoothing was applied to detections",
+      "title": "Smoothing Applied",
+      "type": "boolean"
+    },
+    "smoothing_method": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Smoothing method used (e.g., 'kalman', 'spline')",
+      "title": "Smoothing Method"
+    }
+  },
+  "required": [
+    "track_id",
+    "clip_id",
+    "detections",
+    "start_frame",
+    "end_frame",
+    "duration_frames",
+    "duration_seconds",
+    "confidence"
+  ],
+  "title": "Track",
+  "type": "object"
+}

@@ -9,6 +9,7 @@ from .models.classification import (
     TaskPrediction,
     TaxonomyContext,
 )
+from .models.geometry import BBoxMapper, BBoxXYWHNorm, from_xyxy_px, to_xyxy_px
 from .models.lineage import LineageMap
 from .models.taxon import Taxon
 from .models.tracks import Detection, Track, TrackStats
@@ -36,6 +37,10 @@ __all__ = [
     "Taxon",
     "infer_rank",
     "LineageMap",
+    "BBoxXYWHNorm",
+    "BBoxMapper",
+    "to_xyxy_px",
+    "from_xyxy_px",
     "Detection",
     "Track",
     "TrackStats",

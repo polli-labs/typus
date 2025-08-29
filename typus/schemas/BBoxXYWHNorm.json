@@ -1,0 +1,41 @@
+{
+  "description": "Canonical TL-normalized bbox: [x, y, w, h] with invariants.",
+  "properties": {
+    "x": {
+      "description": "Left coordinate (0-1, normalized)",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "X",
+      "type": "number"
+    },
+    "y": {
+      "description": "Top coordinate (0-1, normalized)",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Y",
+      "type": "number"
+    },
+    "w": {
+      "description": "Width (0-1, normalized)",
+      "exclusiveMinimum": 0.0,
+      "maximum": 1.0,
+      "title": "W",
+      "type": "number"
+    },
+    "h": {
+      "description": "Height (0-1, normalized)",
+      "exclusiveMinimum": 0.0,
+      "maximum": 1.0,
+      "title": "H",
+      "type": "number"
+    }
+  },
+  "required": [
+    "x",
+    "y",
+    "w",
+    "h"
+  ],
+  "title": "BBoxXYWHNorm",
+  "type": "object"
+}

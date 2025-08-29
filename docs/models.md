@@ -9,18 +9,52 @@ Refer to existing documentation or source code for `HierarchicalClassificationRe
 
 ## Geometry Models
 
-These models define basic geometric primitives used in detection and segmentation tasks.
+### **Canonical Geometry (v0.3.0+)**
 
-### `BBoxFormat` (Enum)
+**For new code, always use the canonical `BBoxXYWHNorm` type.** See the [Canonical Geometry](geometry.md) documentation for full details.
 
-Defines the format of a bounding box's coordinates.
+#### `BBoxXYWHNorm` (Recommended)
+
+The canonical bounding box format with enforced invariants:
+
+- **Format**: `[x, y, width, height]` (top-left origin)
+- **Normalization**: All values in `[0, 1]` range  
+- **Immutable**: Cannot be modified after creation
+- **Validated**: Enforces coordinate bounds and non-finite rejection
+
+**Example:**
+
+```python
+from typus import BBoxXYWHNorm
+
+# Canonical bbox covering 20%-70% horizontally, 10%-60% vertically
+bbox = BBoxXYWHNorm(x=0.2, y=0.1, w=0.5, h=0.5)
+
+# Convert to/from pixel coordinates
+from typus import to_xyxy_px, from_xyxy_px
+
+# To pixels (for 1920x1080 image)
+x1, y1, x2, y2 = to_xyxy_px(bbox, W=1920, H=1080)  
+# Result: (384, 108, 1344, 648)
+
+# From pixels
+bbox_from_pixels = from_xyxy_px(384, 108, 1344, 648, W=1920, H=1080)
+```
+
+### Legacy Geometry Types
+
+*The following types are maintained for backward compatibility but should not be used in new code.*
+
+#### `BBoxFormat` (Enum) - Legacy
+
+Defines the format of a legacy bounding box's coordinates.
 
 *   `XYXY_REL`: Relative coordinates representing [x_min, y_min, x_max, y_max], where values are fractions of image width/height.
 *   `XYXY_ABS`: Absolute pixel coordinates representing [x_min, y_min, x_max, y_max].
 *   `CXCYWH_REL`: Relative coordinates representing [center_x, center_y, width, height], where values are fractions of image width/height.
 *   `CXCYWH_ABS`: Absolute pixel coordinates representing [center_x, center_y, width, height].
 
-### `MaskEncoding` (Enum)
+#### `MaskEncoding` (Enum)
 
 Defines the encoding method for an instance mask.
 
@@ -28,24 +62,12 @@ Defines the encoding method for an instance mask.
 *   `POLYGON`: Polygon representation as a list of [x,y] points. The `data` field in `EncodedMask` will be a `List[List[float]]`.
 *   `PNG_BASE64`: Base64 encoded PNG image representing the mask. The `data` field in `EncodedMask` will be a string.
 
-### `BBox`
+#### `BBox` - Legacy
 
-Represents a bounding box.
+*Legacy bounding box with multiple format support. Use `BBoxXYWHNorm` for new code.*
 
 *   `coords: Tuple[float, float, float, float]`: The coordinates of the bounding box.
 *   `fmt: BBoxFormat = BBoxFormat.XYXY_REL`: The format of the coordinates. Defaults to relative XYXY.
-
-**Example:**
-
-```python
-from typus.models.geometry import BBox, BBoxFormat
-
-# Relative XYXY bounding box
-bbox_rel = BBox(coords=(0.1, 0.1, 0.5, 0.5))
-
-# Absolute XYXY bounding box
-bbox_abs = BBox(coords=(100, 50, 200, 150), fmt=BBoxFormat.XYXY_ABS)
-```
 
 ### `EncodedMask`
 
