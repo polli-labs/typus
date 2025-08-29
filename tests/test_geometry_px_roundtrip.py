@@ -8,40 +8,43 @@ from typus.models.geometry import BBoxXYWHNorm, from_xyxy_px, to_xyxy_px
 class TestPixelNormalizedRoundtrip:
     """Test round-trip conversions between pixel and normalized coordinates."""
 
-    @pytest.mark.parametrize("W,H", [
-        (100, 100),      # Square
-        (1920, 1080),    # HD video
-        (640, 480),      # VGA
-        (3840, 2160),    # 4K
-        (1, 1),          # Edge case
-        (800, 600),      # 4:3 aspect ratio
-    ])
+    @pytest.mark.parametrize(
+        "W,H",
+        [
+            (100, 100),  # Square
+            (1920, 1080),  # HD video
+            (640, 480),  # VGA
+            (3840, 2160),  # 4K
+            (1, 1),  # Edge case
+            (800, 600),  # 4:3 aspect ratio
+        ],
+    )
     def test_roundtrip_accuracy(self, W: int, H: int):
         """Test that pixel -> norm -> pixel conversion is accurate within 0.5px."""
         # Test various bbox configurations
         test_cases = [
             # (x1, y1, x2, y2) in pixels
-            (10, 20, 50, 60),           # Small bbox
-            (0, 0, W//2, H//2),         # Top-left quadrant
-            (W//2, H//2, W, H),         # Bottom-right quadrant  
-            (0, 0, W, H),               # Full image
-            (W//4, H//4, 3*W//4, 3*H//4), # Centered box
-            (1, 1, 2, 2),               # Minimal size
+            (10, 20, 50, 60),  # Small bbox
+            (0, 0, W // 2, H // 2),  # Top-left quadrant
+            (W // 2, H // 2, W, H),  # Bottom-right quadrant
+            (0, 0, W, H),  # Full image
+            (W // 4, H // 4, 3 * W // 4, 3 * H // 4),  # Centered box
+            (1, 1, 2, 2),  # Minimal size
         ]
-        
+
         for x1_orig, y1_orig, x2_orig, y2_orig in test_cases:
             # Skip invalid cases
             if x2_orig <= x1_orig or y2_orig <= y1_orig:
                 continue
             if x1_orig < 0 or y1_orig < 0 or x2_orig > W or y2_orig > H:
                 continue
-            
+
             # Convert pixels to normalized
             bbox_norm = from_xyxy_px(x1_orig, y1_orig, x2_orig, y2_orig, W, H)
-            
+
             # Convert back to pixels
             x1_round, y1_round, x2_round, y2_round = to_xyxy_px(bbox_norm, W, H)
-            
+
             # Check accuracy within 0.5 pixels
             assert abs(x1_round - x1_orig) <= 0.5, f"x1 error: {abs(x1_round - x1_orig)}"
             assert abs(y1_round - y1_orig) <= 0.5, f"y1 error: {abs(y1_round - y1_orig)}"
@@ -51,14 +54,14 @@ class TestPixelNormalizedRoundtrip:
     def test_edge_coordinates(self):
         """Test conversion of edge and corner coordinates."""
         W, H = 100, 100
-        
+
         # Full image bbox
         bbox = from_xyxy_px(0, 0, W, H, W, H)
         assert bbox.x == 0.0
         assert bbox.y == 0.0
-        assert bbox.w == 1.0  
+        assert bbox.w == 1.0
         assert bbox.h == 1.0
-        
+
         # Convert back
         x1, y1, x2, y2 = to_xyxy_px(bbox, W, H)
         assert x1 == 0
@@ -69,13 +72,13 @@ class TestPixelNormalizedRoundtrip:
     def test_small_bboxes(self):
         """Test conversion of very small bboxes."""
         W, H = 1000, 1000
-        
+
         # 1-pixel bbox
         bbox = from_xyxy_px(100, 200, 101, 201, W, H)
         assert bbox.w == 1.0 / W
         assert bbox.h == 1.0 / H
-        
-        # Convert back  
+
+        # Convert back
         x1, y1, x2, y2 = to_xyxy_px(bbox, W, H)
         assert abs(x1 - 100) <= 0.5
         assert abs(y1 - 200) <= 0.5
@@ -85,16 +88,16 @@ class TestPixelNormalizedRoundtrip:
     def test_fractional_pixels(self):
         """Test handling of fractional pixel coordinates."""
         W, H = 100, 100
-        
+
         # Fractional input coordinates
         bbox = from_xyxy_px(10.3, 20.7, 50.9, 60.1, W, H)
-        
+
         # Should create valid normalized bbox
         assert 0 <= bbox.x <= 1
         assert 0 <= bbox.y <= 1
         assert 0 < bbox.w <= 1
         assert 0 < bbox.h <= 1
-        
+
         # Round-trip should be close
         x1, y1, x2, y2 = to_xyxy_px(bbox, W, H)
         assert abs(x1 - 10.3) <= 0.5
@@ -105,12 +108,12 @@ class TestPixelNormalizedRoundtrip:
     def test_clamping_behavior(self):
         """Test that out-of-bounds coordinates are clamped properly."""
         W, H = 100, 100
-        
+
         # Negative coordinates should be clamped to 0
         bbox = from_xyxy_px(-10, -5, 50, 60, W, H)
         assert bbox.x == 0.0
         assert bbox.y == 0.0
-        
+
         # Convert back - should stay clamped
         x1, y1, x2, y2 = to_xyxy_px(bbox, W, H)
         assert x1 == 0
@@ -119,38 +122,38 @@ class TestPixelNormalizedRoundtrip:
     def test_invalid_xyxy_input(self):
         """Test error handling for invalid xyxy input."""
         W, H = 100, 100
-        
+
         # x2 < x1
         with pytest.raises(ValueError, match="xyxy invalid"):
             from_xyxy_px(50, 20, 40, 60, W, H)
-        
-        # y2 < y1  
+
+        # y2 < y1
         with pytest.raises(ValueError, match="xyxy invalid"):
             from_xyxy_px(10, 60, 50, 50, W, H)
-        
-        # Equal coordinates (zero width/height)
+
+        # Equal coordinates (zero width/height) 
         with pytest.raises(ValueError, match="xyxy invalid"):
-            from_xyxy_px(10, 20, 10, 60, W, H)
+            from_xyxy_px(10, 20, 10, 20, W, H)
 
     def test_consistency_across_image_sizes(self):
         """Test that normalized coordinates are consistent across different image sizes."""
         # Same relative bbox in different image sizes
         relative_coords = (0.1, 0.2, 0.5, 0.6)  # 10%, 20% to 50%, 60%
-        
+
         image_sizes = [(100, 100), (200, 150), (1920, 1080)]
         normalized_bboxes = []
-        
+
         for W, H in image_sizes:
             # Convert relative coords to pixels for this image size
             x1 = int(relative_coords[0] * W)
-            y1 = int(relative_coords[1] * H) 
+            y1 = int(relative_coords[1] * H)
             x2 = int(relative_coords[2] * W)
             y2 = int(relative_coords[3] * H)
-            
+
             # Create normalized bbox
             bbox = from_xyxy_px(x1, y1, x2, y2, W, H)
             normalized_bboxes.append(bbox)
-        
+
         # All normalized bboxes should be very similar
         # (small differences due to integer pixel quantization are expected)
         base_bbox = normalized_bboxes[0]
@@ -159,3 +162,40 @@ class TestPixelNormalizedRoundtrip:
             assert abs(bbox.y - base_bbox.y) < 0.01, "y coordinates should be similar"
             assert abs(bbox.w - base_bbox.w) < 0.01, "widths should be similar"
             assert abs(bbox.h - base_bbox.h) < 0.01, "heights should be similar"
+
+    def test_half_up_rounding_ties(self):
+        """Test that rounding ties are handled correctly (ties away from zero)."""
+        # Test cases where normalized coordinates * W/H land exactly on 0.5
+        W, H = 10, 10
+
+        # 0.15 * 10 = 1.5 should round to 2 (away from zero)
+        bbox = BBoxXYWHNorm(x=0.15, y=0.15, w=0.1, h=0.1)
+        x1, y1, x2, y2 = to_xyxy_px(bbox, W, H)
+
+        assert x1 == 2, f"x1 should round 1.5 -> 2, got {x1}"
+        assert y1 == 2, f"y1 should round 1.5 -> 2, got {y1}"
+
+        # Test x2, y2 boundaries: x=0.15, w=0.1 means x2 = (0.15+0.1)*10 = 2.5 -> 3
+        assert x2 == 3, f"x2 should round 2.5 -> 3, got {x2}"
+        assert y2 == 3, f"y2 should round 2.5 -> 3, got {y2}"
+
+    def test_one_pixel_box_identity(self):
+        """Test the 1-pixel box identity with exclusive x2/y2 semantics."""
+        W, H = 100, 100
+
+        # A 1-pixel box at (20, 10) should be xyxy=(20, 10, 21, 11)
+        # In normalized coords: x=0.2, y=0.1, w=0.01, h=0.01
+        bbox = BBoxXYWHNorm(x=0.2, y=0.1, w=0.01, h=0.01)
+        x1, y1, x2, y2 = to_xyxy_px(bbox, W, H)
+
+        assert x1 == 20, f"1-px box x1 should be 20, got {x1}"
+        assert y1 == 10, f"1-px box y1 should be 10, got {y1}"
+        assert x2 == 21, f"1-px box x2 should be 21 (exclusive), got {x2}"
+        assert y2 == 11, f"1-px box y2 should be 11 (exclusive), got {y2}"
+
+        # Round-trip should preserve the 1-pixel identity
+        bbox_rt = from_xyxy_px(x1, y1, x2, y2, W, H)
+        assert abs(bbox_rt.x - 0.2) < 1e-6, "Round-trip x should match"
+        assert abs(bbox_rt.y - 0.1) < 1e-6, "Round-trip y should match"
+        assert abs(bbox_rt.w - 0.01) < 1e-6, "Round-trip w should match"
+        assert abs(bbox_rt.h - 0.01) < 1e-6, "Round-trip h should match"

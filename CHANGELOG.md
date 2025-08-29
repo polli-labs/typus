@@ -12,6 +12,7 @@
 * **NEW**: Pixel ↔ normalized coordinate conversion utilities
   - `to_xyxy_px()` and `from_xyxy_px()` functions for round-trip conversion
   - Sub-pixel accuracy (≤0.5px error) across different image dimensions
+  - Half-up rounding rule for pixel conversion (ties away from zero) ensures deterministic edge semantics
 * **NEW**: Enhanced Track models with canonical geometry support
   - `Detection` model supports both `bbox_norm` (canonical) and `bbox` (legacy) fields
   - Factory method `Detection.from_raw_detection()` with provider mapping

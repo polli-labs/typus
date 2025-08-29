@@ -112,6 +112,21 @@ image_width, image_height = 100, 100
 canonical_bbox = mapper(*gemini_coords, image_width, image_height)
 ```
 
+#### Provider Discovery
+
+List all available providers for introspection:
+
+```python
+from typus import BBoxMapper
+
+# Discover available providers
+providers = BBoxMapper.list_providers()
+print(providers)  # ['gemini_br_xyxy', ...]
+
+# Use a specific provider by canonical name
+mapper = BBoxMapper.get("gemini_br_xyxy")
+```
+
 #### Custom Providers
 
 Register your own provider mappings:

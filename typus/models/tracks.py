@@ -12,7 +12,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from .geometry import BBoxXYWHNorm, BBoxMapper
+from .geometry import BBoxMapper, BBoxXYWHNorm
 
 
 class Detection(BaseModel):
@@ -24,18 +24,20 @@ class Detection(BaseModel):
     """
 
     frame_number: int = Field(..., ge=0, description="Frame number in the video")
-    
+
     # Canonical bbox (preferred)
     bbox_norm: BBoxXYWHNorm | None = Field(
         None, description="Canonical bounding box [x, y, w, h] - top-left origin, normalized [0,1]"
     )
-    
+
     # Legacy bbox field (deprecated)
     bbox: list[float] | None = Field(
-        None, min_length=4, max_length=4, 
-        description="Legacy pixel bbox [x, y, width, height] - DEPRECATED, use bbox_norm"
+        None,
+        min_length=4,
+        max_length=4,
+        description="Legacy pixel bbox [x, y, width, height] - DEPRECATED, use bbox_norm",
     )
-    
+
     confidence: float = Field(..., ge=0.0, le=1.0, description="Detection confidence score")
 
     # Optional taxonomy info (may be enriched post-detection)
@@ -54,56 +56,76 @@ class Detection(BaseModel):
         None, min_length=2, max_length=2, description="Velocity [vx, vy] in pixels/frame"
     )
 
-    @model_validator(mode='after')
-    def validate_bbox_fields(self) -> 'Detection':
+    @model_validator(mode="after")
+    def validate_bbox_fields(self) -> "Detection":
         """Ensure at least one bbox field is provided."""
         if self.bbox_norm is None and self.bbox is None:
             raise ValueError("Either bbox_norm or bbox must be provided")
         return self
 
     @classmethod
-    def from_raw_detection(cls, raw: dict, *, upload_w: int | None = None, upload_h: int | None = None, provider: str | None = None) -> 'Detection':
+    def from_raw_detection(
+        cls,
+        raw: dict,
+        *,
+        upload_w: int | None = None,
+        upload_h: int | None = None,
+        provider: str | None = None,
+    ) -> "Detection":
         """Create Detection from raw bbox data with optional provider mapping.
-        
+
+        When both bbox_norm (canonical) and bbox (legacy pixel) are present, this method
+        validates they agree within a 1.0 pixel tolerance. This accounts for rounding
+        differences due to the half-up rounding policy at pixel boundaries.
+
         Args:
             raw: Raw detection dictionary
             upload_w, upload_h: Image dimensions for provider mapping
             provider: Provider hint for bbox format conversion (e.g., 'gemini_br_xyxy')
-            
+
         Returns:
             Detection instance with canonical bbox_norm
-            
+
         Raises:
             ValueError: If provider mapping fails, dimensions missing, or bbox disagreement
         """
         detection_data = raw.copy()
-        
+
         # Handle bbox conversion if provider is specified
-        if 'bbox' in raw and provider is not None:
+        provider_mapping_used = False
+        if "bbox" in raw and provider is not None:
             if upload_w is None or upload_h is None:
                 raise ValueError("upload_w and upload_h required for provider mapping")
-            
+
             mapper_fn = BBoxMapper.get(provider)
-            bbox_data = raw['bbox']
+            bbox_data = raw["bbox"]
             if len(bbox_data) == 4:
                 canonical_bbox = mapper_fn(*bbox_data, upload_w, upload_h)
-                detection_data['bbox_norm'] = canonical_bbox
+                detection_data["bbox_norm"] = canonical_bbox
                 # Keep legacy bbox for compatibility
-                detection_data['bbox'] = bbox_data
-        
+                detection_data["bbox"] = bbox_data
+                provider_mapping_used = True
+
         # Validate agreement if both bbox_norm and bbox are present with dimensions
-        if ('bbox_norm' in detection_data and 'bbox' in detection_data and 
-            upload_w is not None and upload_h is not None):
-            bbox_norm = detection_data['bbox_norm']
+        # BUT skip validation if provider mapping was used (bbox is in provider format)
+        if (
+            "bbox_norm" in detection_data
+            and "bbox" in detection_data
+            and upload_w is not None
+            and upload_h is not None
+            and not provider_mapping_used
+        ):
+            bbox_norm = detection_data["bbox_norm"]
             if not isinstance(bbox_norm, BBoxXYWHNorm):
                 bbox_norm = BBoxXYWHNorm(**bbox_norm) if isinstance(bbox_norm, dict) else bbox_norm
-            
+
             # Convert canonical to pixel xywh for comparison
             from .geometry import to_xyxy_px
+
             x1, y1, x2, y2 = to_xyxy_px(bbox_norm, upload_w, upload_h)
             canonical_as_xywh = [x1, y1, x2 - x1, y2 - y1]
-            
-            legacy_bbox = detection_data['bbox']
+
+            legacy_bbox = detection_data["bbox"]
             if len(legacy_bbox) == 4:
                 # Allow 1-pixel tolerance for rounding differences
                 tolerance = 1.0
@@ -114,15 +136,20 @@ class Detection(BaseModel):
                         f"canonical_as_xywh={canonical_as_xywh}, legacy={legacy_bbox}, "
                         f"diffs={diffs}"
                     )
-        
-        # Require provider hint for ambiguous legacy bbox 
-        if ('bbox' in raw and 'bbox_norm' not in raw and provider is None and 
-            upload_w is not None and upload_h is not None):
+
+        # Require provider hint for ambiguous legacy bbox
+        if (
+            "bbox" in raw
+            and "bbox_norm" not in raw
+            and provider is None
+            and upload_w is not None
+            and upload_h is not None
+        ):
             raise ValueError(
                 "Ambiguous legacy bbox format detected. Please specify 'provider' parameter "
                 "(e.g., 'gemini_br_xyxy') or provide 'bbox_norm' directly for clarity."
             )
-            
+
         return cls(**detection_data)
 
     model_config = {

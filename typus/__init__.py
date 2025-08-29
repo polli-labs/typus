@@ -9,9 +9,9 @@ from .models.classification import (
     TaskPrediction,
     TaxonomyContext,
 )
+from .models.geometry import BBoxMapper, BBoxXYWHNorm, from_xyxy_px, to_xyxy_px
 from .models.lineage import LineageMap
 from .models.taxon import Taxon
-from .models.geometry import BBoxXYWHNorm, BBoxMapper, to_xyxy_px, from_xyxy_px
 from .models.tracks import Detection, Track, TrackStats
 from .services.elevation import ElevationService, PostgresRasterElevation
 from .services.projections import (

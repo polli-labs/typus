@@ -1,6 +1,12 @@
 {
-  "additionalProperties": true,
   "description": "Statistical summary of track metrics.\n\nProvides aggregate statistics about a track's confidence scores\nand optionally other metrics like bounding box stability.",
+  "example": {
+    "bbox_stability": 0.88,
+    "confidence_max": 0.98,
+    "confidence_mean": 0.92,
+    "confidence_min": 0.85,
+    "confidence_std": 0.05
+  },
   "properties": {
     "confidence_mean": {
       "description": "Mean confidence across all detections",
@@ -30,12 +36,19 @@
       "type": "number"
     },
     "bbox_stability": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "default": null,
       "description": "Measure of bounding box consistency (0=unstable, 1=stable)",
-      "maximum": 1.0,
-      "minimum": 0.0,
-      "title": "Bbox Stability",
-      "type": "number"
+      "title": "Bbox Stability"
     }
   },
   "required": [

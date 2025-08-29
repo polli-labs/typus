@@ -1,5 +1,5 @@
 from .detection import ImageDetectionResult, InstancePrediction
-from .geometry import BBox, EncodedMask, BBoxXYWHNorm, BBoxMapper, to_xyxy_px, from_xyxy_px
+from .geometry import BBox, BBoxMapper, BBoxXYWHNorm, EncodedMask, from_xyxy_px, to_xyxy_px
 
 __all__ = [
     "BBox",
@@ -7,7 +7,7 @@ __all__ = [
     "InstancePrediction",
     "ImageDetectionResult",
     "BBoxXYWHNorm",
-    "BBoxMapper", 
+    "BBoxMapper",
     "to_xyxy_px",
     "from_xyxy_px",
 ]
