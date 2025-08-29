@@ -71,20 +71,44 @@ class TestBBoxXYWHNormValidation:
             BBoxXYWHNorm(x=0.1, y=0.2, w=0.5, h=0.0)
 
     def test_non_finite_rejection(self):
-        """Test rejection of non-finite coordinates."""
-        # NaN values
-        with pytest.raises(ValueError):
+        """Test rejection of non-finite coordinates with precise error messages."""
+        # NaN values with field-specific messages
+        with pytest.raises(ValueError, match="non-finite coordinate"):
             BBoxXYWHNorm(x=float('nan'), y=0.2, w=0.5, h=0.6)
         
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="non-finite coordinate"):
             BBoxXYWHNorm(x=0.1, y=float('nan'), w=0.5, h=0.6)
         
+        with pytest.raises(ValueError, match="non-finite coordinate"):
+            BBoxXYWHNorm(x=0.1, y=0.2, w=float('nan'), h=0.6)
+        
+        with pytest.raises(ValueError, match="non-finite coordinate"):
+            BBoxXYWHNorm(x=0.1, y=0.2, w=0.5, h=float('nan'))
+        
         # Infinite values
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="non-finite coordinate"):
             BBoxXYWHNorm(x=float('inf'), y=0.2, w=0.5, h=0.6)
         
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="non-finite coordinate"):
             BBoxXYWHNorm(x=0.1, y=0.2, w=float('-inf'), h=0.6)
+    
+    def test_bounds_exceeded_errors(self):
+        """Test specific error messages for bounds violations."""
+        # x + w > 1 + EPS
+        with pytest.raises(ValueError, match="x \\+ w exceeds 1"):
+            BBoxXYWHNorm(x=0.6, y=0.2, w=0.5, h=0.3)  # 0.6 + 0.5 = 1.1 > 1
+        
+        # y + h > 1 + EPS  
+        with pytest.raises(ValueError, match="y \\+ h exceeds 1"):
+            BBoxXYWHNorm(x=0.1, y=0.7, w=0.3, h=0.4)  # 0.7 + 0.4 = 1.1 > 1
+        
+        # Negative width
+        with pytest.raises(ValueError, match="greater than 0"):
+            BBoxXYWHNorm(x=0.1, y=0.2, w=-0.1, h=0.3)
+        
+        # Zero height  
+        with pytest.raises(ValueError, match="greater than 0"):
+            BBoxXYWHNorm(x=0.1, y=0.2, w=0.3, h=0.0)
 
     def test_edge_case_epsilon_tolerance(self):
         """Test handling of values very close to boundaries."""

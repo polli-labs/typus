@@ -161,7 +161,7 @@ class TestBBoxMapperRegistry:
 
     def test_nonexistent_mapper(self):
         """Test error when requesting non-existent mapper."""
-        with pytest.raises(KeyError, match="No bbox mapper registered"):
+        with pytest.raises(KeyError, match="No bbox mapper registered for 'nonexistent_mapper'"):
             BBoxMapper.get("nonexistent_mapper")
 
     def test_provider_list(self):
@@ -172,8 +172,8 @@ class TestBBoxMapperRegistry:
         assert "gemini_br_xyxy" in providers
         assert isinstance(providers, list)
 
-    def test_mapper_overwrite(self):
-        """Test that registering same name overwrites previous mapper."""
+    def test_mapper_overwrite_protection(self):
+        """Test that registering same name requires explicit replace=True."""
         def mapper1(x1, y1, x2, y2, W, H):
             return BBoxXYWHNorm(x=0.1, y=0.1, w=0.1, h=0.1)
         
@@ -181,11 +181,19 @@ class TestBBoxMapperRegistry:
             return BBoxXYWHNorm(x=0.2, y=0.2, w=0.2, h=0.2)
         
         # Register first mapper
-        BBoxMapper.register("test_overwrite", mapper1)
-        result1 = BBoxMapper.get("test_overwrite")(0, 0, 10, 10, 100, 100)
+        BBoxMapper.register("test_overwrite_protection", mapper1)
+        result1 = BBoxMapper.get("test_overwrite_protection")(0, 0, 10, 10, 100, 100)
         assert result1.x == 0.1
         
-        # Register second mapper with same name
-        BBoxMapper.register("test_overwrite", mapper2)
-        result2 = BBoxMapper.get("test_overwrite")(0, 0, 10, 10, 100, 100)
+        # Try to register second mapper without replace=True (should fail)
+        with pytest.raises(KeyError, match="already exists.*replace=True"):
+            BBoxMapper.register("test_overwrite_protection", mapper2)
+        
+        # Should still use first mapper
+        result_still_1 = BBoxMapper.get("test_overwrite_protection")(0, 0, 10, 10, 100, 100)
+        assert result_still_1.x == 0.1
+        
+        # Register second mapper with explicit replace=True (should succeed)
+        BBoxMapper.register("test_overwrite_protection", mapper2, replace=True)
+        result2 = BBoxMapper.get("test_overwrite_protection")(0, 0, 10, 10, 100, 100)
         assert result2.x == 0.2  # Should use the new mapper

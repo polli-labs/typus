@@ -65,12 +65,13 @@
     "bbox": {
       "default": null,
       "description": "Legacy pixel bbox [x, y, width, height] - DEPRECATED, use bbox_norm",
+      "deprecated": true,
       "items": {
         "type": "number"
       },
       "maxItems": 4,
       "minItems": 4,
-      "title": "Bbox",
+      "title": "Bbox (Legacy)",
       "type": "array"
     },
     "confidence": {
@@ -100,13 +101,14 @@
     },
     "smoothed_bbox": {
       "default": null,
-      "description": "Smoothed bounding box after post-processing",
+      "description": "Smoothed bounding box after post-processing - DEPRECATED, use smoothed_bbox_norm",
+      "deprecated": true,
       "items": {
         "type": "number"
       },
       "maxItems": 4,
       "minItems": 4,
-      "title": "Smoothed Bbox",
+      "title": "Smoothed Bbox (Legacy)",
       "type": "array"
     },
     "smoothed_bbox_norm": {

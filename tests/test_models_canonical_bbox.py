@@ -107,6 +107,40 @@ class TestDetectionCanonicalBbox:
         
         with pytest.raises(ValueError, match="upload_w and upload_h required"):
             Detection.from_raw_detection(raw_data, provider="gemini_br_xyxy")
+    
+    def test_detection_from_raw_bbox_disagreement(self):
+        """Test error when bbox_norm and bbox disagree beyond tolerance."""
+        raw_data = {
+            "frame_number": 100,
+            "bbox_norm": {"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.4},  # Would be ~(10,20,30,40) in 100x100
+            "bbox": [50, 60, 30, 40],  # Completely different bbox 
+            "confidence": 0.95
+        }
+        
+        with pytest.raises(ValueError, match="bbox_norm and bbox disagree beyond tolerance"):
+            Detection.from_raw_detection(raw_data, upload_w=100, upload_h=100)
+    
+    def test_detection_from_raw_ambiguous_legacy(self):
+        """Test error when legacy bbox provided without provider hint."""
+        raw_data = {
+            "frame_number": 100,
+            "bbox": [50, 50, 80, 90],  # Ambiguous format
+            "confidence": 0.95
+        }
+        
+        with pytest.raises(ValueError, match="Ambiguous legacy bbox format.*specify 'provider'"):
+            Detection.from_raw_detection(raw_data, upload_w=100, upload_h=100)
+    
+    def test_detection_from_raw_unknown_provider(self):
+        """Test error when unknown provider specified."""
+        raw_data = {
+            "frame_number": 100,
+            "bbox": [50, 50, 80, 90],
+            "confidence": 0.95
+        }
+        
+        with pytest.raises(KeyError, match="No bbox mapper registered for 'unknown_provider'"):
+            Detection.from_raw_detection(raw_data, upload_w=100, upload_h=100, provider="unknown_provider")
 
     def test_detection_smoothed_bbox_support(self):
         """Test that Detection supports smoothed canonical bbox."""

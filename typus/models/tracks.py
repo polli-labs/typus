@@ -72,6 +72,9 @@ class Detection(BaseModel):
             
         Returns:
             Detection instance with canonical bbox_norm
+            
+        Raises:
+            ValueError: If provider mapping fails, dimensions missing, or bbox disagreement
         """
         detection_data = raw.copy()
         
@@ -87,6 +90,38 @@ class Detection(BaseModel):
                 detection_data['bbox_norm'] = canonical_bbox
                 # Keep legacy bbox for compatibility
                 detection_data['bbox'] = bbox_data
+        
+        # Validate agreement if both bbox_norm and bbox are present with dimensions
+        if ('bbox_norm' in detection_data and 'bbox' in detection_data and 
+            upload_w is not None and upload_h is not None):
+            bbox_norm = detection_data['bbox_norm']
+            if not isinstance(bbox_norm, BBoxXYWHNorm):
+                bbox_norm = BBoxXYWHNorm(**bbox_norm) if isinstance(bbox_norm, dict) else bbox_norm
+            
+            # Convert canonical to pixel xywh for comparison
+            from .geometry import to_xyxy_px
+            x1, y1, x2, y2 = to_xyxy_px(bbox_norm, upload_w, upload_h)
+            canonical_as_xywh = [x1, y1, x2 - x1, y2 - y1]
+            
+            legacy_bbox = detection_data['bbox']
+            if len(legacy_bbox) == 4:
+                # Allow 1-pixel tolerance for rounding differences
+                tolerance = 1.0
+                diffs = [abs(canonical_as_xywh[i] - legacy_bbox[i]) for i in range(4)]
+                if any(diff > tolerance for diff in diffs):
+                    raise ValueError(
+                        f"bbox_norm and bbox disagree beyond tolerance (≤{tolerance}px): "
+                        f"canonical_as_xywh={canonical_as_xywh}, legacy={legacy_bbox}, "
+                        f"diffs={diffs}"
+                    )
+        
+        # Require provider hint for ambiguous legacy bbox 
+        if ('bbox' in raw and 'bbox_norm' not in raw and provider is None and 
+            upload_w is not None and upload_h is not None):
+            raise ValueError(
+                "Ambiguous legacy bbox format detected. Please specify 'provider' parameter "
+                "(e.g., 'gemini_br_xyxy') or provide 'bbox_norm' directly for clarity."
+            )
             
         return cls(**detection_data)
 

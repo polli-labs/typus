@@ -95,8 +95,19 @@ class BBoxMapper:
     _REG: Dict[str, Callable[..., BBoxXYWHNorm]] = {}
 
     @classmethod
-    def register(cls, name: str, fn: Callable[..., BBoxXYWHNorm]) -> None:
-        """Register a bbox mapping function."""
+    def register(cls, name: str, fn: Callable[..., BBoxXYWHNorm], *, replace: bool = False) -> None:
+        """Register a bbox mapping function.
+        
+        Args:
+            name: Provider name identifier
+            fn: Mapping function that returns BBoxXYWHNorm
+            replace: If True, allows overwriting existing mappings
+            
+        Raises:
+            KeyError: If name already exists and replace=False
+        """
+        if name in cls._REG and not replace:
+            raise KeyError(f"Bbox mapper '{name}' already exists; pass replace=True to overwrite")
         cls._REG[name] = fn
 
     @classmethod

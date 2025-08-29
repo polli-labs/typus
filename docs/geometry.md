@@ -2,6 +2,19 @@
 
 As of `typus v0.3.0`, the library provides canonical geometry types that establish a **single source of truth** for bounding box coordinates across all Polli-Labs repositories.
 
+## 📋 **Contract**
+
+The canonical geometry contract establishes these **immutable rules**:
+
+- **🎯 Origin**: Top-left corner (0,0) at upper-left of image
+- **📏 Format**: `[x, y, width, height]` - never xyxy or center-based
+- **🔢 Normalization**: All values in `[0, 1]` range relative to image dimensions  
+- **🔒 Immutability**: `BBoxXYWHNorm` instances cannot be modified after creation
+- **✅ Invariants**: Enforced at construction time with precise error messages
+- **🎚️ Tolerance**: Boundary checks use ε=1e-9 for floating-point precision
+- **📐 Pixel Edges**: In pixel space, xyxy coordinates have **exclusive** x2/y2 bounds
+- **🔄 Rounding**: Pixel conversions round to nearest integer (ties away from zero)
+
 ## Canonical Bounding Box Format
 
 The canonical format is:
@@ -36,20 +49,45 @@ bbox = BBoxXYWHNorm(x=0.2, y=0.1, w=0.5, h=0.5)
 # bbox.x = 0.3  # This would raise TypeError
 ```
 
-### Converting Between Pixel and Normalized Coordinates
+### 🔄 **Coordinate System Conversions** 
+
+Here are worked examples showing conversions between different coordinate systems:
+
+#### **Example: 100×100 image, object from (20,10) to (70,60)**
+
+| System | Representation | Notes |
+|--------|----------------|--------|
+| **Canonical (TL-xywh-norm)** | `x=0.2, y=0.1, w=0.5, h=0.5` | ⭐ **TARGET FORMAT** |
+| **TL-pixel-xyxy** | `(20, 10, 70, 60)` | x2,y2 exclusive bounds |
+| **TL-pixel-xywh** | `(20, 10, 50, 50)` | width = x2-x1, height = y2-y1 |
+| **BR-pixel-xyxy (Gemini)** | `(30, 40, 80, 90)` | Bottom-right origin |
 
 ```python
-from typus import BBoxXYWHNorm, to_xyxy_px, from_xyxy_px
+from typus import BBoxXYWHNorm, to_xyxy_px, from_xyxy_px, BBoxMapper
 
-# Convert from pixel coordinates to canonical
-image_width, image_height = 1920, 1080
-pixel_bbox = from_xyxy_px(x1=384, y1=108, x2=1344, y2=648, W=image_width, H=image_height)
-# Result: BBoxXYWHNorm(x=0.2, y=0.1, w=0.5, h=0.5)
+# 1. Create canonical bbox
+bbox = BBoxXYWHNorm(x=0.2, y=0.1, w=0.5, h=0.5)
 
-# Convert canonical back to pixel coordinates  
-x1, y1, x2, y2 = to_xyxy_px(pixel_bbox, W=image_width, H=image_height)
-# Result: (384, 108, 1344, 648)
+# 2. Convert to TL pixel coordinates  
+x1, y1, x2, y2 = to_xyxy_px(bbox, W=100, H=100)
+print(f"TL-pixel-xyxy: ({x1}, {y1}, {x2}, {y2})")  # (20, 10, 70, 60)
+
+# 3. Convert from TL pixel coordinates
+bbox_from_px = from_xyxy_px(20, 10, 70, 60, W=100, H=100)
+print(f"Round-trip: {bbox_from_px}")  # x=0.2, y=0.1, w=0.5, h=0.5
+
+# 4. Convert from Gemini BR coordinates  
+gemini_mapper = BBoxMapper.get("gemini_br_xyxy")
+bbox_from_gemini = gemini_mapper(30, 40, 80, 90, W=100, H=100)
+print(f"From Gemini: {bbox_from_gemini}")  # x=0.2, y=0.1, w=0.5, h=0.5
 ```
+
+#### **Pixel Edge Semantics**
+
+- **Inclusive**: `x1, y1` (top-left pixel included)
+- **Exclusive**: `x2, y2` (bottom-right pixel NOT included)
+- **1-pixel box**: `(x1=20, y1=10, x2=21, y2=11)` covers exactly 1 pixel
+- **Rounding**: `int(round(coordinate))` with ties away from zero
 
 ## Provider Mapping
 

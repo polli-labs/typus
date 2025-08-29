@@ -81,7 +81,8 @@ allow-plugins = true
 [tool.hatch.build]
 exclude = [
   "tests*",
-  "scripts*", 
+  "scripts*",
+  "dev*",            # Exclude development artifacts
   "**/*.tsv",
   "**/*.sql", 
   "**/*.sqlite",
