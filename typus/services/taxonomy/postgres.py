@@ -398,7 +398,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
                     base_sql = (
                         'SELECT DISTINCT "taxonID", "name", "rankLevel", "immediateAncestor_taxonID", "commonName" '
                         'FROM expanded_taxa '
-                        f"WHERE ({pred_sql}) AND (\"taxonActive\" IS NULL OR \"taxonActive\"=1)"
+                        f"WHERE ({pred_sql}) AND COALESCE(\"taxonActive\", TRUE)"
                     )
                     base_sql += rank_filter_sql
                     base_sql += f' ORDER BY "rankLevel" ASC, "name" ASC LIMIT {sup_limit}'
