@@ -36,7 +36,7 @@ detection_legacy = Detection(
 
 **Key Features:**
 - **Canonical bbox support** - Use `bbox_norm` with `BBoxXYWHNorm` type
-- **Legacy compatibility** - Still accepts pixel `bbox` field (deprecated) 
+- **Legacy compatibility** - Still accepts pixel `bbox` field (deprecated)
 - Confidence score validation (0.0 to 1.0)
 - Optional taxonomy fields for post-detection enrichment
 - Optional smoothed bbox and velocity for processed data
@@ -91,18 +91,18 @@ The `Track.from_raw_detections()` class method provides a convenient way to crea
 # Using canonical normalized bboxes
 raw_detections = [
     {
-        "frame_number": 100, 
-        "bbox_norm": {"x": 0.1, "y": 0.2, "w": 0.5, "h": 0.6}, 
+        "frame_number": 100,
+        "bbox_norm": {"x": 0.1, "y": 0.2, "w": 0.5, "h": 0.6},
         "confidence": 0.90
     },
     {
-        "frame_number": 101, 
-        "bbox_norm": {"x": 0.11, "y": 0.21, "w": 0.5, "h": 0.6}, 
+        "frame_number": 101,
+        "bbox_norm": {"x": 0.11, "y": 0.21, "w": 0.5, "h": 0.6},
         "confidence": 0.92
     },
     {
-        "frame_number": 102, 
-        "bbox_norm": {"x": 0.12, "y": 0.22, "w": 0.5, "h": 0.6}, 
+        "frame_number": 102,
+        "bbox_norm": {"x": 0.12, "y": 0.22, "w": 0.5, "h": 0.6},
         "confidence": 0.95
     },
 ]
@@ -117,7 +117,7 @@ track = Track.from_raw_detections(
 ```
 
 This method automatically:
-- Converts raw dictionaries to Detection objects  
+- Converts raw dictionaries to Detection objects
 - Calculates frame ranges and duration
 - Computes confidence statistics
 - Creates a TrackStats object
@@ -126,7 +126,7 @@ This method automatically:
 
 When working with different vision APIs (like Gemini), use the factory method with provider mapping:
 
-```python  
+```python
 from typus.models.tracks import Detection
 
 # Raw detection from Gemini API (bottom-right origin)
@@ -334,7 +334,7 @@ def adapt_legacy_track(legacy_data):
         )
         for d in legacy_data["dets"]
     ]
-    
+
     return Track.from_raw_detections(
         track_id=legacy_data["id"],
         clip_id=legacy_data["video"],

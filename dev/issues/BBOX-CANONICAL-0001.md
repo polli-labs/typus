@@ -5,7 +5,7 @@
 
 ## Issue Classification
 - **Priority**: P1 (API contract alignment)
-- **Component**: typus.models.tracks  
+- **Component**: typus.models.tracks
 - **Filed**: 2025-08-29
 - **Milestone**: typus v0.2.x (next release)
 
@@ -42,9 +42,9 @@ Based on ibrida v0.6.3 implementation:
 
 ```python
 bbox: list[float] = Field(
-    ..., 
-    min_length=4, 
-    max_length=4, 
+    ...,
+    min_length=4,
+    max_length=4,
     description="Canonical bounding box [x, y, width, height] - top-left origin, normalized [0,1]"
 )
 ```
@@ -58,7 +58,7 @@ Consider adding a Pydantic validator to ensure canonical compliance:
 def validate_canonical_bbox(cls, v):
     if len(v) != 4:
         raise ValueError('bbox must have exactly 4 elements')
-    
+
     x, y, w, h = v
     if not (0 <= x <= 1 and 0 <= y <= 1):
         raise ValueError('bbox x,y must be in [0,1] range')
@@ -66,7 +66,7 @@ def validate_canonical_bbox(cls, v):
         raise ValueError('bbox width,height must be in (0,1] range')
     if x + w > 1.001 or y + h > 1.001:  # Allow small epsilon
         raise ValueError('bbox must not exceed frame boundaries')
-        
+
     return v
 ```
 

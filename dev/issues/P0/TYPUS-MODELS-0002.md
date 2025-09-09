@@ -13,14 +13,14 @@ blocks: [TYPUS-SCHEMA-0003, TYPUS-DOC-0004, TYPUS-REL-0005]
 ---
 
 **Problem**
-`typus` docs and examples still illustrate bboxes as free‑form `list[float]` in "tracks" docs, with no coordinate contract. We need to **use the canonical type** in our public models and docs. 
+`typus` docs and examples still illustrate bboxes as free‑form `list[float]` in "tracks" docs, with no coordinate contract. We need to **use the canonical type** in our public models and docs.
 
 **Scope**
 
 1. **Models**
 
    * In `typus/models/detection.py` and/or `typus/models/tracks.py` (if present), ensure bbox‑carrying objects reference **`BBoxXYWHNorm`** for canonical fields rather than bare `list[float]`.
-     (The codebase already has `BBox` & `EncodedMask` and exports image detection models; extend without breaking those.) 
+     (The codebase already has `BBox` & `EncodedMask` and exports image detection models; extend without breaking those.)
    * If legacy fields exist (e.g., `bbox: List[float]`), keep a **compat** field (deprecated in docstring) and add a new `bbox_norm: BBoxXYWHNorm`. Migration path: populate `bbox_norm` from adapters when constructing from legacy payloads.
 
 2. **Factory/adapters**

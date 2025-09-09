@@ -32,12 +32,12 @@ import pandas as pd
 conn = sqlite3.connect('test_db.sqlite')
 
 # Load each TSV file into a table
-for table_name in ['coldp_name_usage', 'coldp_vernacular_name', 'coldp_distribution', 
+for table_name in ['coldp_name_usage', 'coldp_vernacular_name', 'coldp_distribution',
                   'coldp_media', 'coldp_reference', 'coldp_type_material',
                   'inat_to_coldp_taxon_map', 'expanded_taxa_sample']:
     df = pd.read_csv(f'{table_name}.tsv', sep='\t')
     df.to_sql(table_name, conn, if_exists='replace', index=False)
-    
+
 # Optionally load the specialized LCA sample data
 df_lca = pd.read_csv('expanded_taxa_sample.tsv', sep='\t')
 df_lca.to_sql('expanded_taxa', conn, if_exists='replace', index=False)

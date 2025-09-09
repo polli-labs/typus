@@ -177,9 +177,9 @@ async def test_ancestry_verification(taxonomy_service):
 
     # Check each expected ancestor exists in the ancestry and in the correct order
     for i, ancestor_id in enumerate(expected_ancestors):
-        assert apocrita.ancestry[i] == ancestor_id, (
-            f"Expected {ancestor_id} at position {i}, got {apocrita.ancestry[i]}"
-        )
+        assert (
+            apocrita.ancestry[i] == ancestor_id
+        ), f"Expected {ancestor_id} at position {i}, got {apocrita.ancestry[i]}"
 
     # The last ID in ancestry should be the taxon's own ID
     assert apocrita.ancestry[-1] == apocrita_id
@@ -194,9 +194,9 @@ async def test_distance_symmetry_identity(taxonomy_service):
     # Distance should be symmetric regardless of the argument order
     dist_a_to_b = await taxonomy_service.distance(a, b)
     dist_b_to_a = await taxonomy_service.distance(b, a)
-    assert dist_a_to_b == dist_b_to_a, (
-        f"Distance not symmetric: d({a},{b})={dist_a_to_b} != d({b},{a})={dist_b_to_a}"
-    )
+    assert (
+        dist_a_to_b == dist_b_to_a
+    ), f"Distance not symmetric: d({a},{b})={dist_a_to_b} != d({b},{a})={dist_b_to_a}"
 
     # Also check with include_minor_ranks parameter
     dist_a_to_b_with_minors = await taxonomy_service.distance(a, b, include_minor_ranks=True)

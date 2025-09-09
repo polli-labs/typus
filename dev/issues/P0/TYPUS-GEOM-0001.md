@@ -12,7 +12,7 @@ blocks: [TYPUS-MODELS-0002, TYPUS-SCHEMA-0003, TYPUS-DOC-0004]
 ---
 
 **Motivation**
-`typus` must be the **single canonical package** for geometry contracts across org repos. We will introduce an immutable, strictly‑validated **canonical bbox** type (TL‑origin, normalized `[x, y, w, h]`) and a tiny registry for **provider‑specific mappings** (initially: Gemini BR/xyxy → canonical). Current docs and examples still show ad‑hoc "list[float]" bboxes and multiple formats; we need a contract lock‑in here. 
+`typus` must be the **single canonical package** for geometry contracts across org repos. We will introduce an immutable, strictly‑validated **canonical bbox** type (TL‑origin, normalized `[x, y, w, h]`) and a tiny registry for **provider‑specific mappings** (initially: Gemini BR/xyxy → canonical). Current docs and examples still show ad‑hoc "list[float]" bboxes and multiple formats; we need a contract lock‑in here.
 
 **Scope (deliverables)**
 
@@ -41,7 +41,7 @@ blocks: [TYPUS-MODELS-0002, TYPUS-SCHEMA-0003, TYPUS-DOC-0004]
 5. **Public API exports**
 
    * Re‑export in `typus/models/__init__.py`: `BBoxXYWHNorm`, `BBoxMapper`, and the converter functions.
-     Current exports only include `BBox`, `EncodedMask`, `InstancePrediction`, `ImageDetectionResult`; add the new canonical pieces next to them. 
+     Current exports only include `BBox`, `EncodedMask`, `InstancePrediction`, `ImageDetectionResult`; add the new canonical pieces next to them.
 
 **Tests**
 
@@ -56,4 +56,4 @@ blocks: [TYPUS-MODELS-0002, TYPUS-SCHEMA-0003, TYPUS-DOC-0004]
 * Mappers are pluggable via `BBoxMapper.register(...)`.
 
 **Notes**
-This is **additive**; no existing import paths break. Follow repo's dev workflow & test tooling (`pytest`, `ruff`, `pre‑commit`). 
+This is **additive**; no existing import paths break. Follow repo's dev workflow & test tooling (`pytest`, `ruff`, `pre‑commit`).

@@ -4,7 +4,10 @@ repos:
     hooks:
       - id: ruff
         args: ["--fix"]
-  - repo: https://github.com/pytest-dev/pytest
-    rev: v8.1.1
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
     hooks:
-      - id: pytest
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace

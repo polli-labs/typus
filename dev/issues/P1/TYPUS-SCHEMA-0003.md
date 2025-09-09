@@ -13,10 +13,10 @@ depends_on: [TYPUS-GEOM-0001, TYPUS-MODELS-0002]
 
 **Work**
 
-* Update `typus/export_schemas.py` `MODELS` list to include `typus.models.geometry.BBoxXYWHNorm` and any updated detection/track models; run `python -m typus.export_schemas` to emit JSON into `typus/schemas/`. 
+* Update `typus/export_schemas.py` `MODELS` list to include `typus.models.geometry.BBoxXYWHNorm` and any updated detection/track models; run `python -m typus.export_schemas` to emit JSON into `typus/schemas/`.
 * Commit generated `*.json` files.
 
 **Acceptance**
 
 * `typus/schemas/BBoxXYWHNorm.json` exists and contains the invariants.
-* CI step prints `wrote BBoxXYWHNorm.json` along with the others. 
+* CI step prints `wrote BBoxXYWHNorm.json` along with the others.

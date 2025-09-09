@@ -86,7 +86,7 @@ exclude = [
   "scripts*",
   "dev*",            # Exclude development artifacts
   "**/*.tsv",
-  "**/*.sql", 
+  "**/*.sql",
   "**/*.sqlite",
   "/.ruff_cache",
   "/.pytest_cache",

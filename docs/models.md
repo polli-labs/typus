@@ -18,7 +18,7 @@ Refer to existing documentation or source code for `HierarchicalClassificationRe
 The canonical bounding box format with enforced invariants:
 
 - **Format**: `[x, y, width, height]` (top-left origin)
-- **Normalization**: All values in `[0, 1]` range  
+- **Normalization**: All values in `[0, 1]` range
 - **Immutable**: Cannot be modified after creation
 - **Validated**: Enforces coordinate bounds and non-finite rejection
 
@@ -34,7 +34,7 @@ bbox = BBoxXYWHNorm(x=0.2, y=0.1, w=0.5, h=0.5)
 from typus import to_xyxy_px, from_xyxy_px
 
 # To pixels (for 1920x1080 image)
-x1, y1, x2, y2 = to_xyxy_px(bbox, W=1920, H=1080)  
+x1, y1, x2, y2 = to_xyxy_px(bbox, W=1920, H=1080)
 # Result: (384, 108, 1344, 648)
 
 # From pixels

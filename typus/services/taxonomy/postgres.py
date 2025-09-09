@@ -243,7 +243,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
             f"""
             WITH RECURSIVE sub AS (
               SELECT "taxonID" as taxon_id, "immediateAncestor_taxonID" AS parent_id FROM expanded_taxa WHERE "taxonID" IN ({roots_sql})
-              UNION ALL 
+              UNION ALL
               SELECT et."taxonID" as taxon_id, et."immediateAncestor_taxonID" FROM expanded_taxa et
                 JOIN sub ON et."immediateAncestor_taxonID" = sub.taxon_id
             )

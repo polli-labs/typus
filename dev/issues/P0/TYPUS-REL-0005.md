@@ -13,10 +13,10 @@ depends_on: [TYPUS-GEOM-0001, TYPUS-MODELS-0002, TYPUS-SCHEMA-0003, TYPUS-DOC-00
 
 **Work**
 
-* Bump version to `0.3.0` in packaging metadata; keep CI/publish workflow as is. 
+* Bump version to `0.3.0` in packaging metadata; keep CI/publish workflow as is.
 * Update CHANGELOG: "Added canonical geometry types & mappings; updated models/docs; schemas exported."
-* Ensure `__all__` re‑exports include `BBoxXYWHNorm` and `BBoxMapper`. 
-* Tag & publish (TestPyPI → PyPI) and deploy docs via existing GH Actions. 
+* Ensure `__all__` re‑exports include `BBoxXYWHNorm` and `BBoxMapper`.
+* Tag & publish (TestPyPI → PyPI) and deploy docs via existing GH Actions.
 
 **Acceptance**
 
