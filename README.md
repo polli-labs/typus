@@ -143,6 +143,18 @@ bee = await svc.get_taxon(630955)
 
 * **Pre‑commit hooks** – `pre-commit install`
 
+### Environment Variables
+
+- `TYPUS_TEST_DSN`: Postgres DSN for tests and perf harness (e.g., `postgresql+asyncpg://user:pw@host/db`).
+- `POSTGRES_DSN`: Alternate Postgres DSN; used if `TYPUS_TEST_DSN` is unset.
+- `ELEVATION_DSN`: Optional DSN override for elevation tests; falls back to `TYPUS_TEST_DSN`.
+- `ELEVATION_TABLE`: Elevation raster table name (default: `elevation_raster`).
+- `TYPUS_ELEVATION_TEST`: Set `1` to enable guarded elevation tests.
+- Perf harness:
+  - `TYPUS_PERF_WRITE=1`: write report to `dev/agents/perf_report.md`.
+  - `TYPUS_PERF_VERIFY=1`: enable result sanity checks.
+  - `TYPUS_PERF_EXPLAIN=1`: append PG EXPLAIN snippets.
+
 ---
 
 ## Publishing (maintainers)

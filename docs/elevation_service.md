@@ -18,6 +18,13 @@ svc = PostgresRasterElevation(dsn, raster_table=os.getenv("ELEVATION_TABLE", "el
 
 val = await svc.elevation(34.0522, -118.2437)  # Los Angeles (lat, lon)
 print(val)  # float | None
+
+# Batch example
+vals = await svc.elevations([
+  (34.0522, -118.2437),  # LA
+  (0.0, -30.0),          # ocean (likely None)
+  (40.7128, -74.0060),   # NYC
+])
 ```
 
 Environment
@@ -43,4 +50,3 @@ Coverage & Limitations
 
 - MERIT DEM coverage focuses on global land; ocean or no-data areas can return `None`.
 - Some polar regions are not covered (above ~60°N / below ~60°S).
-
