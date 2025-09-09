@@ -6,9 +6,8 @@ import statistics
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy import text as sql_text
 
 from typus.services import (
     PostgresTaxonomyService,
@@ -30,7 +29,9 @@ class Result:
     span_pct: float | None = None
 
 
-async def _bench_once(svc, query: str, scope: str, mode: str, fuzzy: bool) -> tuple[float, int, list[int]]:
+async def _bench_once(
+    svc, query: str, scope: str, mode: str, fuzzy: bool
+) -> tuple[float, int, list[int]]:
     t0 = time.perf_counter()
     res = await svc.search_taxa(
         query,
@@ -104,10 +105,16 @@ async def _bench_backend(backend: str) -> list[Result]:
                         counts.append(count)
                 if samples:
                     avg = statistics.mean(samples)
-                    p95 = statistics.quantiles(samples, n=20)[18] if len(samples) >= 20 else max(samples)
+                    p95 = (
+                        statistics.quantiles(samples, n=20)[18]
+                        if len(samples) >= 20
+                        else max(samples)
+                    )
                     span = (max(samples) - min(samples)) / avg if avg > 0 else 0.0
                     cnt_avg = statistics.mean(counts) if counts else 0.0
-                    out.append(Result(backend, scope, mode, fuzzy, avg, p95, len(samples), cnt_avg, span))
+                    out.append(
+                        Result(backend, scope, mode, fuzzy, avg, p95, len(samples), cnt_avg, span)
+                    )
     return out
 
 
@@ -141,14 +148,22 @@ async def _pg_explain_snippets() -> list[str]:
         return []
     eng = create_async_engine(dsn, pool_pre_ping=True)
     queries = [
-        ("scientific prefix", "SELECT taxonID FROM expanded_taxa WHERE LOWER(name) LIKE 'apis me%' AND \"rankLevel\" IN (10,20,30,40,50,60,70) ORDER BY \"rankLevel\", name LIMIT 50"),
-        ("scientific substring", "SELECT taxonID FROM expanded_taxa WHERE LOWER(name) LIKE '%apis me%' ORDER BY \"rankLevel\", name LIMIT 50"),
+        (
+            "scientific prefix",
+            'SELECT taxonID FROM expanded_taxa WHERE LOWER(name) LIKE \'apis me%\' AND "rankLevel" IN (10,20,30,40,50,60,70) ORDER BY "rankLevel", name LIMIT 50',
+        ),
+        (
+            "scientific substring",
+            "SELECT taxonID FROM expanded_taxa WHERE LOWER(name) LIKE '%apis me%' ORDER BY \"rankLevel\", name LIMIT 50",
+        ),
     ]
     out: list[str] = []
     async with eng.begin() as conn:
         for label, q in queries:
             try:
-                res = await conn.exec_driver_sql(f"EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF) {q}")
+                res = await conn.exec_driver_sql(
+                    f"EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF) {q}"
+                )
                 plan = "\n".join(r[0] for r in res)
                 out.append(f"### PG EXPLAIN – {label}\n\n```\n{plan}\n```\n")
             except Exception as e:
@@ -165,7 +180,8 @@ async def main() -> int:
         span_pct = (r.span_pct or 0.0) * 100.0
         warn = " [VAR]" if (r.span_pct or 0.0) > 0.25 else ""
         print(
-            f"{r.backend}/{r.scope}/{r.mode}/fuzzy={r.fuzzy} -> avg={r.ms_avg:.2f} ms p95={r.ms_p95:.2f} ms (n={r.n}, count~{r.count_avg:.1f}, span={span_pct:.1f}%)" + warn
+            f"{r.backend}/{r.scope}/{r.mode}/fuzzy={r.fuzzy} -> avg={r.ms_avg:.2f} ms p95={r.ms_p95:.2f} ms (n={r.n}, count~{r.count_avg:.1f}, span={span_pct:.1f}%)"
+            + warn
         )
     if os.getenv("TYPUS_PERF_WRITE", "1") in {"1", "true", "TRUE"}:
         _write_report(results)

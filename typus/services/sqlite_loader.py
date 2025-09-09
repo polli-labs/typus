@@ -120,7 +120,9 @@ def _create_indexes(sqlite_path: Path) -> None:
     try:
         cur = conn.cursor()
         # Fast PK lookups and parent traversals
-        cur.execute('CREATE INDEX IF NOT EXISTS idx_expanded_taxa_taxon_id ON expanded_taxa("taxonID")')
+        cur.execute(
+            'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_taxon_id ON expanded_taxa("taxonID")'
+        )
         cur.execute(
             'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_imm_ancestor ON expanded_taxa("immediateAncestor_taxonID")'
         )
@@ -128,14 +130,18 @@ def _create_indexes(sqlite_path: Path) -> None:
             'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_imm_major_ancestor ON expanded_taxa("immediateMajorAncestor_taxonID")'
         )
         # Rank filter and ordering aid
-        cur.execute('CREATE INDEX IF NOT EXISTS idx_expanded_taxa_ranklevel ON expanded_taxa("rankLevel")')
+        cur.execute(
+            'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_ranklevel ON expanded_taxa("rankLevel")'
+        )
         # Expression indexes for case-insensitive search
-        cur.execute('CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_name ON expanded_taxa(LOWER("name"))')
+        cur.execute(
+            'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_name ON expanded_taxa(LOWER("name"))'
+        )
         cur.execute(
             'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_commonName ON expanded_taxa(LOWER("commonName"))'
         )
         # Gather statistics to help the planner
-        cur.execute('ANALYZE')
+        cur.execute("ANALYZE")
         conn.commit()
     finally:
         conn.close()

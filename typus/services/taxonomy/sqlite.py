@@ -361,9 +361,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
 
         def make_predicates(mode: str) -> str:
             if mode == "exact":
-                return " OR " + (
-                    " OR ".join([f"LOWER({c}) = ?" for c in cols])
-                )
+                return " OR " + (" OR ".join([f"LOWER({c}) = ?" for c in cols]))
             elif mode == "prefix":
                 return " OR " + (" OR ".join([f"LOWER({c}) LIKE ?" for c in cols]))
             elif mode == "substring":
@@ -463,5 +461,5 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
     async def ancestors(self, taxon_id: int, *, include_minor_ranks: bool = True) -> list[int]:
         return await self._get_filtered_ancestry(taxon_id, include_minor_ranks)
 
-__all__ = ["SQLiteTaxonomyService"]
 
+__all__ = ["SQLiteTaxonomyService"]

@@ -81,6 +81,14 @@ lca = await local.lca({630955, 54328})
 
 The two services share behaviour so code can accept `AbstractTaxonomyService` and run identically in both modes.
 
+## Backend Differences & Guidance (v0.4.0)
+
+- Parity: API and semantics are aligned across SQLite and Postgres. Minor result-order differences can occur with fuzzy re-ranking.
+- Datasets: SQLite typically uses a compact fixture while Postgres points to a full production dataset. Expect different result counts when data volumes differ.
+- Performance: exact/prefix searches are fast on both backends (SQLite uses expression indexes; Postgres should use the helper indexes). Substring searches involve scans; prefer prefix where possible.
+- Indexes: SQLite loader creates indexes by default. Postgres should run `typus-pg-ensure-indexes` once in maintenance to ensure optimal plans.
+- Elevation: Provided via a separate Postgres-only service (`PostgresRasterElevation`). No elevation support on SQLite.
+
 ## Postgres Indexes (optional helper)
 
 For production Postgres deployments, ensure the recommended indexes for fast name search and ancestry operations:

@@ -21,4 +21,3 @@ async def test_pg_index_helper_runs_idempotently():
 
     assert any("idx_immediate_ancestor_taxon_id" in s for s in res.ensured)
     assert any("idx_expanded_taxa_ranklevel" in s for s in res.ensured)
-

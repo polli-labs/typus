@@ -71,4 +71,3 @@ class AbstractTaxonomyService(abc.ABC):
 
 
 __all__ = ["AbstractTaxonomyService"]
-

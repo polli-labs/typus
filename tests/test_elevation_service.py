@@ -1,13 +1,11 @@
 import os
+
 import pytest
 
 from typus import PostgresRasterElevation
 
-
 ELEVATION_DSN = (
-    os.getenv("ELEVATION_DSN")
-    or os.getenv("TYPUS_TEST_DSN")
-    or os.getenv("POSTGRES_DSN")
+    os.getenv("ELEVATION_DSN") or os.getenv("TYPUS_TEST_DSN") or os.getenv("POSTGRES_DSN")
 )
 ELEVATION_TABLE = os.getenv("ELEVATION_TABLE", "elevation_raster")
 
@@ -42,8 +40,8 @@ async def test_elevations_batch_smoke():
     # LA (land), Central Atlantic (ocean), NYC (land)
     coords = [
         (34.0522, -118.2437),  # LA
-        (0.0, -30.0),          # Ocean
-        (40.7128, -74.0060),   # NYC
+        (0.0, -30.0),  # Ocean
+        (40.7128, -74.0060),  # NYC
     ]
     vals = await svc.elevations(coords)
     assert len(vals) == 3

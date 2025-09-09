@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Iterable
 
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
@@ -25,14 +24,14 @@ DDL_CORE = [
 
 DDL_PATTERN = [
     # Case-insensitive exact/prefix: use text_pattern_ops on lower(expression)
-    'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_name_pattern ON {fqtn} (lower((name)::text) text_pattern_ops)',
+    "CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_name_pattern ON {fqtn} (lower((name)::text) text_pattern_ops)",
     'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_common_pattern ON {fqtn} (lower(("commonName")::text) text_pattern_ops)',
 ]
 
 
 DDL_TRGM = [
     # Substring acceleration; requires pg_trgm
-    'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_name_trgm ON {fqtn} USING gin (lower((name)::text) gin_trgm_ops)',
+    "CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_name_trgm ON {fqtn} USING gin (lower((name)::text) gin_trgm_ops)",
     'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_common_trgm ON {fqtn} USING gin (lower(("commonName")::text) gin_trgm_ops)',
 ]
 
@@ -41,7 +40,9 @@ def _major_rank_index_ddls(fqtn: str) -> list[str]:
     levels = [10, 20, 30, 40, 50, 60, 70]
     ddls = []
     for lv in levels:
-        ddls.append(f'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_l{lv}_taxonid ON {fqtn} ("L{lv}_taxonID")')
+        ddls.append(
+            f'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_l{lv}_taxonid ON {fqtn} ("L{lv}_taxonID")'
+        )
     return ddls
 
 
@@ -86,10 +87,10 @@ async def ensure_expanded_taxa_indexes(
         # Extension (optional – may require superuser)
         if include_trigram_indexes and ensure_pg_trgm_extension:
             try:
-                await conn.exec_driver_sql('CREATE EXTENSION IF NOT EXISTS pg_trgm')
-                ensured.append('extension:pg_trgm')
+                await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+                ensured.append("extension:pg_trgm")
             except Exception as e:  # pragma: no cover - depends on permissions
-                errors.append(('extension:pg_trgm', str(e)))
+                errors.append(("extension:pg_trgm", str(e)))
 
         for ddl in ddls:
             name = ddl.split(" ")[4] if " INDEX IF NOT EXISTS " in ddl else ddl
@@ -101,10 +102,10 @@ async def ensure_expanded_taxa_indexes(
 
         # Update stats
         try:
-            await conn.exec_driver_sql(f'ANALYZE {fqtn}')
-            ensured.append('ANALYZE')
+            await conn.exec_driver_sql(f"ANALYZE {fqtn}")
+            ensured.append("ANALYZE")
         except Exception as e:  # pragma: no cover
-            errors.append(('ANALYZE', str(e)))
+            errors.append(("ANALYZE", str(e)))
 
     if _own_engine:
         await engine.dispose()
@@ -147,4 +148,3 @@ def cli() -> None:  # pragma: no cover - thin wrapper
         print("errors:")
         for n, e in res.errors:
             print("  ", n, "->", e)
-

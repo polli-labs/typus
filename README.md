@@ -106,6 +106,22 @@ taxa = await svc.search_taxa("Apis", scopes={"scientific"}, match="prefix")
 taxa = await svc.search_taxa("honey bee", scopes={"vernacular"}, match="exact")
 ```
 
+### Elevation (Postgres only)
+
+```python
+import os
+from typus import PostgresRasterElevation
+
+dsn = os.getenv("ELEVATION_DSN") or os.getenv("TYPUS_TEST_DSN")
+elev = PostgresRasterElevation(dsn, raster_table=os.getenv("ELEVATION_TABLE", "elevation_raster"))
+
+la = await elev.elevation(34.0522, -118.2437)
+vals = await elev.elevations([
+    (34.0522, -118.2437),  # LA
+    (0.0, -30.0),          # ocean (likely None)
+])
+```
+
 ### Geo helpers
 
 ```python

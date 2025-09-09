@@ -18,6 +18,7 @@ class PostgresRasterElevation:
             # Reflect table lazily on first use
             if self._tbl is None:
                 async with self._engine.begin() as conn:
+
                     def _reflect(sync_conn):
                         md = MetaData()
                         Table(self._tbl_name, md, autoload_with=sync_conn)
@@ -41,6 +42,7 @@ class PostgresRasterElevation:
             # Ensure table reflected
             if self._tbl is None:
                 async with self._engine.begin() as conn:
+
                     def _reflect(sync_conn):
                         md = MetaData()
                         Table(self._tbl_name, md, autoload_with=sync_conn)
@@ -58,9 +60,7 @@ class PostgresRasterElevation:
             pts_cte = ", ".join(values_rows)
             # For each point, select the first intersecting raster and compute ST_Value
             sql = (
-                "WITH pts(id, lon, lat) AS (VALUES "
-                + pts_cte
-                + ") "
+                "WITH pts(id, lon, lat) AS (VALUES " + pts_cte + ") "
                 "SELECT p.id, ("
                 "  SELECT ST_Value(er.rast, ST_SetSRID(ST_MakePoint(p.lon, p.lat), 4326)) "
                 "  FROM "

@@ -7,11 +7,10 @@ from rapidfuzz import fuzz
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from ...constants import RankLevel, is_major
+from ...constants import RankLevel
 from ...models.taxon import Taxon
 from ...orm.expanded_taxa import ExpandedTaxa
 from .abstract import AbstractTaxonomyService
-
 
 logger = logging.getLogger(__name__)
 
@@ -353,27 +352,32 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
             where_clauses: list[str] = []
             params: dict[str, str] = {}
             idx = 0
+
             def add_clause(fmt: str, val: str) -> None:
                 nonlocal idx
                 key = f"q{idx}"
                 idx += 1
                 for c in cols:
                     where_clauses.append(fmt.format(col=c, p=f":{key}_{len(where_clauses)}"))
-                    params[f"{key}_{len(where_clauses)-1}"] = val
+                    params[f"{key}_{len(where_clauses) - 1}"] = val
+
             ql = q_norm.lower()
             if mode == "exact":
                 for c in cols:
-                    k = f"q{idx}"; idx += 1
+                    k = f"q{idx}"
+                    idx += 1
                     where_clauses.append(f"LOWER({c}) = :{k}")
                     params[k] = ql
             elif mode == "prefix":
                 for c in cols:
-                    k = f"q{idx}"; idx += 1
+                    k = f"q{idx}"
+                    idx += 1
                     where_clauses.append(f"LOWER({c}) LIKE :{k}")
                     params[k] = ql + "%"
             elif mode == "substring":
                 for c in cols:
-                    k = f"q{idx}"; idx += 1
+                    k = f"q{idx}"
+                    idx += 1
                     where_clauses.append(f"LOWER({c}) LIKE :{k}")
                     params[k] = f"%{ql}%"
             return " OR ".join(where_clauses), params
@@ -397,8 +401,8 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
                     sup_limit = max(limit * 5, 50) if fuzzy else limit
                     base_sql = (
                         'SELECT DISTINCT "taxonID", "name", "rankLevel", "immediateAncestor_taxonID", "commonName" '
-                        'FROM expanded_taxa '
-                        f"WHERE ({pred_sql}) AND COALESCE(\"taxonActive\", TRUE)"
+                        "FROM expanded_taxa "
+                        f'WHERE ({pred_sql}) AND COALESCE("taxonActive", TRUE)'
                     )
                     base_sql += rank_filter_sql
                     base_sql += f' ORDER BY "rankLevel" ASC, "name" ASC LIMIT {sup_limit}'

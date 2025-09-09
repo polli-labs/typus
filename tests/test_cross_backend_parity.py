@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sqlite3
 from dataclasses import dataclass
@@ -34,7 +33,7 @@ def sqlite_fixture_count() -> int:
     db = Path("tests/expanded_taxa_sample.sqlite")
     conn = sqlite3.connect(db)
     try:
-        return conn.execute('SELECT COUNT(*) FROM expanded_taxa').fetchone()[0]
+        return conn.execute("SELECT COUNT(*) FROM expanded_taxa").fetchone()[0]
     finally:
         conn.close()
 
@@ -43,7 +42,7 @@ async def pg_table_count(dsn: str) -> int:
     eng = create_async_engine(dsn, pool_pre_ping=True)
     try:
         async with eng.begin() as conn:
-            r = await conn.exec_driver_sql('SELECT COUNT(*) FROM expanded_taxa')
+            r = await conn.exec_driver_sql("SELECT COUNT(*) FROM expanded_taxa")
             return r.scalar() or 0
     finally:
         await eng.dispose()
@@ -75,7 +74,7 @@ async def test_cross_backend_parity_seeded_queries():
     # Determine whether datasets match (row count heuristic)
     s_count = sqlite_fixture_count()
     p_count = await pg_table_count(dsn)
-    datasets_match = (s_count == p_count)
+    datasets_match = s_count == p_count
 
     warnings: list[str] = []
     for c in CASES:
@@ -92,8 +91,7 @@ async def test_cross_backend_parity_seeded_queries():
         if datasets_match:
             # Strict equality and ordering when datasets match
             assert pg_ids == base_ids, (
-                f"Mismatch for {c.scope}:{c.match} '{c.query}':\n"
-                f"sqlite={base_ids}\npg={pg_ids}"
+                f"Mismatch for {c.scope}:{c.match} '{c.query}':\nsqlite={base_ids}\npg={pg_ids}"
             )
         else:
             # Warn-only: ensure baseline IDs are included; ordering may differ
@@ -106,4 +104,3 @@ async def test_cross_backend_parity_seeded_queries():
     # Emit warnings if any (won't fail the test)
     if warnings:
         pytest.skip("; ".join(warnings))
-
