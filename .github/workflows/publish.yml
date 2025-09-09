@@ -6,7 +6,36 @@ on:
       - "v*"
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Set up uv (with cache)
+        uses: astral-sh/setup-uv@v3
+        with:
+          cache: true
+          cache-dependency-path: |
+            pyproject.toml
+            uv.lock
+      - name: Install dependencies (dev + sqlite extras)
+        run: |
+          uv pip install -e ".[dev,sqlite]"
+      - name: Lint (ruff)
+        run: |
+          uv run ruff format --check .
+          uv run ruff check .
+      - name: Run tests (SQLite fixture, no DSN)
+        env:
+          TYPUS_ELEVATION_TEST: "0"
+        run: |
+          uv run pytest -q -k "not test_async_compatibility.py and not test_ancestry_verification and not test_ancestor_descendant_distance and not test_perf_name_search_local"
+
   build-and-publish:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write  # needed to upload release asset

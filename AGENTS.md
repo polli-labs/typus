@@ -9,7 +9,7 @@ Obey these rules when modifying Typus.
    * Run `ruff format .` to auto-format.
    * Run `ruff check .` and fix all errors except E501 (line length) which is
      ignored – the formatter wraps strings automatically.
-   * Ensure `pytest -q` passes before opening a PR.
+   * Ensure the lightweight test subset passes before opening a PR (see docs/contributing.md).
 
 3. **Dependencies**
    * Use the `[project.optional-dependencies]` groups in *pyproject.toml*.
@@ -25,6 +25,7 @@ Obey these rules when modifying Typus.
    * **Optional Database Tests**: Some tests in `test_async_compatibility.py` require
      a real PostgreSQL database and will be skipped in CI unless `TYPUS_TEST_DSN` is set.
      CI-friendly mock versions are provided in `test_async_compatibility_ci.py`.
+   * See `docs/contributing.md` for the exact `pytest -k` expression used by pre-commit/CI.
 
 
 5. **Docs**

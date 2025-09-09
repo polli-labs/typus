@@ -5,8 +5,18 @@
 - Legacy `ancestry`/`ancestry_str` support fully removed from ORM and services. Modern databases and fixtures omit this column; use helpers like `ancestors()` to compute lineage when needed.
 
 ### Added
-- PostgresTaxonomyService: `ancestors()` and `get_many_batched()` implemented to match SQLite parity.
-- Perf harness: seeded cross-backend parity test added; variance and optional EXPLAIN capture.
+- Taxonomy services refactor:
+  - Moved implementations under `typus/services/taxonomy/{abstract.py,postgres.py,sqlite.py}` with stable re‑exports.
+  - PostgresTaxonomyService: added `ancestors()` and `get_many_batched()` to match SQLite parity.
+- Name search (both backends): exact / prefix / substring with optional fuzzy re‑ranking; shared API on `AbstractTaxonomyService`.
+- SQLite loader: default‑on index creation (`--with-indexes` flag; expression indexes on lower(name/commonName), btrees on rank/taxonID).
+- Postgres index helper: idempotent CLI/API (`typus-pg-ensure-indexes`) for fast name search.
+- Perf harness: scripts/perf_report.py with variance, optional verification, and EXPLAIN capture; report written to `dev/agents/perf_report.md`.
+- Elevation service (Postgres‑only): `PostgresRasterElevation` with `elevation()` and `elevations()`; guarded tests and docs.
+
+### Changed
+- Documentation updates: taxonomy service guide, elevation service guide, README environment variables.
+- Internal: removed legacy `typus/services/taxonomy.py` and `typus/services/sqlite.py`; imports updated.
 
 
 ## 0.3.0

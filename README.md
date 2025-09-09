@@ -2,6 +2,8 @@
 
 # Typus
 
+[![CI](https://github.com/polli-labs/typus/actions/workflows/ci.yml/badge.svg)](https://github.com/polli-labs/typus/actions/workflows/ci.yml)
+
 **Shared taxonomy & geo‑temporal types for the Polli‑Labs ecological stack**
 
 Typus centralises every domain object that the rest of our platform —

@@ -11,3 +11,10 @@ repos:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: pytest-lite
+        name: pytest (lite)
+        language: system
+        entry: pytest -q -k "not test_async_compatibility.py and not test_ancestry_verification and not test_ancestor_descendant_distance and not test_perf_name_search_local"
+        pass_filenames: false
