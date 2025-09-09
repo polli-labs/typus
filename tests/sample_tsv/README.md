@@ -8,16 +8,16 @@ This directory contains sample data files that can be used for unit testing with
 
 These files contain samples from the Catalog of Life Data Package (ColDP) tables:
 
-- `coldp_name_usage.tsv`: Scientific names and taxonomic information
-- `coldp_vernacular_name.tsv`: Common names in various languages
-- `coldp_distribution.tsv`: Geographic distribution information
-- `coldp_media.tsv`: Links to images, sounds, and other media
-- `coldp_reference.tsv`: Bibliographic references
-- `coldp_type_material.tsv`: Type specimen information
+- (local only) `coldp_name_usage.tsv`: Scientific names and taxonomic information
+- (local only) `coldp_vernacular_name.tsv`: Common names in various languages
+- (local only) `coldp_distribution.tsv`: Geographic distribution information
+- (local only) `coldp_media.tsv`: Links to images, sounds, and other media
+- (local only) `coldp_reference.tsv`: Bibliographic references
+- (local only) `coldp_type_material.tsv`: Type specimen information
 
 ### Mapping and Taxa Tables
 
-- `inat_to_coldp_taxon_map.tsv`: Crosswalk between iNaturalist taxa and Catalog of Life taxa
+- (local only) `inat_to_coldp_taxon_map.tsv`: Crosswalk between iNaturalist taxa and Catalog of Life taxa
 - `expanded_taxa_sample.tsv`: Sample of the expanded_taxa table with common names and a focused subset of bees and wasps for LCA and distance tests
 
 ## Usage for SQLite Testing

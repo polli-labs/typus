@@ -7,7 +7,7 @@ from typing import List
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from typus.services import PostgresTaxonomyService, SQLiteTaxonomyService
+from typus.services import PostgresTaxonomyService, SQLiteTaxonomyService, load_expanded_taxa
 
 
 @dataclass
@@ -52,6 +52,10 @@ async def pg_table_count(dsn: str) -> int:
 async def test_cross_backend_parity_seeded_queries():
     # Baseline from SQLite fixture (truths)
     sqlite_db = Path("tests/expanded_taxa_sample.sqlite")
+    if not sqlite_db.exists():
+        # Build from TSV fixture on-demand
+        tsv = Path("tests/sample_tsv/expanded_taxa_sample.tsv")
+        load_expanded_taxa(sqlite_db, tsv_path=tsv, force_self_consistent=True)
     sql_svc = SQLiteTaxonomyService(sqlite_db)
 
     baseline: dict[tuple[str, str, str], list[int]] = {}

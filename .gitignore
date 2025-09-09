@@ -182,3 +182,8 @@ expanded_taxa_06282025.tsv
 work/
 CLAUDE.md
 dev/
+AGENTS.md
+dev/
+tests/expanded_taxa_sample.sqlite
+tests/sample_tsv/coldp_*.tsv
+tests/sample_tsv/inat_to_coldp_taxon_map.tsv
