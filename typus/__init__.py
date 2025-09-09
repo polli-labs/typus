@@ -22,7 +22,7 @@ from .services.projections import (
 )
 
 # Lightweight offline service
-from .services.sqlite import SQLiteTaxonomyService
+from .services.taxonomy import SQLiteTaxonomyService
 
 # Core taxonomy service bases
 from .services.taxonomy import (

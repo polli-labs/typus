@@ -110,6 +110,37 @@ def _tsv_to_sqlite(tsv_path: Path, sqlite_path: Path, mode: Literal["replace", "
     conn.close()
 
 
+def _create_indexes(sqlite_path: Path) -> None:
+    """Create recommended indexes for expanded_taxa SQLite database.
+
+    The indexes speed up common lookups and name search patterns used by
+    SQLiteTaxonomyService. Idempotent and safe to run multiple times.
+    """
+    conn = sqlite3.connect(str(sqlite_path))
+    try:
+        cur = conn.cursor()
+        # Fast PK lookups and parent traversals
+        cur.execute('CREATE INDEX IF NOT EXISTS idx_expanded_taxa_taxon_id ON expanded_taxa("taxonID")')
+        cur.execute(
+            'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_imm_ancestor ON expanded_taxa("immediateAncestor_taxonID")'
+        )
+        cur.execute(
+            'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_imm_major_ancestor ON expanded_taxa("immediateMajorAncestor_taxonID")'
+        )
+        # Rank filter and ordering aid
+        cur.execute('CREATE INDEX IF NOT EXISTS idx_expanded_taxa_ranklevel ON expanded_taxa("rankLevel")')
+        # Expression indexes for case-insensitive search
+        cur.execute('CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_name ON expanded_taxa(LOWER("name"))')
+        cur.execute(
+            'CREATE INDEX IF NOT EXISTS idx_expanded_taxa_lower_commonName ON expanded_taxa(LOWER("commonName"))'
+        )
+        # Gather statistics to help the planner
+        cur.execute('ANALYZE')
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def load_expanded_taxa(
     sqlite_path: Path,
     tsv_path: Path | None = None,
@@ -118,6 +149,7 @@ def load_expanded_taxa(
     *,
     cache_dir: Path | None = None,
     force_self_consistent: bool = False,
+    create_indexes: bool = True,
 ) -> Path:
     if cache_dir is None:
         cache_dir = Path(os.getenv("TYPUS_CACHE_DIR", Path.home() / ".cache" / "typus"))
@@ -141,6 +173,24 @@ def load_expanded_taxa(
         )
         if force_self_consistent:
             _ensure_self_consistent(sqlite_path)
+        if create_indexes:
+            # Only create indexes if this looks like a valid expanded_taxa database
+            try:
+                conn = sqlite3.connect(str(sqlite_path))
+                ok = _schema_ok(conn)
+                conn.close()
+            except Exception:
+                ok = False
+            if ok:
+                _create_indexes(sqlite_path)
+            # If not ok, silently skip (e.g., cache hit test writes a dummy file)
+        else:
+            import warnings as _warnings
+
+            _warnings.warn(
+                "SQLite indexes were not created. Expect slower name search and ancestry operations.",
+                stacklevel=1,
+            )
         return sqlite_path
     # download
     file_name = Path(url).name
@@ -159,10 +209,42 @@ def load_expanded_taxa(
             _tsv_to_sqlite(tsv_path, sqlite_path, "replace")
             if force_self_consistent:
                 _ensure_self_consistent(sqlite_path)
+            if create_indexes:
+                try:
+                    conn = sqlite3.connect(str(sqlite_path))
+                    ok = _schema_ok(conn)
+                    conn.close()
+                except Exception:
+                    ok = False
+                if ok:
+                    _create_indexes(sqlite_path)
+            else:
+                import warnings as _warnings
+
+                _warnings.warn(
+                    "SQLite indexes were not created. Expect slower name search and ancestry operations.",
+                    stacklevel=1,
+                )
             return sqlite_path
     sqlite_path.write_bytes(cached.read_bytes())
     if force_self_consistent:
         _ensure_self_consistent(sqlite_path)
+    if create_indexes:
+        try:
+            conn = sqlite3.connect(str(sqlite_path))
+            ok = _schema_ok(conn)
+            conn.close()
+        except Exception:
+            ok = False
+        if ok:
+            _create_indexes(sqlite_path)
+    else:
+        import warnings as _warnings
+
+        _warnings.warn(
+            "SQLite indexes were not created. Expect slower name search and ancestry operations.",
+            stacklevel=1,
+        )
     return sqlite_path
 
 
@@ -178,9 +260,33 @@ def main() -> None:
     parser.add_argument("--url", default=DEFAULT_URL)
     parser.add_argument("--replace", action="store_true")
     parser.add_argument("--cache", type=Path)
+    try:
+        # Python 3.10+: provides --with-indexes / --no-with-indexes
+        from argparse import BooleanOptionalAction  # type: ignore
+
+        parser.add_argument(
+            "--with-indexes",
+            action=BooleanOptionalAction,
+            default=True,
+            help="Create recommended SQLite indexes (default: on)",
+        )
+    except Exception:
+        parser.add_argument("--with-indexes", action="store_true", default=True)
     args = parser.parse_args()
     mode = "replace" if args.replace else "fail"
-    load_expanded_taxa(args.sqlite, args.tsv, args.url, mode, cache_dir=args.cache)
+    if not getattr(args, "with_indexes", True):
+        print(
+            "WARNING: --with-indexes disabled. Expect slower name search and ancestry operations.",
+            file=sys.stderr,
+        )
+    load_expanded_taxa(
+        args.sqlite,
+        args.tsv,
+        args.url,
+        mode,
+        cache_dir=args.cache,
+        create_indexes=getattr(args, "with_indexes", True),
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover - manual invocation

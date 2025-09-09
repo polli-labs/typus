@@ -69,28 +69,56 @@ pip install -e ".[dev,sqlite]"
 
 ## Quick start
 
-```python
-from typus import PostgresTaxonomyService, RankLevel, latlon_to_unit_sphere
+### SQLite (recommended for getting started)
 
-svc = PostgresTaxonomyService("postgresql+asyncpg://user:pw@host/db")
-bee = await svc.get_taxon(630955)           # Anthophila
-print(bee.scientific_name, bee.rank_level)  # Anthophila RankLevel.L32
-
-print(latlon_to_unit_sphere(31.5, -110.4))  # → x, y, z on S²
+```bash
+# Download or build the expanded taxonomy dataset locally (~475MB sqlite / ~440MB tsv.gz)
+# The loader creates recommended indexes by default for fast name search
+typus-load-sqlite --sqlite expanded_taxa.sqlite
 ```
-
-### Offline mode (SQLite fixture)
 
 ```python
 from pathlib import Path
-from typus.services import SQLiteTaxonomyService, load_expanded_taxa
+from typus.services import SQLiteTaxonomyService
 
-db = Path("expanded_taxa.sqlite")
-load_expanded_taxa(db)  # downloads if missing
-svc = SQLiteTaxonomyService(db)
+svc = SQLiteTaxonomyService(Path("expanded_taxa.sqlite"))
+bee = await svc.get_taxon(630955)           # Anthophila
+print(bee.scientific_name, bee.rank_level)  # Anthophila RankLevel.L32
 ```
-```bash
-typus-load-sqlite --sqlite expanded_taxa.sqlite
+
+You can also load on-demand in code (will download if missing):
+
+```python
+from pathlib import Path
+from typus.services import load_expanded_taxa, SQLiteTaxonomyService
+
+db_path = load_expanded_taxa(Path("expanded_taxa.sqlite"))  # create_indexes=True by default
+svc = SQLiteTaxonomyService(db_path)
+```
+
+### Name search (v0.4.0+)
+
+```python
+# Scientific prefix match
+taxa = await svc.search_taxa("Apis", scopes={"scientific"}, match="prefix")
+
+# Vernacular (common name) exact
+taxa = await svc.search_taxa("honey bee", scopes={"vernacular"}, match="exact")
+```
+
+### Geo helpers
+
+```python
+from typus import latlon_to_unit_sphere
+print(latlon_to_unit_sphere(31.5, -110.4))  # → x, y, z on S²
+```
+
+### Postgres (optional for production deployments)
+
+```python
+from typus import PostgresTaxonomyService
+svc = PostgresTaxonomyService("postgresql+asyncpg://user:pw@host/db")
+bee = await svc.get_taxon(630955)
 ```
 
 ---

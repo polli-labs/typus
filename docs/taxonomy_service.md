@@ -10,13 +10,17 @@ Both classes implement the `AbstractTaxonomyService` API:
 ```python
 class AbstractTaxonomyService:
     async def get_taxon(self, taxon_id: int) -> Taxon: ...
-    async def children(self, taxon_id: int, *, depth: int = 1): ...
+    async def children(self, taxon_id: int, *, depth: int = 1): ...  # async-iterable on Postgres
+    async def children_list(self, taxon_id: int, *, depth: int = 1) -> list[Taxon]: ...
     async def lca(self, taxon_ids: set[int], *, include_minor_ranks: bool = False) -> Taxon: ...
     async def distance(
         self, a: int, b: int, *, include_minor_ranks: bool = False, inclusive: bool = False
     ) -> int: ...
     async def fetch_subtree(self, root_ids: set[int]) -> dict[int, int | None]: ...
     async def subtree(self, root_id: int) -> dict[int, int | None]: ...
+    async def get_many_batched(self, ids: set[int]) -> dict[int, Taxon]: ...
+    async def ancestors(self, taxon_id: int, *, include_minor_ranks: bool = True) -> list[int]: ...
+    async def search_taxa(self, query: str, *, scopes={"scientific","vernacular"}, match="auto", fuzzy=True, threshold=0.8, limit=20, rank_filter=None, with_scores=False): ...
 ```
 
 The return types are `Taxon` models or simple dictionaries. All methods are `async` so they can be awaited inside any asyncio application.
@@ -52,10 +56,10 @@ path = load_expanded_taxa(Path("expanded_taxa.sqlite"))
 ```
 
 ```
-usage: typus-load-sqlite --sqlite PATH [--tsv TSV] [--url URL] [--replace] [--cache DIR]
+usage: typus-load-sqlite --sqlite PATH [--tsv TSV] [--url URL] [--replace] [--cache DIR] [--with-indexes/--no-with-indexes]
 ```
 
-Downloads come from `https://assets.polli.ai/expanded_taxa/latest/expanded_taxa.sqlite` by default and are cached in `~/.cache/typus` (override with `$TYPUS_CACHE_DIR`). Use `--replace` to overwrite an existing file or `--tsv my.tsv` to populate from a local TSV dump.
+Downloads come from `https://assets.polli.ai/expanded_taxa/latest/expanded_taxa.sqlite` by default and are cached in `~/.cache/typus` (override with `$TYPUS_CACHE_DIR`). Use `--replace` to overwrite an existing file or `--tsv my.tsv` to populate from a local TSV dump. The loader creates recommended indexes by default for fast name search; disable with `--no-with-indexes`.
 
 See [Offline mode](offline_mode.md) for more details on the loader.
 
@@ -76,3 +80,48 @@ lca = await local.lca({630955, 54328})
 ```
 
 The two services share behaviour so code can accept `AbstractTaxonomyService` and run identically in both modes.
+
+## Postgres Indexes (optional helper)
+
+For production Postgres deployments, ensure the recommended indexes for fast name search and ancestry operations:
+
+```
+uv run typus-pg-ensure-indexes --dsn "$POSTGRES_DSN" --schema public --ensure-trgm
+```
+
+Programmatic:
+
+```python
+from typus.services.pg_index_helper import ensure_expanded_taxa_indexes
+await ensure_expanded_taxa_indexes(POSTGRES_DSN, include_trigram_indexes=True, ensure_pg_trgm_extension=False)
+```
+
+## Name Search (v0.4.0+)
+
+Typus includes a uniform search capability across scientific and vernacular names with optional fuzzy matching:
+
+```python
+taxa = await svc.search_taxa(
+    "Apis", scopes={"scientific"}, match="prefix", fuzzy=True, threshold=0.8, limit=20,
+)
+```
+
+- scopes: {"scientific", "vernacular"}
+- match: "exact" | "prefix" | "substring" | "auto"
+- fuzzy: True uses RapidFuzz to re-rank a SQL superset
+- rank_filter: restricts by `RankLevel`
+- with_scores: return `(Taxon, score)` tuples
+
+## Children ergonomics
+
+- Postgres `children()` is an async-iterable (good for streaming in services).
+- Use `children_list()` to get a list on all backends for simple workflows:
+
+```python
+kids = await svc.children_list(52747, depth=2)
+```
+
+## Ancestors & Batched Lookups
+
+- `ancestors(taxon_id, include_minor_ranks=True)` returns a parent chain (root→self), assembled via immediate ancestor hops.
+- `get_many_batched(ids)` resolves many taxa efficiently in one query per backend.

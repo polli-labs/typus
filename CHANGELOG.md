@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased (v0.4.0)
+### Removed
+- Legacy `ancestry`/`ancestry_str` support fully removed from ORM and services. Modern databases and fixtures omit this column; use helpers like `ancestors()` to compute lineage when needed.
+
+### Added
+- PostgresTaxonomyService: `ancestors()` and `get_many_batched()` implemented to match SQLite parity.
+- Perf harness: seeded cross-backend parity test added; variance and optional EXPLAIN capture.
+
+
 ## 0.3.0
 ### Added - Canonical Geometry
 * **NEW**: `BBoxXYWHNorm` - Canonical top-left normalized bbox type with strict invariant validation

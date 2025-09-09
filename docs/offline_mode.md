@@ -14,12 +14,17 @@ load_expanded_taxa(Path("expanded_taxa.sqlite"))
 ## CLI
 
 ```bash
-typus-load-sqlite --sqlite expanded_taxa.sqlite
+typus-load-sqlite --sqlite expanded_taxa.sqlite  # creates recommended indexes
 ```
 
 Pass `--replace` to overwrite, `--tsv my.tsv` to use a local dump. Downloads are
 stored in `~/.cache/typus` unless `$TYPUS_CACHE_DIR` is set. Override the source
 URL with `--url` or `$TYPUS_EXPANDED_TAXA_URL`.
+
+Indexes: By default the loader creates expression indexes to accelerate
+case-insensitive name search and rank filters, and runs `ANALYZE`. To opt out,
+pass `--no-with-indexes` or set `create_indexes=False` in the programmatic API
+(expect slower queries).
 
 ## Sample LCA dataset & tests
 
@@ -32,4 +37,3 @@ python scripts/gen_fixture_sqlite.py
 ```
 
 The resulting file stays well under 100&nbsp;KB so CI can fetch it quickly.
-

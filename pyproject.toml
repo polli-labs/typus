@@ -49,6 +49,7 @@ dev = [
   "asyncpg>=0.29",
   "aiosqlite>=0.19",
   "pyarrow>=16,<17",
+  "pandas>=2.2,<3",
   "mkdocs>=1.6,<2",
   "mkdocs-material>=9.5,<10",
   "pytest-httpserver>=1.0",
@@ -67,6 +68,7 @@ Issues     = "https://github.com/polli-labs/typus/issues"
 
 [project.scripts]
 typus-load-sqlite = "typus.services.sqlite_loader:main"
+typus-pg-ensure-indexes = "typus.services.pg_index_helper:cli"
 
 # ---------------------------------------------------------------------------
 # Build backend
