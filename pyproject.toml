@@ -109,3 +109,4 @@ addopts    = "-q"
 minversion = "7.0"
 pythonpath = ["."]
 markers    = ["asyncio"]
+asyncio_mode = "auto"
