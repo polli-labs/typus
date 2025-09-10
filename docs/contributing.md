@@ -64,4 +64,3 @@ CI/CD Overview
 - Publish workflow (`.github/workflows/publish.yml`):
   - Blocks build/publish on tests job.
   - Builds and uploads wheels, then deploys docs on tag.
-

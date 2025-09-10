@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (v0.4.0)
+## 0.4.0
 ### Removed
 - Legacy `ancestry`/`ancestry_str` support fully removed from ORM and services. Modern databases and fixtures omit this column; use helpers like `ancestors()` to compute lineage when needed.
 
