@@ -25,6 +25,7 @@ jobs:
             ${{ runner.os }}-uv-3.10-
       - name: Install dependencies (dev + sqlite extras)
         run: |
+          uv venv
           uv pip install -e ".[dev,sqlite]"
       - name: Lint (ruff)
         run: |

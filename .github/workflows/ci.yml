@@ -34,13 +34,14 @@ jobs:
 
       - name: Install dependencies (dev + sqlite extras)
         run: |
+          uv venv
           uv pip install -e ".[dev,sqlite]"
 
       - name: Pre-commit (includes ruff + whitespace + pytest-lite)
         env:
           TYPUS_ELEVATION_TEST: "0"
         run: |
-          pre-commit run -a
+          uv run pre-commit run -a
 
       - name: Lint (ruff)
         run: |
