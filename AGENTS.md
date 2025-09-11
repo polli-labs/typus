@@ -17,6 +17,17 @@ Obey these rules when modifying Typus.
      – sqlite extras for SQLite-only helpers
    * **Never** add a runtime dependency without asking the maintainer.
 
+4. **Environment**
+   * Always use uv, not pip.
+    * Create/update env: `make dev-setup` (uv venv + uv pip install -e .[dev,sqlite])
+    * Run tools: `uv run ruff …`, `uv run pytest …`, `uv run pre-commit …`
+  * Formatting & lint
+    * Local: `ruff format . && ruff check .` (via `make format` / `make lint`)
+    * CI is check-only (no auto-apply). Pre-commit shows diffs on failure.
+  * Don’t introduce pip install commands in scripts, docs, or CI.
+  * Prefer Makefile targets for common flows: `format`, `lint`, `test`, `ci`.
+  * When pre-commit disagrees with `uv run ruff`, align versions by pinning ruff dev extra to match pre-commit rev.
+
 4. **Tests**
    * New modules must include unit tests under `tests/`.
    * Use the `taxonomy_service` fixture provided by `conftest.py`
