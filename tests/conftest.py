@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 
 import pytest_asyncio
 
-from typus.services.sqlite import SQLiteTaxonomyService
+from typus.services import SQLiteTaxonomyService
 from typus.services.sqlite_loader import load_expanded_taxa
 from typus.services.taxonomy import AbstractTaxonomyService, PostgresTaxonomyService
 

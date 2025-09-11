@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.0
+### Removed
+- Legacy `ancestry`/`ancestry_str` support fully removed from ORM and services. Modern databases and fixtures omit this column; use helpers like `ancestors()` to compute lineage when needed.
+
+### Added
+- Taxonomy services refactor:
+  - Moved implementations under `typus/services/taxonomy/{abstract.py,postgres.py,sqlite.py}` with stable re‑exports.
+  - PostgresTaxonomyService: added `ancestors()` and `get_many_batched()` to match SQLite parity.
+- Name search (both backends): exact / prefix / substring with optional fuzzy re‑ranking; shared API on `AbstractTaxonomyService`.
+- SQLite loader: default‑on index creation (`--with-indexes` flag; expression indexes on lower(name/commonName), btrees on rank/taxonID).
+- Postgres index helper: idempotent CLI/API (`typus-pg-ensure-indexes`) for fast name search.
+- Perf harness: scripts/perf_report.py with variance, optional verification, and EXPLAIN capture; report written to `dev/agents/perf_report.md`.
+- Elevation service (Postgres‑only): `PostgresRasterElevation` with `elevation()` and `elevations()`; guarded tests and docs.
+
+### Changed
+- Documentation updates: taxonomy service guide, elevation service guide, README environment variables.
+- Internal: removed legacy `typus/services/taxonomy.py` and `typus/services/sqlite.py`; imports updated.
+
+
 ## 0.3.0
 ### Added - Canonical Geometry
 * **NEW**: `BBoxXYWHNorm` - Canonical top-left normalized bbox type with strict invariant validation
@@ -62,24 +81,24 @@
   - Test fixture generation script (`gen_fixture_sqlite.py`) updated to remove ancestry
   - Taxon model now returns empty ancestry list (can be computed on demand if needed)
   - ORM still maps `ancestry_str` for backward compatibility but it's marked deprecated
-  
+
 * **BREAKING**: Major performance improvements for LCA and distance calculations
   - LCA now uses efficient expanded L*_taxonID columns for major ranks (O(1) database queries)
   - Distance calculation rewritten to use recursive CTEs instead of building full ancestry paths
   - Removed dependency on non-existent `path` column (ltree) in production databases
   - Fixed transaction handling issues when ltree queries fail
   - Algorithms now leverage immediateAncestor and immediateMajorAncestor columns efficiently
-  
+
 * **BREAKING**: Fixed column name mismatches between SQLite and PostgreSQL
   - All raw SQL queries updated to use correct production column names (`taxonID` not `taxon_id`)
   - Consistently uses `immediateAncestor_taxonID` and `immediateMajorAncestor_taxonID`
   - Added proper quoting for all column names in SQL queries
-  
+
 * **FIX**: Resolved MissingGreenlet error in pure asyncio contexts (FastAPI/uvicorn)
   - Service no longer attempts to access deferred columns that may not exist
   - Fixed _row_to_taxon methods to handle missing columns gracefully
   - Added robust handling for databases without ancestry column
-  
+
 * **NEW**: CI-friendly mock tests for async compatibility verification
 * **NEW**: Comprehensive documentation for expanded_taxa table structure
 * **CHG**: Major ranks list corrected (uses 30 for tribe, not 34 for family)

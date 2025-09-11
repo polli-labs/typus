@@ -131,7 +131,7 @@ class TestPixelNormalizedRoundtrip:
         with pytest.raises(ValueError, match="xyxy invalid"):
             from_xyxy_px(10, 60, 50, 50, W, H)
 
-        # Equal coordinates (zero width/height) 
+        # Equal coordinates (zero width/height)
         with pytest.raises(ValueError, match="xyxy invalid"):
             from_xyxy_px(10, 20, 10, 20, W, H)
 

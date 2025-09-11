@@ -58,12 +58,7 @@ class ExpandedTaxa(Base):
         "taxonActive", Boolean, nullable=True
     )  # SQLite will use 0/1
 
-    # ancestry column - DEPRECATED and not present in modern databases
-    # Only kept for backward compatibility with legacy test fixtures
-    ancestry_str: Mapped[str | None] = deferred(
-        mapped_column("ancestry", String, nullable=True),
-        doc="DEPRECATED — This column does not exist in production databases. Use immediate ancestor columns instead.",
-    )
+    # Optional ltree path string; may be absent
     path_ltree: Mapped[str | None] = deferred(
         mapped_column("path", String, nullable=True),
         doc="ltree string from Postgres. May be absent in some environments/tables.",

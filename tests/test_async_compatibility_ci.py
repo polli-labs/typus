@@ -45,19 +45,18 @@ async def test_no_greenlet_with_mock():
 
 
 @pytest.mark.asyncio
-async def test_row_to_taxon_with_ancestry():
-    """Test that _row_to_taxon handles ancestry column when present."""
+async def test_row_to_taxon_without_ancestry_column():
+    """_row_to_taxon should not depend on legacy ancestry_str presence."""
     mock_row = MagicMock()
     mock_row.taxon_id = 47219
     mock_row.scientific_name = "Apis mellifera"
     mock_row.rank_level = 10
     mock_row.parent_id = 578086
-    mock_row.ancestry_str = "1|48460|47158|47120|48736|47222|630955|578086|47219"
 
     service = PostgresTaxonomyService("postgresql+asyncpg://mock:mock@localhost/mock")
     taxon = service._row_to_taxon(mock_row)
 
-    assert taxon.ancestry == [1, 48460, 47158, 47120, 48736, 47222, 630955, 578086, 47219]
+    assert taxon.ancestry == []
 
 
 @pytest.mark.asyncio
@@ -90,7 +89,7 @@ def test_no_greenlet_in_new_loop():
 
     async def test_async():
         # Mock the session and query execution
-        with patch("typus.services.taxonomy.select") as mock_select:
+        with patch("typus.services.taxonomy.postgres.select") as mock_select:
             mock_stmt = MagicMock()
             mock_select.return_value.where.return_value = mock_stmt
 
@@ -137,7 +136,7 @@ async def test_sql_uses_correct_column_names():
 
     # Check children method SQL
 
-    with patch("typus.services.taxonomy.text") as mock_text:
+    with patch("typus.services.taxonomy.postgres.text") as mock_text:
         mock_session = AsyncMock()
         mock_session.execute = AsyncMock(
             return_value=MagicMock(

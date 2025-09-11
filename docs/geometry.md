@@ -8,7 +8,7 @@ The canonical geometry contract establishes these **immutable rules**:
 
 - **🎯 Origin**: Top-left corner (0,0) at upper-left of image
 - **📏 Format**: `[x, y, width, height]` - never xyxy or center-based
-- **🔢 Normalization**: All values in `[0, 1]` range relative to image dimensions  
+- **🔢 Normalization**: All values in `[0, 1]` range relative to image dimensions
 - **🔒 Immutability**: `BBoxXYWHNorm` instances cannot be modified after creation
 - **✅ Invariants**: Enforced at construction time with precise error messages
 - **🎚️ Tolerance**: Boundary checks use ε=1e-9 for floating-point precision
@@ -20,7 +20,7 @@ The canonical geometry contract establishes these **immutable rules**:
 The canonical format is:
 
 - **Coordinate System**: Top-left origin (0,0 at top-left corner)
-- **Format**: `[x, y, width, height]` 
+- **Format**: `[x, y, width, height]`
 - **Normalization**: All values in `[0, 1]` range relative to image dimensions
 - **Type**: `BBoxXYWHNorm` (immutable Pydantic model)
 
@@ -29,7 +29,7 @@ The canonical format is:
 The `BBoxXYWHNorm` type enforces these constraints:
 
 - `0 ≤ x ≤ 1` (left coordinate)
-- `0 ≤ y ≤ 1` (top coordinate)  
+- `0 ≤ y ≤ 1` (top coordinate)
 - `0 < w ≤ 1` (width, must be positive)
 - `0 < h ≤ 1` (height, must be positive)
 - `x + w ≤ 1` (cannot exceed right image boundary)
@@ -49,7 +49,7 @@ bbox = BBoxXYWHNorm(x=0.2, y=0.1, w=0.5, h=0.5)
 # bbox.x = 0.3  # This would raise TypeError
 ```
 
-### 🔄 **Coordinate System Conversions** 
+### 🔄 **Coordinate System Conversions**
 
 Here are worked examples showing conversions between different coordinate systems:
 
@@ -68,7 +68,7 @@ from typus import BBoxXYWHNorm, to_xyxy_px, from_xyxy_px, BBoxMapper
 # 1. Create canonical bbox
 bbox = BBoxXYWHNorm(x=0.2, y=0.1, w=0.5, h=0.5)
 
-# 2. Convert to TL pixel coordinates  
+# 2. Convert to TL pixel coordinates
 x1, y1, x2, y2 = to_xyxy_px(bbox, W=100, H=100)
 print(f"TL-pixel-xyxy: ({x1}, {y1}, {x2}, {y2})")  # (20, 10, 70, 60)
 
@@ -76,7 +76,7 @@ print(f"TL-pixel-xyxy: ({x1}, {y1}, {x2}, {y2})")  # (20, 10, 70, 60)
 bbox_from_px = from_xyxy_px(20, 10, 70, 60, W=100, H=100)
 print(f"Round-trip: {bbox_from_px}")  # x=0.2, y=0.1, w=0.5, h=0.5
 
-# 4. Convert from Gemini BR coordinates  
+# 4. Convert from Gemini BR coordinates
 gemini_mapper = BBoxMapper.get("gemini_br_xyxy")
 bbox_from_gemini = gemini_mapper(30, 40, 80, 90, W=100, H=100)
 print(f"From Gemini: {bbox_from_gemini}")  # x=0.2, y=0.1, w=0.5, h=0.5
@@ -167,7 +167,7 @@ detection = Detection(
 
 # Legacy support (deprecated)
 detection_legacy = Detection(
-    frame_number=100, 
+    frame_number=100,
     bbox=[10, 20, 50, 60],  # Pixel coordinates - DEPRECATED
     confidence=0.95
 )
@@ -207,12 +207,12 @@ If you have existing code using pixel bboxes:
 # Before (v0.2.x)
 bbox_pixels = [10, 20, 50, 60]  # x, y, width, height in pixels
 
-# After (v0.3.0+) 
+# After (v0.3.0+)
 from typus import BBoxXYWHNorm
 image_width, image_height = 100, 100
 bbox_canonical = BBoxXYWHNorm(
     x=10/image_width,    # 0.1
-    y=20/image_height,   # 0.2  
+    y=20/image_height,   # 0.2
     w=50/image_width,    # 0.5
     h=60/image_height    # 0.6
 )
@@ -240,7 +240,7 @@ def handle_bbox(bbox: BBoxXYWHNorm):
 ## Best Practices
 
 1. **Always use canonical format** for new code
-2. **Convert at API boundaries** using provider mappers  
+2. **Convert at API boundaries** using provider mappers
 3. **Store in canonical format** to avoid coordinate system bugs
 4. **Use factory methods** like `Detection.from_raw_detection()` for conversion
 5. **Validate early** - canonical types enforce invariants at construction time
@@ -258,5 +258,5 @@ schema = BBoxXYWHNorm.model_json_schema()
 
 Generated schemas are available in `typus/schemas/` directory:
 - `BBoxXYWHNorm.json`
-- `Detection.json` 
+- `Detection.json`
 - `Track.json`

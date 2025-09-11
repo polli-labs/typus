@@ -40,7 +40,7 @@ These columns provide direct access to parent taxa in the taxonomic hierarchy, e
 
 For each standard taxonomic rank level, three columns are provided:
 - `L{level}_taxonID` - Taxon ID at that rank level
-- `L{level}_name` - Scientific name at that rank level  
+- `L{level}_name` - Scientific name at that rank level
 - `L{level}_commonName` - Common name at that rank level (from ColDP)
 
 ## Complete Rank Level Mapping
@@ -91,7 +91,7 @@ The table employs strategic indexing for optimal query performance:
 
 ### Taxonomic Level Indexes (for clade filtering)
 - `idx_expanded_taxa_l10_taxonid` - Species-level filtering
-- `idx_expanded_taxa_l20_taxonid` - Genus-level filtering  
+- `idx_expanded_taxa_l20_taxonid` - Genus-level filtering
 - `idx_expanded_taxa_l30_taxonid` - Tribe-level filtering
 - `idx_expanded_taxa_l40_taxonid` - Order-level filtering
 - `idx_expanded_taxa_l50_taxonid` - Class-level filtering
@@ -107,25 +107,25 @@ The table employs strategic indexing for optimal query performance:
 ### Species-Level Filtering
 ```sql
 -- Get all records for a specific species
-SELECT * FROM expanded_taxa 
+SELECT * FROM expanded_taxa
 WHERE L10_taxonID = 47219;  -- Apis mellifera
 ```
 
 ### Clade-Based Filtering
 ```sql
 -- Get all bees (Anthophila epifamily)
-SELECT * FROM expanded_taxa 
+SELECT * FROM expanded_taxa
 WHERE L34_5_taxonID = 630955;
 
 -- Get all birds (Aves class)
-SELECT * FROM expanded_taxa 
+SELECT * FROM expanded_taxa
 WHERE L50_taxonID = 3;
 ```
 
 ### Ancestor Traversal
 ```sql
 -- Find immediate parent
-SELECT parent.* 
+SELECT parent.*
 FROM expanded_taxa child
 JOIN expanded_taxa parent ON child.immediateAncestor_taxonID = parent.taxonID
 WHERE child.taxonID = 47219;
@@ -134,7 +134,7 @@ WHERE child.taxonID = 47219;
 ### Taxonomic Hierarchy Display
 ```sql
 -- Show full taxonomic hierarchy for a species
-SELECT 
+SELECT
     name as species_name,
     L20_name as genus,
     L34_name as family,
@@ -142,16 +142,16 @@ SELECT
     L50_name as class,
     L67_name as phylum,
     L70_name as kingdom
-FROM expanded_taxa 
+FROM expanded_taxa
 WHERE taxonID = 47219;
 ```
 
 ### Finding Taxa with Common Names
 ```sql
 -- Find all taxa with common names at species level
-SELECT taxonID, name, commonName 
-FROM expanded_taxa 
-WHERE rankLevel = 10 
+SELECT taxonID, name, commonName
+FROM expanded_taxa
+WHERE rankLevel = 10
   AND commonName IS NOT NULL;
 ```
 

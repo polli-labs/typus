@@ -3,8 +3,18 @@ repos:
     rev: v0.4.4
     hooks:
       - id: ruff
-        args: ["--fix"]
-  - repo: https://github.com/pytest-dev/pytest
-    rev: v8.1.1
+      - id: ruff-format
+        args: ["--check"]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
     hooks:
-      - id: pytest
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: pytest-lite
+        name: pytest (lite)
+        language: system
+        entry: pytest -q -k "not test_async_compatibility and not ancestry_verification and not ancestor_descendant_distance and not perf_name_search_local"
+        pass_filenames: false

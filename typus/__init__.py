@@ -21,15 +21,15 @@ from .services.projections import (
     unit_sphere_to_latlon,
 )
 
-# Lightweight offline service
-from .services.sqlite import SQLiteTaxonomyService
-
 # Core taxonomy service bases
 from .services.taxonomy import (
     AbstractTaxonomyService as TaxonomyService,
 )
+
+# Lightweight offline service
 from .services.taxonomy import (
     PostgresTaxonomyService,
+    SQLiteTaxonomyService,
 )
 
 __all__ = [

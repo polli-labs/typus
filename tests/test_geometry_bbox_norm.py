@@ -86,7 +86,7 @@ class TestBBoxXYWHNormValidation:
         with pytest.raises(ValidationError):
             BBoxXYWHNorm(x=0.1, y=0.2, w=0.5, h=float("nan"))
 
-        # Infinite values - Pydantic catches these at field level 
+        # Infinite values - Pydantic catches these at field level
         with pytest.raises(ValidationError):
             BBoxXYWHNorm(x=float("inf"), y=0.2, w=0.5, h=0.6)
 
@@ -117,9 +117,9 @@ class TestBBoxXYWHNormValidation:
         eps = 1e-9
 
         # This should pass as x + w ≈ 1.0 within epsilon
-        bbox = BBoxXYWHNorm(x=0.5, y=0.5, w=0.5 - 2*eps, h=0.5 - 2*eps)
+        bbox = BBoxXYWHNorm(x=0.5, y=0.5, w=0.5 - 2 * eps, h=0.5 - 2 * eps)
         # Allow for floating point precision issues
-        assert abs((bbox.x + bbox.w) - 1.0) < 2*eps
+        assert abs((bbox.x + bbox.w) - 1.0) < 2 * eps
 
     def test_json_serialization(self):
         """Test JSON serialization and deserialization."""

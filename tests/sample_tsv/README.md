@@ -8,16 +8,16 @@ This directory contains sample data files that can be used for unit testing with
 
 These files contain samples from the Catalog of Life Data Package (ColDP) tables:
 
-- `coldp_name_usage.tsv`: Scientific names and taxonomic information
-- `coldp_vernacular_name.tsv`: Common names in various languages
-- `coldp_distribution.tsv`: Geographic distribution information
-- `coldp_media.tsv`: Links to images, sounds, and other media
-- `coldp_reference.tsv`: Bibliographic references
-- `coldp_type_material.tsv`: Type specimen information
+- (local only) `coldp_name_usage.tsv`: Scientific names and taxonomic information
+- (local only) `coldp_vernacular_name.tsv`: Common names in various languages
+- (local only) `coldp_distribution.tsv`: Geographic distribution information
+- (local only) `coldp_media.tsv`: Links to images, sounds, and other media
+- (local only) `coldp_reference.tsv`: Bibliographic references
+- (local only) `coldp_type_material.tsv`: Type specimen information
 
 ### Mapping and Taxa Tables
 
-- `inat_to_coldp_taxon_map.tsv`: Crosswalk between iNaturalist taxa and Catalog of Life taxa
+- (local only) `inat_to_coldp_taxon_map.tsv`: Crosswalk between iNaturalist taxa and Catalog of Life taxa
 - `expanded_taxa_sample.tsv`: Sample of the expanded_taxa table with common names and a focused subset of bees and wasps for LCA and distance tests
 
 ## Usage for SQLite Testing
@@ -32,12 +32,12 @@ import pandas as pd
 conn = sqlite3.connect('test_db.sqlite')
 
 # Load each TSV file into a table
-for table_name in ['coldp_name_usage', 'coldp_vernacular_name', 'coldp_distribution', 
+for table_name in ['coldp_name_usage', 'coldp_vernacular_name', 'coldp_distribution',
                   'coldp_media', 'coldp_reference', 'coldp_type_material',
                   'inat_to_coldp_taxon_map', 'expanded_taxa_sample']:
     df = pd.read_csv(f'{table_name}.tsv', sep='\t')
     df.to_sql(table_name, conn, if_exists='replace', index=False)
-    
+
 # Optionally load the specialized LCA sample data
 df_lca = pd.read_csv('expanded_taxa_sample.tsv', sep='\t')
 df_lca.to_sql('expanded_taxa', conn, if_exists='replace', index=False)

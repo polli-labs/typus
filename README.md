@@ -2,6 +2,8 @@
 
 # Typus
 
+[![CI](https://github.com/polli-labs/typus/actions/workflows/ci.yml/badge.svg)](https://github.com/polli-labs/typus/actions/workflows/ci.yml)
+
 **Shared taxonomy & geo‑temporal types for the Polli‑Labs ecological stack**
 
 Typus centralises every domain object that the rest of our platform —
@@ -69,28 +71,72 @@ pip install -e ".[dev,sqlite]"
 
 ## Quick start
 
-```python
-from typus import PostgresTaxonomyService, RankLevel, latlon_to_unit_sphere
+### SQLite (recommended for getting started)
 
-svc = PostgresTaxonomyService("postgresql+asyncpg://user:pw@host/db")
-bee = await svc.get_taxon(630955)           # Anthophila
-print(bee.scientific_name, bee.rank_level)  # Anthophila RankLevel.L32
-
-print(latlon_to_unit_sphere(31.5, -110.4))  # → x, y, z on S²
+```bash
+# Download or build the expanded taxonomy dataset locally (~475MB sqlite / ~440MB tsv.gz)
+# The loader creates recommended indexes by default for fast name search
+typus-load-sqlite --sqlite expanded_taxa.sqlite
 ```
-
-### Offline mode (SQLite fixture)
 
 ```python
 from pathlib import Path
-from typus.services import SQLiteTaxonomyService, load_expanded_taxa
+from typus.services import SQLiteTaxonomyService
 
-db = Path("expanded_taxa.sqlite")
-load_expanded_taxa(db)  # downloads if missing
-svc = SQLiteTaxonomyService(db)
+svc = SQLiteTaxonomyService(Path("expanded_taxa.sqlite"))
+bee = await svc.get_taxon(630955)           # Anthophila
+print(bee.scientific_name, bee.rank_level)  # Anthophila RankLevel.L32
 ```
-```bash
-typus-load-sqlite --sqlite expanded_taxa.sqlite
+
+You can also load on-demand in code (will download if missing):
+
+```python
+from pathlib import Path
+from typus.services import load_expanded_taxa, SQLiteTaxonomyService
+
+db_path = load_expanded_taxa(Path("expanded_taxa.sqlite"))  # create_indexes=True by default
+svc = SQLiteTaxonomyService(db_path)
+```
+
+### Name search (v0.4.0+)
+
+```python
+# Scientific prefix match
+taxa = await svc.search_taxa("Apis", scopes={"scientific"}, match="prefix")
+
+# Vernacular (common name) exact
+taxa = await svc.search_taxa("honey bee", scopes={"vernacular"}, match="exact")
+```
+
+### Elevation (Postgres only)
+
+```python
+import os
+from typus import PostgresRasterElevation
+
+dsn = os.getenv("ELEVATION_DSN") or os.getenv("TYPUS_TEST_DSN")
+elev = PostgresRasterElevation(dsn, raster_table=os.getenv("ELEVATION_TABLE", "elevation_raster"))
+
+la = await elev.elevation(34.0522, -118.2437)
+vals = await elev.elevations([
+    (34.0522, -118.2437),  # LA
+    (0.0, -30.0),          # ocean (likely None)
+])
+```
+
+### Geo helpers
+
+```python
+from typus import latlon_to_unit_sphere
+print(latlon_to_unit_sphere(31.5, -110.4))  # → x, y, z on S²
+```
+
+### Postgres (optional for production deployments)
+
+```python
+from typus import PostgresTaxonomyService
+svc = PostgresTaxonomyService("postgresql+asyncpg://user:pw@host/db")
+bee = await svc.get_taxon(630955)
 ```
 
 ---
@@ -100,7 +146,7 @@ typus-load-sqlite --sqlite expanded_taxa.sqlite
 * **Lint & tests (one‑liner)**
 
   ```bash
-  ruff check . && ruff format . && pytest -q
+  ruff format . && ruff check . && pytest -q
   ```
 
 * **Format whole repo**
@@ -114,6 +160,18 @@ typus-load-sqlite --sqlite expanded_taxa.sqlite
 * **SQLite fixture** – `python scripts/gen_fixture_sqlite.py`
 
 * **Pre‑commit hooks** – `pre-commit install`
+
+### Environment Variables
+
+- `TYPUS_TEST_DSN`: Postgres DSN for tests and perf harness (e.g., `postgresql+asyncpg://user:pw@host/db`).
+- `POSTGRES_DSN`: Alternate Postgres DSN; used if `TYPUS_TEST_DSN` is unset.
+- `ELEVATION_DSN`: Optional DSN override for elevation tests; falls back to `TYPUS_TEST_DSN`.
+- `ELEVATION_TABLE`: Elevation raster table name (default: `elevation_raster`).
+- `TYPUS_ELEVATION_TEST`: Set `1` to enable guarded elevation tests.
+- Perf harness:
+  - `TYPUS_PERF_WRITE=1`: write report to `dev/agents/perf_report.md`.
+  - `TYPUS_PERF_VERIFY=1`: enable result sanity checks.
+  - `TYPUS_PERF_EXPLAIN=1`: append PG EXPLAIN snippets.
 
 ---
 
