@@ -94,9 +94,9 @@ async def test_cross_backend_parity_seeded_queries():
 
         if datasets_match:
             # Strict equality and ordering when datasets match
-            assert (
-                pg_ids == base_ids
-            ), f"Mismatch for {c.scope}:{c.match} '{c.query}':\nsqlite={base_ids}\npg={pg_ids}"
+            assert pg_ids == base_ids, (
+                f"Mismatch for {c.scope}:{c.match} '{c.query}':\n" f"sqlite={base_ids}\npg={pg_ids}"
+            )
         else:
             # Warn-only: ensure baseline IDs are included; ordering may differ
             missing = [i for i in base_ids if i not in pg_ids]

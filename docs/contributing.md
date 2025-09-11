@@ -20,7 +20,8 @@ pre-commit install
 ```
 
 - Hooks run on commit and in CI:
-  - ruff (lint + format check)
+  - ruff (lint only)
+  - ruff-format (auto-format; will fail the hook if it changes files)
   - whitespace/yaml fixers
   - pytest-lite (a fast subset; see below)
 
@@ -60,7 +61,9 @@ CI/CD Overview
 
 - CI workflow (`.github/workflows/ci.yml`):
   - Matrix on Python 3.10/3.11/3.12.
-  - Runs pre-commit (includes pytest-lite) plus a separate lightweight pytest run.
+  - Runs pre-commit (ruff, ruff-format, whitespace, pytest-lite) with --show-diff-on-failure.
+  - Then runs ruff format --check and ruff check.
+  - Runs a lightweight SQLite-backed pytest selection.
 - Publish workflow (`.github/workflows/publish.yml`):
   - Blocks build/publish on tests job.
   - Builds and uploads wheels, then deploys docs on tag.

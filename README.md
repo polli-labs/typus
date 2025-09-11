@@ -146,7 +146,7 @@ bee = await svc.get_taxon(630955)
 * **Lint & tests (one‑liner)**
 
   ```bash
-  ruff check . && ruff format . && pytest -q
+  ruff format . && ruff check . && pytest -q
   ```
 
 * **Format whole repo**

@@ -152,14 +152,12 @@ async def test_postgres_lca_fallback_mechanism():
     assert distance_major_only == 1
 
     # ---- NEW: species-level sibling distance inside Vespa ----
-    assert (
-        await taxonomy_service.distance(
-            VESPA_MANDARINIA,  # Vespa mandarinia
-            VESPA_CRABRO,  # Vespa crabro
-            include_minor_ranks=True,
-        )
-        == 2
-    )  # mandarinia -> Vespa (genus) -> crabro
+    dist_species = await taxonomy_service.distance(
+        VESPA_MANDARINIA,  # Vespa mandarinia
+        VESPA_CRABRO,  # Vespa crabro
+        include_minor_ranks=True,
+    )
+    assert dist_species == 2  # mandarinia -> Vespa (genus) -> crabro
 
 
 @pytest.mark.asyncio
@@ -250,10 +248,10 @@ async def test_ancestor_descendant_distance(taxonomy_service):
 
     # The distance between Anthophila (epifamily) and Aculeata (infraorder) with minors included
     # Anthophila -> Apoidea -> Aculeata = 2 steps
-    assert (
-        await taxonomy_service.distance(anthophila_id, LCA_ACULEATA_ID, include_minor_ranks=True)
-        == 2
+    distance_anthophila_to_aculeata = await taxonomy_service.distance(
+        anthophila_id, LCA_ACULEATA_ID, include_minor_ranks=True
     )
+    assert distance_anthophila_to_aculeata == 2
 
     # With minors excluded, we should get the distance between Apidae (family) and Hymenoptera (order)
     # Apidae -> Hymenoptera = 1 step

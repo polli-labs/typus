@@ -41,7 +41,7 @@ jobs:
         env:
           TYPUS_ELEVATION_TEST: "0"
         run: |
-          uv run pre-commit run -a
+          uv run pre-commit run -a --show-diff-on-failure
 
       - name: Lint (ruff)
         run: |
