@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.1
+### Added
+- Introduced `typus.ops` with portable geometry and tracking helpers:
+  - Bounding box utilities: IoU (`iou_xyxy`), intersection (`intersect_xyxy`),
+    clamping (`clamp_xyxy`), area (`area_xyxy`).
+  - Pixel TL‑`xywh` converters complementing existing `xyxy` converters:
+    `to_xywh_px()` and `from_xywh_px()`.
+  - Tracking helpers: `group_detections_by_frame()` and
+    `detection_xyxy_px()` to convert a detection to pixel `xyxy`.
+### Docs
+- New page `docs/reference/ops.md` summarizing helpers with examples and
+  updated API index to include Ops.
+
 ## 0.4.0
 ### Removed
 - Legacy `ancestry`/`ancestry_str` support fully removed from ORM and services. Modern databases and fixtures omit this column; use helpers like `ancestors()` to compute lineage when needed.

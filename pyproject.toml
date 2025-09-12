@@ -1,6 +1,6 @@
 [project]
 name            = "polli-typus"
-version         = "0.4.0"
+version         = "0.4.1"
 description     = "Taxonomic types, projections and async taxonomy services for Polli-Labs."
 readme          = { file = "README.md", content-type = "text/markdown" }
 license         = "MIT"
@@ -57,7 +57,12 @@ dev = [
 ]
 
 # Docs extra – everything you need to run `mkdocs build` or `mkdocs serve`
-docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5,<10"]
+docs = [
+  "mkdocs>=1.6,<2",
+  "mkdocs-material>=9.5,<10",
+  "mkdocstrings>=0.24,<1",
+  "mkdocstrings-python>=1.10,<2"
+]
 
 [project.urls]
 Homepage   = "https://github.com/polli-labs/typus"

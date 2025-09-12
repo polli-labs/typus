@@ -6,6 +6,7 @@ from typing import List, Sequence, Set, Tuple
 from rapidfuzz import fuzz
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from ...constants import RankLevel
 from ...models.taxon import Taxon
@@ -19,7 +20,9 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
     """Async service backed by `expanded_taxa` materialised view."""
 
     def __init__(self, dsn: str):
-        self._engine = create_async_engine(dsn, pool_pre_ping=True)
+        # Use NullPool to avoid reusing connections across pytest event loops,
+        # which can cause "Future attached to a different loop" with asyncpg.
+        self._engine = create_async_engine(dsn, pool_pre_ping=True, poolclass=NullPool)
         self._Session = async_sessionmaker(self._engine, expire_on_commit=False)
 
     async def get_taxon(self, taxon_id: int) -> Taxon:

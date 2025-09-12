@@ -53,6 +53,10 @@ docs: ## Build docs with mkdocs (requires extras [docs])
 	uv pip install -e ".[docs]"
 	uv run mkdocs build
 
+schemas: ## Export JSON Schemas and show changes
+	uv run python -m typus.export_schemas
+	@git status --porcelain typus/schemas || true
+
 perf: ## Run name-search perf harness (writes dev/agents/perf_report.md)
 	TYPUS_PERF_WRITE=1 uv run python scripts/perf_report.py
 
