@@ -6,6 +6,8 @@
 
 **Shared taxonomy & geo‑temporal types for the Polli‑Labs ecological stack**
 
+Documentation: https://docs.polli.ai/typus
+
 Typus centralises every domain object that the rest of our platform —
 `linnaeus`, `pollinalysis-server`, dashboards … — needs: taxon records,
 clades, hierarchical classification results, projection helpers and async

@@ -18,3 +18,8 @@ repos:
         language: system
         entry: pytest -q -k "not test_async_compatibility and not ancestry_verification and not ancestor_descendant_distance and not perf_name_search_local"
         pass_filenames: false
+      - id: export-schemas
+        name: export JSON Schemas (fail if stale)
+        language: system
+        entry: bash -lc 'uv run python -m typus.export_schemas && git diff --exit-code typus/schemas || (echo "\nSchemas changed. Please commit updated files." && exit 1)'
+        pass_filenames: false

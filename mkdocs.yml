@@ -11,7 +11,20 @@ nav:
       - Offline mode: offline_mode.md
       - expanded_taxa schema: expanded_taxa.md
   - Models: models.md
-plugins: []
+  - Geometry: geometry.md
+  - Tracks: tracks.md
+  - Elevation Service: elevation_service.md
+  - Contributing: contributing.md
+  - Ops Helpers: reference/ops.md
+  - API Reference: reference/api.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: false
 markdown_extensions:
   - tables
   - admonition
