@@ -48,6 +48,11 @@ jobs:
           uv run ruff format --check .
           uv run ruff check .
 
+      - name: Schema freshness (export + diff)
+        run: |
+          uv run python -m typus.export_schemas
+          git diff --exit-code typus/schemas
+
       - name: Run tests (SQLite fixture, no DSN)
         env:
           TYPUS_ELEVATION_TEST: "0"
