@@ -4,12 +4,12 @@ theme:
   features:
     - navigation.sections
     - navigation.top
-  logo: https://assets.polli.ai/docs-brand/v1.0.3/wordmarks/typus.svg
-  logo_dark: https://assets.polli.ai/docs-brand/v1.0.3/wordmarks/typus.svg
+  logo: https://assets.polli.ai/docs-brand/latest/wordmarks/typus.svg
+  logo_dark: https://assets.polli.ai/docs-brand/latest/wordmarks/typus.svg
 extra_css:
-  - https://assets.polli.ai/docs-brand/v1.0.3/polli-brand.css
+  - https://assets.polli.ai/docs-brand/latest/polli-brand.css
 extra_javascript:
-  - https://assets.polli.ai/docs-brand/v1.0.3/polli-brand.js
+  - https://assets.polli.ai/docs-brand/latest/polli-brand.js
 nav:
   - Home: index.md
   - Taxonomy Service:
