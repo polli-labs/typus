@@ -23,6 +23,8 @@ database services. Anything that speaks taxonomy imports **Typus** and stays DRY
   `SQLiteTaxonomyService` (fixture) share one interface.
 * **Pydantic v2 models** – `Taxon`, `Clade`,
   `HierarchicalClassificationResult`, all JSON‑Schema‑exportable.
+* **Taxonomy summaries & pollinator groups** – `TaxonSummary` trails plus coarse
+  `PollinatorGroup` helpers for UI labels.
 * **Projection utils** – lat/lon ↔ unit‑sphere, cyclical‑time features,
   multi‑scale elevation sinusoids.
 * **Optional drivers only when you need them** – install
@@ -108,6 +110,24 @@ taxa = await svc.search_taxa("Apis", scopes={"scientific"}, match="prefix")
 
 # Vernacular (common name) exact
 taxa = await svc.search_taxa("honey bee", scopes={"vernacular"}, match="exact")
+```
+
+### Taxonomy summaries & pollinator groups (v0.4.2)
+
+```python
+from pathlib import Path
+from typus import PollinatorGroup
+from typus.services import SQLiteTaxonomyService
+
+svc = SQLiteTaxonomyService(Path("expanded_taxa.sqlite"))
+
+# Compact trail for UIs
+bee_summary = await svc.taxon_summary(630955)  # Anthophila
+print(bee_summary.format_trail())  # Animalia → Arthropoda → Insecta → Hymenoptera → Apidae → Anthophila
+
+# Coarse pollinator grouping
+groups = await svc.pollinator_groups_for_taxon(47219)  # Apis mellifera
+assert PollinatorGroup.BEE in groups
 ```
 
 ### Elevation (Postgres only)

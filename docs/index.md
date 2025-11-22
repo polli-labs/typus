@@ -4,6 +4,7 @@ Typus provides cross‑platform taxonomic models and asynchronous services for t
 
 * **[Canonical Geometry](geometry.md)** – standardized bbox formats and provider mappings.
 * **Taxonomy Service** – [overview](taxonomy_service.md) and [Offline mode](offline_mode.md).
+* **Taxonomy summaries & pollinator groups** – see `TaxonSummary` / `PollinatorGroup` in [taxonomy service](taxonomy_service.md) and [models](models.md).
 * **[Models](models.md)** – detection, geometry, and taxonomy data structures.
 * **[Tracks](tracks.md)** – object tracking models for video analysis.
 * **[Ops Helpers](reference/ops.md)** – portable bbox + tracking utilities.

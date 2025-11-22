@@ -11,8 +11,10 @@ from .models.classification import (
 )
 from .models.geometry import BBoxMapper, BBoxXYWHNorm, from_xyxy_px, to_xyxy_px
 from .models.lineage import LineageMap
+from .models.summary import TaxonSummary, TaxonTrailNode
 from .models.taxon import Taxon
 from .models.tracks import Detection, Track, TrackStats
+from .pollinator_groups import PollinatorGroup, PollinatorGroupDef, pollinator_groups_for_ancestry
 from .services.elevation import ElevationService, PostgresRasterElevation
 from .services.projections import (
     datetime_to_temporal_sinusoids,
@@ -35,6 +37,8 @@ from .services.taxonomy import (
 __all__ = [
     "RankLevel",
     "Taxon",
+    "TaxonSummary",
+    "TaxonTrailNode",
     "infer_rank",
     "LineageMap",
     "BBoxXYWHNorm",
@@ -53,6 +57,9 @@ __all__ = [
     "TaxonomyService",
     "PostgresTaxonomyService",
     "SQLiteTaxonomyService",
+    "PollinatorGroup",
+    "PollinatorGroupDef",
+    "pollinator_groups_for_ancestry",
     "Clade",
     "TaskPrediction",
     "HierarchicalClassificationResult",

@@ -6,6 +6,7 @@ from typing import List, Set, Tuple
 from rapidfuzz import fuzz
 
 from ...constants import RankLevel, is_major
+from ...models.summary import TaxonSummary, TaxonTrailNode
 from ...models.taxon import Taxon
 from .abstract import AbstractTaxonomyService
 
@@ -19,6 +20,43 @@ WITH RECURSIVE subtree_nodes(tid, tpid) AS (
 SELECT tid, tpid FROM subtree_nodes;
 """
 assert "immediateAncestor_taxonID" in _FETCH_SUBTREE_SQL
+
+
+def _col_prefix_for_level(level: RankLevel) -> str:
+    if level.value == 335:
+        return "L33_5"
+    if level.value == 345:
+        return "L34_5"
+    return f"L{int(level.value)}"
+
+
+def _ancestry_pairs_from_row(row: sqlite3.Row) -> list[tuple[int, RankLevel]]:
+    """Return ancestry (root→self) as (taxon_id, RankLevel) pairs using expanded columns."""
+    pairs: list[tuple[int, RankLevel]] = []
+    levels_desc = sorted([lvl for lvl in RankLevel], key=lambda r: int(r.value), reverse=True)
+    for lvl in levels_desc:
+        prefix = _col_prefix_for_level(lvl)
+        col = f"{prefix}_taxonID"
+        try:
+            if col in row.keys():
+                val = row[col]
+                if val is not None:
+                    pairs.append((int(val), lvl))
+        except Exception:
+            continue
+    try:
+        self_lvl = RankLevel(int(row["rankLevel"]))
+    except Exception:
+        self_lvl = RankLevel.L100
+    pairs.append((int(row["taxonID"]), self_lvl))
+
+    seen: set[int] = set()
+    out: list[tuple[int, RankLevel]] = []
+    for tid, lvl in pairs:
+        if tid not in seen:
+            out.append((tid, lvl))
+            seen.add(tid)
+    return out
 
 
 class SQLiteTaxonomyService(AbstractTaxonomyService):
@@ -76,37 +114,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         if row is None:
             raise KeyError(taxon_id)
 
-        pairs: list[tuple[int, RankLevel]] = []
-        levels_desc = sorted([lvl for lvl in RankLevel], key=lambda r: int(r.value), reverse=True)
-        for lvl in levels_desc:
-            if lvl.value == 335:
-                prefix = "L33_5"
-            elif lvl.value == 345:
-                prefix = "L34_5"
-            else:
-                prefix = f"L{int(lvl.value)}"
-            col = f"{prefix}_taxonID"
-            try:
-                if col in row.keys():
-                    val = row[col]
-                    if val is not None:
-                        pairs.append((int(val), lvl))
-            except Exception:
-                pass
-        # Append self at the end
-        try:
-            self_lvl = RankLevel(int(row["rankLevel"]))
-        except Exception:
-            self_lvl = RankLevel.L100
-        pairs.append((int(row["taxonID"]), self_lvl))
-        # Deduplicate preserving order
-        seen: set[int] = set()
-        out: list[tuple[int, RankLevel]] = []
-        for tid, lvl in pairs:
-            if tid not in seen:
-                out.append((tid, lvl))
-                seen.add(tid)
-        return out
+        return _ancestry_pairs_from_row(row)
 
     async def get_taxon(self, taxon_id: int) -> Taxon:
         loop = asyncio.get_running_loop()
@@ -460,6 +468,67 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
 
     async def ancestors(self, taxon_id: int, *, include_minor_ranks: bool = True) -> list[int]:
         return await self._get_filtered_ancestry(taxon_id, include_minor_ranks)
+
+    async def taxon_summary(
+        self,
+        taxon_id: int,
+        *,
+        major_ranks_only: bool = True,
+    ) -> TaxonSummary:
+        loop = asyncio.get_running_loop()
+        row = await loop.run_in_executor(
+            None,
+            lambda: self._conn.execute(
+                'SELECT * FROM "expanded_taxa" WHERE "taxonID"=?', (taxon_id,)
+            ).fetchone(),
+        )
+        if row is None:
+            raise KeyError(taxon_id)
+
+        pairs = _ancestry_pairs_from_row(row)
+        trail: list[TaxonTrailNode] = []
+
+        for tid, lvl in pairs:
+            if major_ranks_only and tid != taxon_id and not is_major(lvl):
+                continue
+
+            prefix = _col_prefix_for_level(lvl)
+            name_col = f"{prefix}_name"
+            common_col = f"{prefix}_commonName"
+
+            scientific_name = row[name_col] if name_col in row.keys() else None
+            vernacular_name = row[common_col] if common_col in row.keys() else None
+
+            if tid == taxon_id:
+                scientific_name = scientific_name or row["name"]
+                vernacular_name = vernacular_name or row["commonName"]
+
+            if scientific_name is None:
+                try:
+                    taxon = await self.get_taxon(tid)
+                    scientific_name = taxon.scientific_name
+                    vernacular_name = vernacular_name or next(
+                        iter(taxon.vernacular.get("en", [])), None
+                    )
+                except Exception:
+                    scientific_name = str(tid)
+
+            trail.append(
+                TaxonTrailNode(
+                    rank_level=lvl,
+                    taxon_id=tid,
+                    scientific_name=scientific_name,
+                    vernacular_name=vernacular_name,
+                )
+            )
+
+        return TaxonSummary(
+            taxon_id=row["taxonID"],
+            scientific_name=row["name"],
+            vernacular_name=row["commonName"],
+            rank_level=RankLevel(int(row["rankLevel"])),
+            trail=trail,
+        )
 
 
 __all__ = ["SQLiteTaxonomyService"]

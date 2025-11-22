@@ -1,0 +1,78 @@
+{
+  "$defs": {
+    "RankLevel": {
+      "enum": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        5,
+        11,
+        12,
+        13,
+        15,
+        24,
+        25,
+        26,
+        27,
+        32,
+        33,
+        335,
+        34,
+        345,
+        35,
+        37,
+        43,
+        44,
+        45,
+        47,
+        53,
+        57,
+        67,
+        100
+      ],
+      "title": "RankLevel",
+      "type": "integer"
+    }
+  },
+  "description": "One step in a taxonomic trail (root \u2192 focal taxon).",
+  "properties": {
+    "rank_level": {
+      "$ref": "#/$defs/RankLevel",
+      "description": "Rank level for this ancestor"
+    },
+    "taxon_id": {
+      "description": "Taxon ID at this rank",
+      "title": "Taxon Id",
+      "type": "integer"
+    },
+    "scientific_name": {
+      "description": "Canonical scientific name at this rank",
+      "title": "Scientific Name",
+      "type": "string"
+    },
+    "vernacular_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional common/vernacular name for this rank",
+      "title": "Vernacular Name"
+    }
+  },
+  "required": [
+    "rank_level",
+    "taxon_id",
+    "scientific_name"
+  ],
+  "title": "TaxonTrailNode",
+  "type": "object"
+}

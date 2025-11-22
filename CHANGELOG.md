@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.2 – 2025-11-22
+### Added
+- `TaxonSummary` / `TaxonTrailNode` models with `format_trail()` for UI-friendly lineage strings; exported JSON Schemas.
+- Taxonomy services: `taxon_summary()` and `pollinator_groups_for_taxon()` helpers on both SQLite/Postgres backends.
+- `PollinatorGroup` enum and mapping utilities (`pollinator_groups_for_ancestry`) covering Bee, Fly, Butterfly/Moth, Wasp, Beetle, Bird, Bat.
+- Docs & examples for taxonomy summaries and pollinator groups; release notes under `dev/agents/typus-v0.4.2-notes.md`.
+
+### Changed
+- Version bumped to 0.4.2; schema bundle regenerated.
+
 ## 0.4.1
 ### Added
 - Introduced `typus.ops` with portable geometry and tracking helpers:
