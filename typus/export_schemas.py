@@ -6,6 +6,8 @@ from pathlib import Path
 
 MODELS = [
     "typus.models.taxon.Taxon",
+    "typus.models.summary.TaxonTrailNode",
+    "typus.models.summary.TaxonSummary",
     "typus.models.lineage.LineageMap",
     "typus.models.clade.Clade",
     "typus.models.classification.HierarchicalClassificationResult",

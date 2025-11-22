@@ -7,6 +7,24 @@ This document describes the Pydantic models used in Typus for representing vario
 Refer to existing documentation or source code for `HierarchicalClassificationResult` and `TaxonomyContext`.
 *(Assumption: These are documented elsewhere or users should refer to code. If this file were being extended, this section would already exist.)*
 
+## Taxonomy summaries (v0.4.2+)
+
+### `TaxonTrailNode`
+- `taxon_id: int`
+- `rank_level: RankLevel`
+- `scientific_name: str`
+- `vernacular_name: str | None`
+
+### `TaxonSummary`
+- `taxon_id`, `scientific_name`, `vernacular_name`, `rank_level`
+- `trail: list[TaxonTrailNode]` ordered root → focal taxon
+- `format_trail(separator=" → ", include_vernacular=True)` convenience formatter for UI strings
+
+### `PollinatorGroup` (Enum)
+Coarse groupings for high-level UI labels: `Bee`, `Butterfly/Moth`, `Fly`, `Wasp`, `Beetle`, `Bird`, `Bat`, `Other`.
+
+Use `pollinator_groups_for_ancestry(ancestry_ids)` or the service helper `pollinator_groups_for_taxon(taxon_id)` to map a taxon's lineage to these buckets. The mapping is intentionally opinionated and not a substitute for detailed taxonomy.
+
 ## Geometry Models
 
 ### **Canonical Geometry (v0.3.0+)**

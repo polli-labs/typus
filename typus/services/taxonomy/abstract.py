@@ -9,7 +9,9 @@ import abc
 from typing import List, Set, Tuple
 
 from ...constants import RankLevel
+from ...models.summary import TaxonSummary
 from ...models.taxon import Taxon
+from ...pollinator_groups import PollinatorGroup, pollinator_groups_for_ancestry
 
 
 class AbstractTaxonomyService(abc.ABC):
@@ -68,6 +70,20 @@ class AbstractTaxonomyService(abc.ABC):
     # Convenience: uniform list return for children on all backends
     @abc.abstractmethod
     async def children_list(self, taxon_id: int, *, depth: int = 1) -> List[Taxon]: ...
+
+    @abc.abstractmethod
+    async def taxon_summary(
+        self,
+        taxon_id: int,
+        *,
+        major_ranks_only: bool = True,
+    ) -> TaxonSummary: ...
+
+    async def pollinator_groups_for_taxon(self, taxon_id: int) -> set[PollinatorGroup]:
+        """Return pollinator groups matched by the taxon's ancestry (root → self)."""
+
+        ancestry = await self.ancestors(taxon_id, include_minor_ranks=True)
+        return pollinator_groups_for_ancestry(ancestry)
 
 
 __all__ = ["AbstractTaxonomyService"]

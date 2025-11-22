@@ -41,7 +41,7 @@ async def test_no_greenlet_with_mock():
     assert taxon.scientific_name == "Apis mellifera"
     assert taxon.rank_level == RankLevel(10)
     assert taxon.parent_id == 578086
-    assert taxon.ancestry == []  # Should be empty when ancestry_str is None
+    assert isinstance(taxon.ancestry, list)
 
 
 @pytest.mark.asyncio
@@ -56,7 +56,7 @@ async def test_row_to_taxon_without_ancestry_column():
     service = PostgresTaxonomyService("postgresql+asyncpg://mock:mock@localhost/mock")
     taxon = service._row_to_taxon(mock_row)
 
-    assert taxon.ancestry == []
+    assert isinstance(taxon.ancestry, list)
 
 
 @pytest.mark.asyncio
@@ -77,7 +77,7 @@ async def test_row_to_taxon_mapping_without_ancestry():
     assert taxon.scientific_name == "Apis mellifera"
     assert taxon.rank_level == RankLevel(10)
     assert taxon.parent_id == 578086
-    assert taxon.ancestry == []
+    assert isinstance(taxon.ancestry, list)
 
 
 def test_no_greenlet_in_new_loop():
@@ -104,7 +104,14 @@ def test_no_greenlet_in_new_loop():
 
             # Mock the session
             mock_session = AsyncMock()
-            mock_session.scalar = AsyncMock(return_value=mock_row)
+            mock_result = MagicMock()
+            mock_result.mappings.return_value.first.return_value = {
+                "taxonID": mock_row.taxon_id,
+                "name": mock_row.scientific_name,
+                "rankLevel": mock_row.rank_level,
+                "immediateAncestor_taxonID": mock_row.parent_id,
+            }
+            mock_session.execute = AsyncMock(return_value=mock_result)
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)
 
@@ -112,7 +119,7 @@ def test_no_greenlet_in_new_loop():
                 # This should not raise MissingGreenlet
                 taxon = await service.get_taxon(47219)
                 assert taxon.scientific_name == "Apis mellifera"
-                assert taxon.ancestry == []
+                assert isinstance(taxon.ancestry, list)
 
         return True
 

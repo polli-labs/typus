@@ -21,6 +21,8 @@ class AbstractTaxonomyService:
     async def get_many_batched(self, ids: set[int]) -> dict[int, Taxon]: ...
     async def ancestors(self, taxon_id: int, *, include_minor_ranks: bool = True) -> list[int]: ...
     async def search_taxa(self, query: str, *, scopes={"scientific","vernacular"}, match="auto", fuzzy=True, threshold=0.8, limit=20, rank_filter=None, with_scores=False): ...
+    async def taxon_summary(self, taxon_id: int, *, major_ranks_only: bool = True) -> TaxonSummary: ...
+    async def pollinator_groups_for_taxon(self, taxon_id: int) -> set[PollinatorGroup]: ...
 ```
 
 The return types are `Taxon` models or simple dictionaries. All methods are `async` so they can be awaited inside any asyncio application.
@@ -80,6 +82,25 @@ lca = await local.lca({630955, 54328})
 ```
 
 The two services share behaviour so code can accept `AbstractTaxonomyService` and run identically in both modes.
+
+## Taxonomy summaries & pollinator groups (v0.4.2)
+
+```python
+from typus import PollinatorGroup
+
+summary = await svc.taxon_summary(47219)  # Apis mellifera
+trail = summary.format_trail()  # Animalia → Arthropoda → Insecta → Hymenoptera → Apidae → Apis → Apis mellifera
+
+groups = await svc.pollinator_groups_for_taxon(47219)
+assert groups == {PollinatorGroup.BEE}
+```
+
+- `taxon_summary(taxon_id, major_ranks_only=True)` returns a `TaxonSummary` with
+  the ordered root→taxon trail. Set `major_ranks_only=False` to include minor
+  ranks; the focal taxon is always included.
+- `pollinator_groups_for_taxon()` maps a taxon's ancestry to coarse UI-friendly
+  buckets (Bee, Fly, Butterfly/Moth, Wasp, Beetle, Bird, Bat). The mapping is
+  intentionally opinionated and should not be used for precise taxonomy.
 
 ## Backend Differences & Guidance (v0.4.0)
 
