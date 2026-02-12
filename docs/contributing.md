@@ -27,7 +27,7 @@ Lightweight SQLite-backed tests (default for local dev and CI):
 make ci
 ```
 
-Full test suite (SQLite + any guarded tests that don’t require Postgres):
+Default test suite (SQLite + tests that do not require optional Postgres access):
 
 ```
 make test
@@ -41,19 +41,19 @@ export POSTGRES_DSN=$TYPUS_TEST_DSN
 export ELEVATION_DSN=$TYPUS_TEST_DSN
 export ELEVATION_TABLE=elevation_raster
 
-# Name search / PG subset (dataset-dependent)
+# Optional Postgres marker subset (dataset-dependent)
 make test-pg
 
 # Elevation smoke tests (guarded; requires raster table)
 TYPUS_ELEVATION_TEST=1 uv run pytest -q -k elevation_service
 
-Important: avoid exporting `POSTGRES_DSN` when running the full suite unless
-you intend to run against the live database. Some tests (e.g. children/depth)
+Important: `make test` and CI exclude `pg_optional` tests by marker. Run
+`make test-pg` explicitly when you want live Postgres coverage. Some tests
 assert counts that are specific to the SQLite sample fixture and will not match
 the full production dataset. The recommended workflow is:
 
 1) Run `make ci` / `make test` without `POSTGRES_DSN` to exercise SQLite.
-2) Run `make test-pg` for Postgres-specific coverage (name search, etc.).
+2) Run `make test-pg` for Postgres-specific coverage (async compatibility, parity, name search).
 ```
 
 Notes:

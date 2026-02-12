@@ -9,8 +9,11 @@ import os
 
 import pytest
 
+from tests.pg_test_utils import is_database_unavailable_error, normalize_test_dsn
 from typus import PostgresTaxonomyService
 from typus.constants import RankLevel
+
+pytestmark = pytest.mark.pg_optional
 
 
 @pytest.mark.asyncio
@@ -21,8 +24,11 @@ async def test_postgres_pure_asyncio():
     pure async frameworks that don't provide greenlet context.
     """
     # Get DSN from environment or use default test database
-    dsn = os.environ.get(
-        "TYPUS_TEST_DSN", "postgresql+asyncpg://postgres:ooglyboogly69@localhost:5432/ibrida-v0"
+    dsn = normalize_test_dsn(
+        os.environ.get(
+            "TYPUS_TEST_DSN",
+            "postgresql+asyncpg://postgres:ooglyboogly69@localhost:5432/ibrida-v0",
+        )
     )
 
     # Skip test if PostgreSQL is not available
@@ -35,7 +41,7 @@ async def test_postgres_pure_asyncio():
     try:
         taxon = await service.get_taxon(47219)  # Apis mellifera
     except RuntimeError as e:
-        if "does not exist" in str(e):
+        if is_database_unavailable_error(e):
             pytest.skip(f"PostgreSQL database unavailable: {e}")
         raise
     assert taxon.scientific_name == "Apis mellifera"
@@ -77,9 +83,11 @@ def test_no_greenlet_context():
     """
 
     async def run_test():
-        dsn = os.environ.get(
-            "TYPUS_TEST_DSN",
-            "postgresql+asyncpg://postgres:ooglyboogly69@localhost:5432/ibrida-v0-r1",
+        dsn = normalize_test_dsn(
+            os.environ.get(
+                "TYPUS_TEST_DSN",
+                "postgresql+asyncpg://postgres:ooglyboogly69@localhost:5432/ibrida-v0",
+            )
         )
 
         try:
@@ -123,8 +131,11 @@ async def test_handles_missing_ancestry_column():
     The ibridaDB database doesn't have an ancestry column - it uses expanded
     columns like L10_taxonID instead. The service should handle this gracefully.
     """
-    dsn = os.environ.get(
-        "TYPUS_TEST_DSN", "postgresql+asyncpg://postgres:ooglyboogly69@localhost:5432/ibrida-v0"
+    dsn = normalize_test_dsn(
+        os.environ.get(
+            "TYPUS_TEST_DSN",
+            "postgresql+asyncpg://postgres:ooglyboogly69@localhost:5432/ibrida-v0",
+        )
     )
 
     try:
@@ -136,7 +147,7 @@ async def test_handles_missing_ancestry_column():
     try:
         taxon = await service.get_taxon(47219)
     except RuntimeError as e:
-        if "does not exist" in str(e):
+        if is_database_unavailable_error(e):
             pytest.skip(f"PostgreSQL database unavailable: {e}")
         raise
     assert taxon.scientific_name == "Apis mellifera"

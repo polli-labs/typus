@@ -99,7 +99,7 @@ def _tsv_to_sqlite(tsv_path: Path, sqlite_path: Path, mode: Literal["replace", "
     # streaming read
     frame = pl.scan_csv(tsv_path, separator="\t")
     batch_size = 50000
-    for batch in frame.collect(streaming=True).iter_slices(n_rows=batch_size):
+    for batch in frame.collect(engine="streaming").iter_slices(n_rows=batch_size):
         pdf = batch.to_pandas()
         if "taxonActive" in pdf.columns:
             pdf["taxonActive"] = pdf["taxonActive"].map(lambda x: 1 if str(x).lower() == "t" else 0)

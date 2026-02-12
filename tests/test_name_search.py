@@ -2,6 +2,7 @@ import os
 
 import pytest
 
+from tests.pg_test_utils import is_database_unavailable_error, normalize_test_dsn
 from typus.constants import RankLevel
 
 
@@ -63,12 +64,20 @@ async def test_with_scores_flag(taxonomy_service):
 
 
 @pytest.mark.asyncio
+@pytest.mark.pg_optional
 async def test_postgres_parity_when_available():
-    dsn = os.getenv("TYPUS_TEST_DSN")
+    dsn = normalize_test_dsn(os.getenv("TYPUS_TEST_DSN"))
     if not dsn:
         pytest.skip("Postgres DSN not configured")
     from typus import PostgresTaxonomyService
 
     svc = PostgresTaxonomyService(dsn)
-    res = await svc.search_taxa("Apis mellifera", scopes={"scientific"}, match="exact", fuzzy=False)
+    try:
+        res = await svc.search_taxa(
+            "Apis mellifera", scopes={"scientific"}, match="exact", fuzzy=False
+        )
+    except RuntimeError as e:
+        if is_database_unavailable_error(e):
+            pytest.skip(f"Postgres database unavailable: {e}")
+        raise
     assert any(t.taxon_id == 47219 for t in res)
