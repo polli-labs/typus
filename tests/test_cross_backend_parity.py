@@ -7,6 +7,7 @@ from typing import List
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from tests.pg_test_utils import is_database_unavailable_error, normalize_test_dsn
 from typus.services import PostgresTaxonomyService, SQLiteTaxonomyService, load_expanded_taxa
 
 
@@ -49,6 +50,7 @@ async def pg_table_count(dsn: str) -> int:
 
 
 @pytest.mark.asyncio
+@pytest.mark.pg_optional
 async def test_cross_backend_parity_seeded_queries():
     # Baseline from SQLite fixture (truths)
     sqlite_db = Path("tests/expanded_taxa_sample.sqlite")
@@ -69,7 +71,7 @@ async def test_cross_backend_parity_seeded_queries():
         )
         baseline[(c.query, c.scope, c.match)] = [t.taxon_id for t in res]
 
-    dsn = os.getenv("TYPUS_TEST_DSN") or os.getenv("POSTGRES_DSN")
+    dsn = normalize_test_dsn(os.getenv("TYPUS_TEST_DSN") or os.getenv("POSTGRES_DSN"))
     if not dsn:
         pytest.skip("No Postgres DSN; baseline only")
 
@@ -77,18 +79,28 @@ async def test_cross_backend_parity_seeded_queries():
 
     # Determine whether datasets match (row count heuristic)
     s_count = sqlite_fixture_count()
-    p_count = await pg_table_count(dsn)
+    try:
+        p_count = await pg_table_count(dsn)
+    except Exception as e:
+        if is_database_unavailable_error(e):
+            pytest.skip(f"Postgres database unavailable: {e}")
+        raise
     datasets_match = s_count == p_count
 
     warnings: list[str] = []
     for c in CASES:
-        res_pg = await pg_svc.search_taxa(
-            c.query,
-            scopes={c.scope},
-            match=c.match,
-            fuzzy=False,
-            limit=100,
-        )
+        try:
+            res_pg = await pg_svc.search_taxa(
+                c.query,
+                scopes={c.scope},
+                match=c.match,
+                fuzzy=False,
+                limit=100,
+            )
+        except RuntimeError as e:
+            if is_database_unavailable_error(e):
+                pytest.skip(f"Postgres database unavailable: {e}")
+            raise
         pg_ids = [t.taxon_id for t in res_pg]
         base_ids = baseline[(c.query, c.scope, c.match)]
 

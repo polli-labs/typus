@@ -57,4 +57,4 @@ jobs:
         env:
           TYPUS_ELEVATION_TEST: "0"
         run: |
-          uv run pytest -q -k "not test_async_compatibility and not ancestry_verification and not ancestor_descendant_distance and not perf_name_search_local"
+          uv run pytest -q -m "not pg_optional" -k "not ancestry_verification and not ancestor_descendant_distance and not perf_name_search_local"

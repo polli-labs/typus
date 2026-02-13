@@ -30,18 +30,18 @@ lint: ## Lint (ruff)
 format: ## Format (ruff)
 	uv run ruff format .
 
-test: ## Run full test suite (SQLite fixture by default)
-	uv run pytest -q
+test: ## Run default suite (excludes optional Postgres-backed tests)
+	uv run pytest -q -m "not pg_optional"
 
 test-fast: ## Run tests, verbose output
 	uv run pytest -v
 
-ci: ## CI-friendly tests (skip Postgres + full-ancestry checks)
-	uv run pytest -q -k 'not test_async_compatibility.py and not test_ancestry_verification and not test_ancestor_descendant_distance'
+ci: ## CI-friendly tests (skip optional Postgres + full-ancestry checks)
+	uv run pytest -q -m "not pg_optional" -k 'not test_ancestry_verification and not test_ancestor_descendant_distance'
 
-test-pg: ## Run Postgres-backed tests (requires TYPUS_TEST_DSN)
+test-pg: ## Run optional Postgres-backed tests (requires TYPUS_TEST_DSN)
 	@[ -n "$$TYPUS_TEST_DSN" ] || (echo "$(YELLOW)TYPUS_TEST_DSN not set; skipping PG tests$(NC)" && exit 0)
-	uv run pytest -q -k name_search
+	uv run pytest -q -m "pg_optional"
 
 pg-indexes: ## Ensure Postgres indexes for expanded_taxa (uses POSTGRES_DSN or TYPUS_TEST_DSN)
 	uv run typus-pg-ensure-indexes

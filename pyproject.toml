@@ -114,5 +114,8 @@ docstring-code-format = true
 addopts    = "-q"
 minversion = "7.0"
 pythonpath = ["."]
-markers    = ["asyncio"]
+markers    = [
+  "asyncio",
+  "pg_optional: optional Postgres-backed tests requiring a live DSN/database",
+]
 asyncio_mode = "auto"
