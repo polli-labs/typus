@@ -5,11 +5,10 @@ contexts without greenlet support, which is critical for FastAPI/uvicorn deploym
 """
 
 import asyncio
-import os
 
 import pytest
 
-from tests.pg_test_utils import is_database_unavailable_error, normalize_test_dsn
+from tests.pg_test_utils import is_database_unavailable_error, resolve_test_dsn
 from typus import PostgresTaxonomyService
 from typus.constants import RankLevel
 
@@ -23,13 +22,10 @@ async def test_postgres_pure_asyncio():
     This test is critical for ensuring compatibility with FastAPI and other
     pure async frameworks that don't provide greenlet context.
     """
-    # Get DSN from environment or use default test database
-    dsn = normalize_test_dsn(
-        os.environ.get(
-            "TYPUS_TEST_DSN",
-            "postgresql+asyncpg://postgres:ooglyboogly69@localhost:5432/ibrida-v0",
-        )
-    )
+    # Resolve DSN from test environment settings
+    dsn = resolve_test_dsn()
+    if not dsn:
+        pytest.skip("Postgres DSN not configured")
 
     # Skip test if PostgreSQL is not available
     try:
@@ -83,12 +79,9 @@ def test_no_greenlet_context():
     """
 
     async def run_test():
-        dsn = normalize_test_dsn(
-            os.environ.get(
-                "TYPUS_TEST_DSN",
-                "postgresql+asyncpg://postgres:ooglyboogly69@localhost:5432/ibrida-v0",
-            )
-        )
+        dsn = resolve_test_dsn()
+        if not dsn:
+            pytest.skip("Postgres DSN not configured")
 
         try:
             service = PostgresTaxonomyService(dsn)
@@ -109,7 +102,7 @@ def test_no_greenlet_context():
         except Exception as e:
             if "MissingGreenlet" in str(e.__class__.__name__):
                 pytest.fail(f"MissingGreenlet error still occurs: {e}")
-            elif "cannot connect" in str(e).lower() or "connection" in str(e).lower():
+            elif is_database_unavailable_error(e):
                 pytest.skip(f"Database connection not available: {e}")
             else:
                 raise
@@ -131,12 +124,9 @@ async def test_handles_missing_ancestry_column():
     The ibridaDB database doesn't have an ancestry column - it uses expanded
     columns like L10_taxonID instead. The service should handle this gracefully.
     """
-    dsn = normalize_test_dsn(
-        os.environ.get(
-            "TYPUS_TEST_DSN",
-            "postgresql+asyncpg://postgres:ooglyboogly69@localhost:5432/ibrida-v0",
-        )
-    )
+    dsn = resolve_test_dsn()
+    if not dsn:
+        pytest.skip("Postgres DSN not configured")
 
     try:
         service = PostgresTaxonomyService(dsn)

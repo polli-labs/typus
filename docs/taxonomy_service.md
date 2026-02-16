@@ -36,7 +36,7 @@ svc = PostgresTaxonomyService("postgresql+asyncpg://user:pw@host/db")
 bee = await svc.get_taxon(630955)
 ```
 
-`PostgresTaxonomyService` requires the optional `asyncpg` dependency (`pip install polli-typus[postgres]`). It expects the `expanded_taxa` view with columns `immediateAncestor_taxonID` and `immediateMajorAncestor_taxonID`. The service first attempts to use an ltree `path` column for `lca()` and `distance()` queries but will automatically fall back to a recursive CTE when that column is missing.
+`PostgresTaxonomyService` requires the optional `asyncpg` dependency (`uv pip install "polli-typus[postgres]"`). It expects the `expanded_taxa` view with columns `immediateAncestor_taxonID` and `immediateMajorAncestor_taxonID`. The service first attempts to use an ltree `path` column for `lca()` and `distance()` queries but will automatically fall back to a recursive CTE when that column is missing.
 
 ## SQLite service
 

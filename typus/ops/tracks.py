@@ -15,7 +15,7 @@ def group_detections_by_frame(dets: Iterable[Detection]) -> Dict[int, List[Detec
     tmp: Dict[int, List[Detection]] = defaultdict(list)
     for d in dets:
         # Detection.frame_number is required by the model; be robust to unexpected None
-        if d is None:  # type: ignore[unreachable]
+        if d is None:
             continue
         fn = int(getattr(d, "frame_number", 0))
         tmp[fn].append(d)
@@ -30,7 +30,7 @@ def detection_xyxy_px(det: Detection, W: int, H: int) -> Tuple[float, float, flo
     (pixel `xywh`) is provided, falls back to converting that to `xyxy`.
     """
     if isinstance(det.bbox_norm, BBoxXYWHNorm):
-        return tuple(to_xyxy_px(det.bbox_norm, W, H))  # type: ignore[return-value]
+        return tuple(to_xyxy_px(det.bbox_norm, W, H))
 
     if det.bbox and len(det.bbox) == 4:
         x, y, w, h = det.bbox

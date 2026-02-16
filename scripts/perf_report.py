@@ -14,6 +14,7 @@ from typus.services import (
     SQLiteTaxonomyService,
     load_expanded_taxa,
 )
+from typus.services.pg_test_ops import resolve_test_dsn
 
 
 @dataclass
@@ -74,7 +75,7 @@ async def _bench_backend(backend: str) -> list[Result]:
         db = load_expanded_taxa(Path(".cache/typus/expanded_taxa.sqlite"))
         svc = SQLiteTaxonomyService(db)
     else:
-        dsn = os.getenv("TYPUS_TEST_DSN") or os.getenv("POSTGRES_DSN")
+        dsn = resolve_test_dsn()
         if not dsn:
             return []
         svc = PostgresTaxonomyService(dsn)
@@ -143,7 +144,7 @@ def _write_report(results: list[Result]) -> None:
 
 
 async def _pg_explain_snippets() -> list[str]:
-    dsn = os.getenv("TYPUS_TEST_DSN") or os.getenv("POSTGRES_DSN")
+    dsn = resolve_test_dsn()
     if not dsn or os.getenv("TYPUS_PERF_EXPLAIN", "0") not in {"1", "true", "TRUE"}:
         return []
     eng = create_async_engine(dsn, pool_pre_ping=True)

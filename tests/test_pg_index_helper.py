@@ -2,11 +2,16 @@ import os
 
 import pytest
 
+from tests.pg_test_utils import resolve_test_dsn
+
 
 @pytest.mark.asyncio
 async def test_pg_index_helper_runs_idempotently():
-    dsn = os.getenv("TYPUS_TEST_DSN") or os.getenv("POSTGRES_DSN")
-    if not dsn or not os.getenv("TYPUS_ALLOW_DDL"):
+    dsn = resolve_test_dsn()
+    if not dsn:
+        pytest.skip("PG DSN not set")
+
+    if not os.getenv("TYPUS_ALLOW_DDL"):
         pytest.skip("PG DSN not set or DDL not allowed")
 
     from typus.services.pg_index_helper import ensure_expanded_taxa_indexes

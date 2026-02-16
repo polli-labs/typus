@@ -32,10 +32,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-uv-${{ matrix.python-version }}-
 
-      - name: Install dependencies (dev + sqlite extras)
+      - name: Install dependencies (dev + sqlite + loader extras)
         run: |
           uv venv
-          uv pip install -e ".[dev,sqlite]"
+          uv pip install -e ".[dev,sqlite,loader]"
 
       - name: Pre-commit (includes ruff + whitespace + pytest-lite)
         env:
@@ -48,6 +48,10 @@ jobs:
           uv run ruff format --check .
           uv run ruff check .
 
+      - name: Type check (ty)
+        run: |
+          make typecheck
+
       - name: Schema freshness (export + diff)
         run: |
           uv run python -m typus.export_schemas
@@ -57,4 +61,4 @@ jobs:
         env:
           TYPUS_ELEVATION_TEST: "0"
         run: |
-          uv run pytest -q -m "not pg_optional" -k "not ancestry_verification and not ancestor_descendant_distance and not perf_name_search_local"
+          make ci

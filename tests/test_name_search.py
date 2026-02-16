@@ -1,8 +1,6 @@
-import os
-
 import pytest
 
-from tests.pg_test_utils import is_database_unavailable_error, normalize_test_dsn
+from tests.pg_test_utils import is_database_unavailable_error, resolve_test_dsn
 from typus.constants import RankLevel
 
 
@@ -66,7 +64,7 @@ async def test_with_scores_flag(taxonomy_service):
 @pytest.mark.asyncio
 @pytest.mark.pg_optional
 async def test_postgres_parity_when_available():
-    dsn = normalize_test_dsn(os.getenv("TYPUS_TEST_DSN"))
+    dsn = resolve_test_dsn()
     if not dsn:
         pytest.skip("Postgres DSN not configured")
     from typus import PostgresTaxonomyService

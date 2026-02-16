@@ -30,8 +30,11 @@ from .services.taxonomy import (
 
 # Lightweight offline service
 from .services.taxonomy import (
+    BackendConnectionError,
     PostgresTaxonomyService,
     SQLiteTaxonomyService,
+    TaxonNotFoundError,
+    TaxonomyServiceError,
 )
 
 __all__ = [
@@ -55,6 +58,9 @@ __all__ = [
     "ElevationService",
     "PostgresRasterElevation",
     "TaxonomyService",
+    "TaxonomyServiceError",
+    "BackendConnectionError",
+    "TaxonNotFoundError",
     "PostgresTaxonomyService",
     "SQLiteTaxonomyService",
     "PollinatorGroup",
