@@ -117,10 +117,10 @@ CI/CD Overview
 
 - CI workflow (`.github/workflows/ci.yml`):
   - Matrix on Python 3.10/3.11/3.12.
-  - Runs pre-commit (ruff, ruff-format, whitespace, pytest-lite) with `--show-diff-on-failure`.
-  - Then runs `ruff format --check` and `ruff check`.
+  - Runs `ruff format --check` and `ruff check`.
   - Runs `ty` type checks via `make typecheck`.
-  - Runs a lightweight SQLite-backed pytest selection.
+  - Runs schema freshness checks and a lightweight SQLite-backed pytest selection.
+  - Triggers on PRs and pushes to `main` (to avoid duplicate branch + PR runs for the same commit).
 - Publish workflow (`.github/workflows/publish.yml`):
   - Blocks build/publish on tests job (ruff + ty + schemas + SQLite test selection).
   - Builds and uploads wheels, then deploys docs on tag.

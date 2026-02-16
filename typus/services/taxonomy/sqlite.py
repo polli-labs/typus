@@ -385,7 +385,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
                 'SELECT DISTINCT "taxonID", "name", "rankLevel", "immediateAncestor_taxonID", "commonName" '
                 "FROM expanded_taxa WHERE ("
                 + pred[4:]
-                + ') AND ("taxonActive" IS NULL OR "taxonActive"=1)'
+                + ") AND (\"taxonActive\" IS NULL OR CAST(\"taxonActive\" AS INTEGER)=1 OR LOWER(CAST(\"taxonActive\" AS TEXT)) IN ('1', 't', 'true'))"
             )
             if rank_filter_sql:
                 base_sql += rank_filter_sql

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "**" ]
 
@@ -36,12 +36,6 @@ jobs:
         run: |
           uv venv
           uv pip install -e ".[dev,sqlite,loader]"
-
-      - name: Pre-commit (includes ruff + whitespace + pytest-lite)
-        env:
-          TYPUS_ELEVATION_TEST: "0"
-        run: |
-          uv run pre-commit run -a --show-diff-on-failure
 
       - name: Lint (ruff)
         run: |
