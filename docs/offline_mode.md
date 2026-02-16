@@ -4,6 +4,12 @@
 prebuilt SQLite dump of the `expanded_taxa` table (or converts a TSV file) and
 caches it locally.
 
+Install loader dependencies first:
+
+```bash
+uv pip install "polli-typus[loader]"
+```
+
 ```python
 from pathlib import Path
 from typus.services.sqlite_loader import load_expanded_taxa
@@ -33,7 +39,7 @@ The test-suite uses a tiny dataset defined in
 `expanded_taxa_sample.sqlite` with:
 
 ```bash
-python scripts/gen_fixture_sqlite.py
+uv run python scripts/gen_fixture_sqlite.py
 ```
 
 The resulting file stays well under 100&nbsp;KB so CI can fetch it quickly.

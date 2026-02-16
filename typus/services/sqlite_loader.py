@@ -6,11 +6,18 @@ import os
 import sqlite3
 import sys
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
-import polars as pl
-import requests
-from tqdm import tqdm
+try:
+    import polars as pl
+    import requests
+    from tqdm import tqdm
+except ModuleNotFoundError as exc:  # pragma: no cover - dependency wiring guard
+    missing = exc.name or "loader dependency"
+    raise ModuleNotFoundError(
+        f"`typus.services.sqlite_loader` requires optional dependency '{missing}'. "
+        'Install with `uv pip install "polli-typus[loader]"`.'
+    ) from exc
 
 DEFAULT_URL = os.getenv(
     "TYPUS_EXPANDED_TAXA_URL",
@@ -99,7 +106,8 @@ def _tsv_to_sqlite(tsv_path: Path, sqlite_path: Path, mode: Literal["replace", "
     # streaming read
     frame = pl.scan_csv(tsv_path, separator="\t")
     batch_size = 50000
-    for batch in frame.collect(engine="streaming").iter_slices(n_rows=batch_size):
+    streamed = cast(pl.DataFrame, frame.collect(engine="streaming"))
+    for batch in streamed.iter_slices(n_rows=batch_size):
         pdf = batch.to_pandas()
         if "taxonActive" in pdf.columns:
             pdf["taxonActive"] = pdf["taxonActive"].map(lambda x: 1 if str(x).lower() == "t" else 0)
@@ -172,11 +180,15 @@ def load_expanded_taxa(
             with gzip.open(tsv_path, "rb") as r, (cache_dir / tsv_path.stem).open("wb") as w:
                 w.write(r.read())
             tsv_path = cache_dir / tsv_path.stem
-        _tsv_to_sqlite(
-            tsv_path,
-            sqlite_path,
-            "replace" if not sqlite_path.exists() else if_exists,
-        )
+        load_mode: Literal["replace", "append"]
+        if not sqlite_path.exists():
+            load_mode = "replace"
+        elif if_exists == "append":
+            load_mode = "append"
+        else:
+            load_mode = "replace"
+
+        _tsv_to_sqlite(tsv_path, sqlite_path, load_mode)
         if force_self_consistent:
             _ensure_self_consistent(sqlite_path)
         if create_indexes:
@@ -268,7 +280,7 @@ def main() -> None:
     parser.add_argument("--cache", type=Path)
     try:
         # Python 3.10+: provides --with-indexes / --no-with-indexes
-        from argparse import BooleanOptionalAction  # type: ignore
+        from argparse import BooleanOptionalAction
 
         parser.add_argument(
             "--with-indexes",

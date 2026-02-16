@@ -4,8 +4,8 @@ import asyncio
 import logging
 from typing import List, Sequence, Set, Tuple
 
-from rapidfuzz import fuzz
 from sqlalchemy import select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -14,6 +14,14 @@ from ...models.summary import TaxonSummary, TaxonTrailNode
 from ...models.taxon import Taxon
 from ...orm.expanded_taxa import ExpandedTaxa
 from .abstract import AbstractTaxonomyService
+from .common import (
+    ancestry_pairs_from_mapping,
+    col_prefix_for_level,
+    filtered_ancestry_ids,
+    score_taxon_match,
+    taxon_from_search_row,
+)
+from .errors import BackendConnectionError, TaxonNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +47,15 @@ class _ChildrenCursor:
             SELECT * FROM sub WHERE lvl > 0;
             """
         )
-        async with self._svc._Session() as s:
-            res = await s.execute(sql, {"tid": self._taxon_id, "d": self._depth})
-            rows = res.mappings().all()
-            return [self._svc._row_to_taxon_from_mapping(r) for r in rows]
+        try:
+            async with self._svc._Session() as s:
+                res = await s.execute(sql, {"tid": self._taxon_id, "d": self._depth})
+                rows = res.mappings().all()
+                return [self._svc._row_to_taxon_from_mapping(r) for r in rows]
+        except SQLAlchemyError as exc:
+            raise BackendConnectionError(
+                f"Failed to fetch children from Postgres backend: {exc}"
+            ) from exc
 
     async def _ensure(self) -> list[Taxon]:
         if self._task is None:
@@ -60,45 +73,6 @@ class _ChildrenCursor:
         return _gen()
 
 
-def _col_prefix_for_level(level: RankLevel) -> str:
-    if level.value == 335:
-        return "L33_5"
-    if level.value == 345:
-        return "L34_5"
-    return f"L{int(level.value)}"
-
-
-def _ancestry_pairs_from_mapping(row: dict) -> list[tuple[int, RankLevel]]:
-    pairs: list[tuple[int, RankLevel]] = []
-    levels_desc = sorted([lvl for lvl in RankLevel], key=lambda r: int(r.value), reverse=True)
-    for lvl in levels_desc:
-        prefix = _col_prefix_for_level(lvl)
-        col = f"{prefix}_taxonID"
-        val = row.get(col)
-        if val is not None:
-            pairs.append((int(val), lvl))
-
-    pairs.append((int(row["taxonID"]), RankLevel(int(row["rankLevel"]))))
-
-    seen: set[int] = set()
-    out: list[tuple[int, RankLevel]] = []
-    for tid, lvl in pairs:
-        if tid not in seen:
-            out.append((tid, lvl))
-            seen.add(tid)
-    return out
-
-
-def _filtered_ancestry_ids(row: dict, include_minor_ranks: bool) -> list[int]:
-    has_expanded = any(k.startswith("L") and k.endswith("_taxonID") for k in row.keys())
-    if not has_expanded:
-        return []
-
-    pairs = _ancestry_pairs_from_mapping(row)
-    ids = [tid for tid, lvl in pairs if include_minor_ranks or is_major(lvl)]
-    return ids
-
-
 class PostgresTaxonomyService(AbstractTaxonomyService):
     """Async service backed by `expanded_taxa` materialised view."""
 
@@ -108,6 +82,15 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         self._engine = create_async_engine(dsn, pool_pre_ping=True, poolclass=NullPool)
         self._Session = async_sessionmaker(self._engine, expire_on_commit=False)
 
+    async def aclose(self) -> None:
+        await self._engine.dispose()
+
+    async def __aenter__(self) -> "PostgresTaxonomyService":
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        await self.aclose()
+
     async def get_taxon(self, taxon_id: int) -> Taxon:
         try:
             async with self._Session() as s:
@@ -116,11 +99,12 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
                 )
                 res = await s.execute(stmt)
                 row = res.mappings().first()
-            if row is None:
-                raise KeyError(taxon_id)
-            return self._row_to_taxon_from_mapping(row)
-        except Exception as e:  # pragma: no cover - test env skip
-            raise RuntimeError(f"connection error: {e}") from e
+        except SQLAlchemyError as exc:
+            raise BackendConnectionError(f"Failed to query taxon {taxon_id}: {exc}") from exc
+
+        if row is None:
+            raise TaxonNotFoundError(taxon_id)
+        return self._row_to_taxon_from_mapping(row)
 
     def children(self, taxon_id: int, *, depth: int = 1):
         return _ChildrenCursor(self, taxon_id, depth)
@@ -206,27 +190,34 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         if len(taxon_ids) == 1:
             return await self.get_taxon(list(taxon_ids)[0])
 
-        try:
-            ancestries = [
-                await self.ancestors(tid, include_minor_ranks=include_minor_ranks)
-                for tid in taxon_ids
-            ]
-            common_prefix = ancestries[0]
-            for anc in ancestries[1:]:
-                current: list[int] = []
-                for a, b in zip(common_prefix, anc):
-                    if a == b:
-                        current.append(a)
-                    else:
-                        break
-                common_prefix = current
-            if not common_prefix:
-                raise ValueError(f"Could not determine LCA for taxon IDs: {taxon_ids}")
-            lca_tid = common_prefix[-1]
-        except Exception as e:  # pragma: no cover - test env skip
-            raise RuntimeError(f"connection error: {e}") from e
+        if not include_minor_ranks:
+            try:
+                async with self._Session() as s:
+                    lca_tid = await self._lca_via_expanded_columns(s, taxon_ids)
+                    if lca_tid is None:
+                        lca_tid = await self._lca_recursive_fallback(s, taxon_ids)
+            except SQLAlchemyError as exc:
+                raise BackendConnectionError(
+                    f"Failed to compute LCA from Postgres backend: {exc}"
+                ) from exc
 
-        return await self.get_taxon(lca_tid)
+            if lca_tid is None:
+                raise ValueError(f"Could not determine LCA for taxon IDs: {taxon_ids}")
+            return await self.get_taxon(int(lca_tid))
+
+        ancestries = [await self.ancestors(tid, include_minor_ranks=True) for tid in taxon_ids]
+        common_prefix = ancestries[0]
+        for anc in ancestries[1:]:
+            current: list[int] = []
+            for a, b in zip(common_prefix, anc):
+                if a == b:
+                    current.append(a)
+                else:
+                    break
+            common_prefix = current
+        if not common_prefix:
+            raise ValueError(f"Could not determine LCA for taxon IDs: {taxon_ids}")
+        return await self.get_taxon(common_prefix[-1])
 
     async def distance(
         self,
@@ -277,13 +268,13 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
 
                 dist = await s.scalar(sql, {"descendant": descendant, "ancestor": ancestor})
                 return dist if dist is not None else 0
-        except Exception as e:  # pragma: no cover - test env skip
-            raise RuntimeError(f"connection error: {e}") from e
+        except SQLAlchemyError as exc:
+            raise BackendConnectionError(f"Failed to compute taxonomic distance: {exc}") from exc
 
     async def fetch_subtree(self, root_ids: set[int]) -> dict[int, int | None]:
         if not root_ids:
             return {}
-        roots_sql = ",".join(map(str, root_ids))
+        roots_sql = ",".join(str(tid) for tid in sorted(root_ids))
         sql = text(
             f"""
             WITH RECURSIVE sub AS (
@@ -299,8 +290,10 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
             async with self._Session() as s:
                 res = await s.execute(sql)
                 return {r.taxon_id: r.parent_id for r in res}
-        except Exception as e:  # pragma: no cover - test env skip
-            raise RuntimeError(f"connection error: {e}") from e
+        except SQLAlchemyError as exc:
+            raise BackendConnectionError(
+                f"Failed to fetch subtree from Postgres backend: {exc}"
+            ) from exc
 
     async def subtree(self, root_id: int) -> dict[int, int | None]:  # pragma: no cover
         return await self.fetch_subtree({root_id})
@@ -308,50 +301,32 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
     def _row_to_taxon(self, row: ExpandedTaxa) -> Taxon:
         # Allow MagicMock rows in tests without full mapper
         if not hasattr(row, "__mapper__"):
-            return Taxon(
-                taxon_id=getattr(row, "taxon_id"),
-                scientific_name=getattr(row, "scientific_name"),
-                rank_level=RankLevel(getattr(row, "rank_level")),
-                parent_id=getattr(row, "parent_id", None),
+            return taxon_from_search_row(
+                {
+                    "taxon_id": getattr(row, "taxon_id"),
+                    "scientific_name": getattr(row, "scientific_name"),
+                    "rank_level": getattr(row, "rank_level"),
+                    "parent_id": getattr(row, "parent_id", None),
+                    "commonName": None,
+                },
                 ancestry=[],
-                vernacular={},
             )
-
-        common_name = getattr(row, "common_name", None) if hasattr(row, "common_name") else None
-        vernacular = {}
-        if common_name and isinstance(common_name, str):
-            vernacular = {"en": [common_name]}
 
         row_dict = {
             col.columns[0].name: getattr(row, col.key) for col in row.__mapper__.column_attrs
         }
-        ancestry_ids = _filtered_ancestry_ids(row_dict, include_minor_ranks=True)
-
-        return Taxon(
-            taxon_id=row.taxon_id,
-            scientific_name=row.scientific_name,
-            rank_level=RankLevel(row.rank_level),
-            parent_id=row.parent_id,
+        ancestry_ids = filtered_ancestry_ids(row_dict, include_minor_ranks=True)
+        return taxon_from_search_row(
+            row_dict,
             ancestry=ancestry_ids,
-            vernacular=vernacular,
         )
 
     def _row_to_taxon_from_mapping(self, row_mapping) -> Taxon:
-        common_name = row_mapping.get("commonName")
-        vernacular = {}
-        if common_name and isinstance(common_name, str):
-            vernacular = {"en": [common_name]}
-
         row_dict = dict(row_mapping)
-        ancestry_ids = _filtered_ancestry_ids(row_dict, include_minor_ranks=True)
-
-        return Taxon(
-            taxon_id=row_mapping.get("taxon_id") or row_mapping.get("taxonID"),
-            scientific_name=row_mapping["name"],
-            rank_level=RankLevel(row_mapping["rankLevel"]),
-            parent_id=row_mapping.get("immediateAncestor_taxonID"),
+        ancestry_ids = filtered_ancestry_ids(row_dict, include_minor_ranks=True)
+        return taxon_from_search_row(
+            row_dict,
             ancestry=ancestry_ids,
-            vernacular=vernacular,
         )
 
     async def ancestors(self, taxon_id: int, *, include_minor_ranks: bool = True) -> list[int]:
@@ -367,12 +342,14 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
             async with self._Session() as s:
                 res = await s.execute(sql, {"tid": taxon_id})
                 row = res.mappings().first()
-        except Exception as e:  # pragma: no cover - test env skip
-            raise RuntimeError(f"connection error: {e}") from e
+        except SQLAlchemyError as exc:
+            raise BackendConnectionError(
+                f"Failed to fetch ancestry from Postgres backend: {exc}"
+            ) from exc
         if row is None:
-            raise KeyError(taxon_id)
+            raise TaxonNotFoundError(taxon_id)
 
-        return _filtered_ancestry_ids(dict(row), include_minor_ranks)
+        return filtered_ancestry_ids(dict(row), include_minor_ranks)
 
     async def taxon_summary(
         self,
@@ -386,21 +363,23 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
                     text('SELECT * FROM expanded_taxa WHERE "taxonID" = :tid'), {"tid": taxon_id}
                 )
                 row = res.mappings().first()
-        except Exception as e:  # pragma: no cover - test env skip
-            raise RuntimeError(f"connection error: {e}") from e
+        except SQLAlchemyError as exc:
+            raise BackendConnectionError(
+                f"Failed to build taxon summary from Postgres backend: {exc}"
+            ) from exc
 
         if row is None:
-            raise KeyError(taxon_id)
+            raise TaxonNotFoundError(taxon_id)
 
         row_dict = dict(row)
-        pairs = _ancestry_pairs_from_mapping(row_dict)
+        pairs = ancestry_pairs_from_mapping(row_dict)
         trail: list[TaxonTrailNode] = []
 
         for tid, lvl in pairs:
             if major_ranks_only and tid != taxon_id and not is_major(lvl):
                 continue
 
-            prefix = _col_prefix_for_level(lvl)
+            prefix = col_prefix_for_level(lvl)
             name_col = f"{prefix}_name"
             common_col = f"{prefix}_commonName"
 
@@ -467,14 +446,6 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
             params: dict[str, str] = {}
             idx = 0
 
-            def add_clause(fmt: str, val: str) -> None:
-                nonlocal idx
-                key = f"q{idx}"
-                idx += 1
-                for c in cols:
-                    where_clauses.append(fmt.format(col=c, p=f":{key}_{len(where_clauses)}"))
-                    params[f"{key}_{len(where_clauses) - 1}"] = val
-
             ql = q_norm.lower()
             if mode == "exact":
                 for c in cols:
@@ -524,25 +495,26 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
                     superset_rows = [dict(r) for r in res.mappings().all()]
                     if superset_rows:
                         break
-        except Exception as e:  # pragma: no cover - test env skip
-            raise RuntimeError(f"connection error: {e}") from e
-
-        def score_row(row: dict) -> float:
-            cand = (row.get("name") or "").strip()
-            vname = (row.get("commonName") or "").strip()
-            base = cand if "scientific" in scopes else vname
-            return float(fuzz.WRatio(q_norm.lower(), base.lower()) / 100.0)
+        except SQLAlchemyError as exc:
+            raise BackendConnectionError(
+                f"Failed to execute search against Postgres backend: {exc}"
+            ) from exc
 
         for r in superset_rows:
-            tax = Taxon(
-                taxon_id=r["taxonID"],
-                scientific_name=r["name"],
-                rank_level=RankLevel(int(r["rankLevel"])),
-                parent_id=r["immediateAncestor_taxonID"],
+            tax = taxon_from_search_row(
+                r,
                 ancestry=[],
-                vernacular={"en": [r["commonName"]]} if r.get("commonName") else {},
             )
-            sc = score_row(r) if fuzzy else 1.0
+            sc = (
+                score_taxon_match(
+                    q_norm,
+                    scientific_name=r.get("name"),
+                    vernacular_name=r.get("commonName"),
+                    scopes=scopes,
+                )
+                if fuzzy
+                else 1.0
+            )
             if not fuzzy or sc >= threshold:
                 results_acc.append((tax, sc))
 

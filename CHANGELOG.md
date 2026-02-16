@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.0 – 2026-02-13
+### Added
+- `scripts/pg_smoke.py` and `make test-pg-smoke` for explicit optional-Postgres smoke validation (`current_database()` + table presence) before running `pg_optional` tests.
+- Shared test/ops Postgres env utilities in `typus.services.pg_test_ops` (DSN resolution/normalization + availability classification), with coverage in `tests/test_pg_test_ops.py`.
+- Typed backend exceptions (`TaxonomyServiceError`, `BackendConnectionError`, `TaxonNotFoundError`) and async lifecycle hooks (`aclose`, async context manager support) for taxonomy services.
+- Type distribution marker `typus/py.typed` and `Typing :: Typed` classifier.
+
+### Changed
+- **Potentially breaking:** core install is now lightweight; TSV/HTTP loader dependencies moved behind optional extra `polli-typus[loader]`.
+- `typus.services.load_expanded_taxa` now lazy-loads loader dependencies and returns a clear install hint when loader extras are missing.
+- Test selector expressions are now sourced from Make targets (`make ci` / `make test-pg`) and reused by pre-commit + CI + publish workflows to avoid drift.
+- SQLite name search now accepts both integer and text boolean encodings for `"taxonActive"` (`1`/`'t'`/`'true'`) to avoid false-empty results with legacy/exported SQLite datasets.
+- Release/docs workflows are now `uv`-first and aligned with repo policy (no ad-hoc `pip` paths).
+- Added `ty` project config + `make typecheck`; CI and publish test gates now enforce static type checks.
+- CI now runs on PRs and `main` pushes (not all branch pushes) to avoid duplicate branch+PR workflow runs on the same commit.
+- SQLite and Postgres taxonomy backends now share common ancestry/search scoring helpers to reduce divergence.
+- Optional Postgres tests/scripts now consume the same DSN resolution helper; removed hardcoded local DSN credential defaults.
+- `tests/conftest.py` fixture is now deterministic SQLite-only (Postgres coverage lives in explicit `pg_optional` tests).
+
 ## 0.4.2 – 2025-11-22
 ### Added
 - `TaxonSummary` / `TaxonTrailNode` models with `format_trail()` for UI-friendly lineage strings; exported JSON Schemas.

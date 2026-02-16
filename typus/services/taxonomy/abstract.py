@@ -85,5 +85,14 @@ class AbstractTaxonomyService(abc.ABC):
         ancestry = await self.ancestors(taxon_id, include_minor_ranks=True)
         return pollinator_groups_for_ancestry(ancestry)
 
+    async def aclose(self) -> None:
+        """Optional async resource cleanup hook for long-lived service instances."""
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        await self.aclose()
+
 
 __all__ = ["AbstractTaxonomyService"]

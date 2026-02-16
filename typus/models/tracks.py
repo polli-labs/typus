@@ -510,7 +510,7 @@ class Track(BaseModel):
         overall_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
 
         # Merge taxonomy (use most common or highest confidence)
-        taxon_counts = {}
+        taxon_counts: dict[int, int] = {}
         for track in sorted_tracks:
             if track.taxon_id:
                 taxon_counts[track.taxon_id] = taxon_counts.get(track.taxon_id, 0) + len(
@@ -523,7 +523,7 @@ class Track(BaseModel):
 
         if taxon_counts:
             # Use taxon with most detections
-            merged_taxon_id = max(taxon_counts, key=taxon_counts.get)
+            merged_taxon_id = max(taxon_counts.items(), key=lambda item: item[1])[0]
             # Find the track with this taxon to get names
             for track in sorted_tracks:
                 if track.taxon_id == merged_taxon_id:

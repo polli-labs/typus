@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
+from .pg_test_ops import normalize_test_dsn, resolve_test_dsn
+
 
 @dataclass
 class EnsureResult:
@@ -114,10 +116,9 @@ async def ensure_expanded_taxa_indexes(
 
 def cli() -> None:  # pragma: no cover - thin wrapper
     import argparse
-    import os
 
     p = argparse.ArgumentParser(description="Ensure Postgres indexes for expanded_taxa")
-    p.add_argument("--dsn", default=os.getenv("POSTGRES_DSN") or os.getenv("TYPUS_TEST_DSN"))
+    p.add_argument("--dsn", default=resolve_test_dsn())
     p.add_argument("--schema", default="public")
     p.add_argument("--table", default="expanded_taxa")
     p.add_argument("--no-major", action="store_true", help="Skip per-major rank L*_taxonID indexes")
@@ -126,12 +127,14 @@ def cli() -> None:  # pragma: no cover - thin wrapper
     p.add_argument("--ensure-trgm", action="store_true", help="Attempt CREATE EXTENSION pg_trgm")
     args = p.parse_args()
 
-    if not args.dsn:
+    dsn = normalize_test_dsn(args.dsn)
+
+    if not dsn:
         raise SystemExit("No DSN provided via --dsn or env POSTGRES_DSN/TYPUS_TEST_DSN")
 
     res = asyncio.run(
         ensure_expanded_taxa_indexes(
-            args.dsn,
+            dsn,
             schema=args.schema,
             table=args.table,
             include_major_rank_indexes=not args.no_major,

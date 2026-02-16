@@ -1,9 +1,10 @@
-import os
+import sqlite3
 
 import pytest
 
-from tests.pg_test_utils import is_database_unavailable_error, normalize_test_dsn
+from tests.pg_test_utils import is_database_unavailable_error, resolve_test_dsn
 from typus.constants import RankLevel
+from typus.services import SQLiteTaxonomyService
 
 
 @pytest.mark.asyncio
@@ -64,9 +65,55 @@ async def test_with_scores_flag(taxonomy_service):
 
 
 @pytest.mark.asyncio
+async def test_sqlite_search_accepts_text_boolean_taxon_active(tmp_path):
+    db_path = tmp_path / "text_taxon_active.sqlite"
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute(
+            """
+            CREATE TABLE expanded_taxa (
+                "taxonID" INTEGER,
+                "name" TEXT,
+                "rankLevel" INTEGER,
+                "immediateAncestor_taxonID" INTEGER,
+                "commonName" TEXT,
+                "taxonActive" TEXT
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO expanded_taxa ("taxonID", "name", "rankLevel", "immediateAncestor_taxonID", "commonName", "taxonActive")
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (47219, "Apis mellifera", 10, 47220, "honey bee", "t"),
+        )
+        conn.execute(
+            """
+            INSERT INTO expanded_taxa ("taxonID", "name", "rankLevel", "immediateAncestor_taxonID", "commonName", "taxonActive")
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (900001, "Apis mellifera", 10, 47220, "honey bee", "f"),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    svc = SQLiteTaxonomyService(db_path)
+    try:
+        res = await svc.search_taxa(
+            "Apis mellifera", scopes={"scientific"}, match="exact", fuzzy=False
+        )
+    finally:
+        svc.close()
+
+    assert [t.taxon_id for t in res] == [47219]
+
+
+@pytest.mark.asyncio
 @pytest.mark.pg_optional
 async def test_postgres_parity_when_available():
-    dsn = normalize_test_dsn(os.getenv("TYPUS_TEST_DSN"))
+    dsn = resolve_test_dsn()
     if not dsn:
         pytest.skip("Postgres DSN not configured")
     from typus import PostgresTaxonomyService

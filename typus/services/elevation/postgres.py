@@ -13,23 +13,29 @@ class PostgresRasterElevation:
         self._tbl_name = raster_table
         self._tbl: Optional[Table] = None
 
+    async def _ensure_table(self) -> Table:
+        if self._tbl is None:
+            async with self._engine.begin() as conn:
+
+                def _reflect(sync_conn):
+                    md = MetaData()
+                    Table(self._tbl_name, md, autoload_with=sync_conn)
+                    self._tbl = md.tables[self._tbl_name]
+
+                await conn.run_sync(_reflect)
+
+        if self._tbl is None:  # pragma: no cover - defensive guard
+            raise RuntimeError(f"Failed to reflect raster table {self._tbl_name!r}")
+
+        return self._tbl
+
     async def elevation(self, lat: float, lon: float) -> Optional[float]:
         async with self._Session() as s:
-            # Reflect table lazily on first use
-            if self._tbl is None:
-                async with self._engine.begin() as conn:
-
-                    def _reflect(sync_conn):
-                        md = MetaData()
-                        Table(self._tbl_name, md, autoload_with=sync_conn)
-                        self._tbl = md.tables[self._tbl_name]
-
-                    await conn.run_sync(_reflect)
-
+            tbl = await self._ensure_table()
             point = func.ST_SetSRID(func.ST_MakePoint(lon, lat), 4326)
             stmt = (
-                select(func.ST_Value(self._tbl.c.rast, point))
-                .where(func.ST_Intersects(self._tbl.c.rast, point))
+                select(func.ST_Value(tbl.c.rast, point))
+                .where(func.ST_Intersects(tbl.c.rast, point))
                 .limit(1)
             )
             val = await s.scalar(stmt)
@@ -39,16 +45,7 @@ class PostgresRasterElevation:
         if not coords:
             return []
         async with self._Session() as s:
-            # Ensure table reflected
-            if self._tbl is None:
-                async with self._engine.begin() as conn:
-
-                    def _reflect(sync_conn):
-                        md = MetaData()
-                        Table(self._tbl_name, md, autoload_with=sync_conn)
-                        self._tbl = md.tables[self._tbl_name]
-
-                    await conn.run_sync(_reflect)
+            await self._ensure_table()
 
             # Build a VALUES list of (id, lon, lat)
             values_rows: list[str] = []

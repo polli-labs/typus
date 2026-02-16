@@ -1,4 +1,3 @@
-import os
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
@@ -7,7 +6,7 @@ from typing import List
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from tests.pg_test_utils import is_database_unavailable_error, normalize_test_dsn
+from tests.pg_test_utils import is_database_unavailable_error, resolve_test_dsn
 from typus.services import PostgresTaxonomyService, SQLiteTaxonomyService, load_expanded_taxa
 
 
@@ -71,7 +70,7 @@ async def test_cross_backend_parity_seeded_queries():
         )
         baseline[(c.query, c.scope, c.match)] = [t.taxon_id for t in res]
 
-    dsn = normalize_test_dsn(os.getenv("TYPUS_TEST_DSN") or os.getenv("POSTGRES_DSN"))
+    dsn = resolve_test_dsn()
     if not dsn:
         pytest.skip("No Postgres DSN; baseline only")
 

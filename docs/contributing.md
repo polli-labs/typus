@@ -8,7 +8,7 @@ Environment
 - Use `uv` and Makefile shortcuts (no plain `pip` in scripts/CI):
 
 ```
-make dev-setup      # creates .venv (py310) and installs -e .[dev,sqlite]
+make dev-setup      # creates .venv (py310) and installs -e .[dev,sqlite,loader]
 make dev-install    # installs pre-commit hooks
 ```
 
@@ -17,6 +17,12 @@ Formatting & Lint
 ```
 make format         # uv run ruff format .
 make lint           # uv run ruff check --fix .
+```
+
+Type checking
+
+```
+make typecheck      # uv run ty check
 ```
 
 Tests
@@ -36,10 +42,13 @@ make test
 Postgres-backed tests (optional, requires a running DB):
 
 ```
-export TYPUS_TEST_DSN=postgresql+asyncpg://postgres:ooglyboogly69@localhost:5432/ibrida-v0
+export TYPUS_TEST_DSN=postgresql+asyncpg://<user>:<pass>@<host>:5432/ibrida-v0
 export POSTGRES_DSN=$TYPUS_TEST_DSN
 export ELEVATION_DSN=$TYPUS_TEST_DSN
 export ELEVATION_TABLE=elevation_raster
+
+# Smoke-check DSN / DB / required table before optional PG tests
+make test-pg-smoke
 
 # Optional Postgres marker subset (dataset-dependent)
 make test-pg
@@ -48,12 +57,12 @@ make test-pg
 TYPUS_ELEVATION_TEST=1 uv run pytest -q -k elevation_service
 
 Important: `make test` and CI exclude `pg_optional` tests by marker. Run
-`make test-pg` explicitly when you want live Postgres coverage. Some tests
+`make test-pg-smoke` + `make test-pg` explicitly when you want live Postgres coverage. Some tests
 assert counts that are specific to the SQLite sample fixture and will not match
 the full production dataset. The recommended workflow is:
 
-1) Run `make ci` / `make test` without `POSTGRES_DSN` to exercise SQLite.
-2) Run `make test-pg` for Postgres-specific coverage (async compatibility, parity, name search).
+1) Run `make ci` / `make test` to exercise the SQLite fixture path.
+2) Run `make test-pg-smoke` and then `make test-pg` for Postgres-specific coverage.
 ```
 
 Notes:
@@ -87,7 +96,7 @@ uv run python -m typus.export_schemas
 ```
 
 Generated JSON files live under `typus/schemas/` and are committed to the repo.
-Currently, schema export is a manual step (not enforced by CI).
+CI and release workflows enforce schema freshness with `make schemas-check`.
 
 Perf Harness (optional)
 
@@ -108,9 +117,10 @@ CI/CD Overview
 
 - CI workflow (`.github/workflows/ci.yml`):
   - Matrix on Python 3.10/3.11/3.12.
-  - Runs pre-commit (ruff, ruff-format, whitespace, pytest-lite) with `--show-diff-on-failure`.
-  - Then runs `ruff format --check` and `ruff check`.
-  - Runs a lightweight SQLite-backed pytest selection.
+  - Runs `ruff format --check` and `ruff check`.
+  - Runs `ty` type checks via `make typecheck`.
+  - Runs schema freshness checks and a lightweight SQLite-backed pytest selection.
+  - Triggers on PRs and pushes to `main` (to avoid duplicate branch + PR runs for the same commit).
 - Publish workflow (`.github/workflows/publish.yml`):
-  - Blocks build/publish on tests job.
+  - Blocks build/publish on tests job (ruff + ty + schemas + SQLite test selection).
   - Builds and uploads wheels, then deploys docs on tag.
