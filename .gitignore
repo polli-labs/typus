@@ -186,3 +186,5 @@ AGENTS.md
 tests/expanded_taxa_sample.sqlite
 tests/sample_tsv/coldp_*.tsv
 tests/sample_tsv/inat_to_coldp_taxon_map.tsv
+docs/org-kb/
+.exports/
