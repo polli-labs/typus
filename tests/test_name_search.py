@@ -2,6 +2,7 @@ import sqlite3
 
 import pytest
 
+from tests.helpers import taxon_ids
 from tests.pg_test_utils import is_database_unavailable_error, resolve_test_dsn
 from typus.constants import RankLevel
 from typus.services import SQLiteTaxonomyService
@@ -13,7 +14,7 @@ async def test_scientific_exact_name(taxonomy_service):
     res = await taxonomy_service.search_taxa(
         "Apis mellifera", scopes={"scientific"}, match="exact", fuzzy=False
     )
-    assert any(t.taxon_id == 47219 for t in res)
+    assert 47219 in taxon_ids(res)
 
 
 @pytest.mark.asyncio
@@ -26,7 +27,7 @@ async def test_scientific_prefix_and_rank_filter(taxonomy_service):
         fuzzy=False,
         rank_filter={RankLevel.L20},
     )
-    assert any(t.taxon_id == 47220 for t in res)
+    assert 47220 in taxon_ids(res)
 
 
 @pytest.mark.asyncio
@@ -35,7 +36,7 @@ async def test_vernacular_exact_name(taxonomy_service):
     res = await taxonomy_service.search_taxa(
         "honey bee", scopes={"vernacular"}, match="exact", fuzzy=False
     )
-    assert any(t.taxon_id == 47219 for t in res)
+    assert 47219 in taxon_ids(res)
 
 
 @pytest.mark.asyncio
@@ -49,7 +50,7 @@ async def test_vernacular_fuzzy_near_miss(taxonomy_service):
         threshold=0.7,
         limit=10,
     )
-    assert any(t.taxon_id == 47219 for t in res)
+    assert 47219 in taxon_ids(res)
 
 
 @pytest.mark.asyncio
@@ -107,7 +108,7 @@ async def test_sqlite_search_accepts_text_boolean_taxon_active(tmp_path):
     finally:
         svc.close()
 
-    assert [t.taxon_id for t in res] == [47219]
+    assert taxon_ids(res) == [47219]
 
 
 @pytest.mark.asyncio
@@ -127,4 +128,4 @@ async def test_postgres_parity_when_available():
         if is_database_unavailable_error(e):
             pytest.skip(f"Postgres database unavailable: {e}")
         raise
-    assert any(t.taxon_id == 47219 for t in res)
+    assert 47219 in taxon_ids(res)

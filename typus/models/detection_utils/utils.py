@@ -60,7 +60,7 @@ def to_coco(image: ImageDetectionResult, category_map: Dict[int, int]) -> Dict:
             # Should not happen if bbox.fmt is always one of the enum values
             raise ValueError(f"Unsupported bbox format: {instance.bbox.fmt}")
 
-        annotation = {
+        annotation: dict[str, object] = {
             "image_id": 0,  # Placeholder, COCO expects an image_id
             "category_id": coco_category_id,
             "bbox": [abs_x, abs_y, abs_w, abs_h],

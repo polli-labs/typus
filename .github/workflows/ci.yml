@@ -37,22 +37,8 @@ jobs:
           uv venv
           uv pip install -e ".[dev,sqlite,loader]"
 
-      - name: Lint (ruff)
-        run: |
-          uv run ruff format --check .
-          uv run ruff check .
-
-      - name: Type check (ty)
-        run: |
-          make typecheck
-
-      - name: Schema freshness (export + diff)
-        run: |
-          uv run python -m typus.export_schemas
-          git diff --exit-code typus/schemas
-
-      - name: Run tests (SQLite fixture, no DSN)
+      - name: Canonical quality gate
         env:
           TYPUS_ELEVATION_TEST: "0"
         run: |
-          make ci
+          make check-all

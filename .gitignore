@@ -181,7 +181,13 @@ expanded_taxa_06282025.tsv
 .venv/
 work/
 CLAUDE.md
-dev/
+dev/*
+!dev/agents/
+dev/agents/*
+!dev/agents/typus-v0.4.2-notes.md
+!dev/scripts/
+dev/scripts/*
+!dev/scripts/bootstrap-dev.sh
 AGENTS.md
 tests/expanded_taxa_sample.sqlite
 tests/sample_tsv/coldp_*.tsv

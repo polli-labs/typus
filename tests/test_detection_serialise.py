@@ -61,15 +61,15 @@ SAMPLE_INSTANCE_PREDICTION_NO_MASK_NO_CLASS = InstancePrediction(
     instance_id=2, bbox=SAMPLE_BBOX_CXCYWH_REL, score=0.88
 )
 
-SAMPLE_TAXONOMY_CONTEXT = TaxonomyContext(
-    taxonomy_id="test_taxonomy_v1", lca_graph_id="test_lca_graph_v1"
+SAMPLE_IMAGE_TAXONOMY_CONTEXT = TaxonomyContext(
+    source="test_taxonomy_v1", version="test_lca_graph_v1"
 )
 
 SAMPLE_IMAGE_DETECTION_RESULT = ImageDetectionResult(
     width=1000,
     height=800,
     instances=[SAMPLE_INSTANCE_PREDICTION_FULL, SAMPLE_INSTANCE_PREDICTION_NO_MASK_NO_CLASS],
-    taxonomy_context=SAMPLE_TAXONOMY_CONTEXT,
+    taxonomy_context=SAMPLE_IMAGE_TAXONOMY_CONTEXT,
 )
 
 # --- Test Cases ---

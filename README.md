@@ -165,10 +165,18 @@ bee = await svc.get_taxon(630955)
 
 ## Developer guide
 
-* **Lint & tests (one‑liner)**
+Contributor setup and the canonical gate live in [`docs/contributing.md`](docs/contributing.md).
+
+* **Bootstrap the repo-local dev environment**
 
   ```bash
-  make format && make lint && make typecheck && make test
+  ./dev/scripts/bootstrap-dev.sh
+  ```
+
+* **Run the canonical local quality gate**
+
+  ```bash
+  make check-all
   ```
 
 * **Format whole repo**
@@ -179,6 +187,7 @@ bee = await svc.get_taxon(630955)
 
 * **JSON Schemas** – `make schemas` → `typus/schemas/`
 * **Type checking** – `make typecheck`
+* **Contributor guide** – `docs/contributing.md`
 
 * **SQLite fixture** – `uv run python scripts/gen_fixture_sqlite.py`
 

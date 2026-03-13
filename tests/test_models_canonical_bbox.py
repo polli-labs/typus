@@ -78,6 +78,7 @@ class TestDetectionCanonicalBbox:
 
         detection = Detection.from_raw_detection(raw_data)
 
+        assert detection.bbox_norm is not None
         assert detection.bbox_norm.x == 0.1
         assert detection.bbox_norm.y == 0.2
         assert detection.bbox_norm.w == 0.3
@@ -249,4 +250,5 @@ class TestTrackWithCanonicalBbox:
 
         # Should deserialize successfully
         track_restored = Track.model_validate(track_dict)
+        assert track_restored.detections[0].bbox_norm is not None
         assert track_restored.detections[0].bbox_norm.x == 0.1

@@ -6,6 +6,13 @@ Environment
 
 - Python 3.10+ (CI runs on 3.10, 3.11, 3.12)
 - Use `uv` and Makefile shortcuts (no plain `pip` in scripts/CI):
+- Preferred bootstrap path for contributors:
+
+```
+./dev/scripts/bootstrap-dev.sh   # ensures uv + Python 3.10, syncs .venv, installs hooks
+```
+
+- Lower-level env sync targets remain available when you only need to refresh part of the setup:
 
 ```
 make dev-setup      # creates .venv (py310) and installs -e .[dev,sqlite,loader]
@@ -17,23 +24,30 @@ Formatting & Lint
 ```
 make format         # uv run ruff format .
 make lint           # uv run ruff check --fix .
+make lint-check     # uv run ruff format --check . && uv run ruff check .
 ```
 
 Type checking
 
 ```
-make typecheck      # uv run ty check
+make typecheck      # uv run ty check (warnings fail)
+```
+
+Canonical local quality gate
+
+```
+make check-all      # lint-check + typecheck + schemas-check + ci
 ```
 
 Tests
 
-Lightweight SQLite-backed tests (default for local dev and CI):
+Lightweight SQLite-backed tests that match the CI gate:
 
 ```
 make ci
 ```
 
-Default test suite (SQLite + tests that do not require optional Postgres access):
+Broader default local suite (SQLite + tests that do not require optional Postgres access):
 
 ```
 make test
@@ -117,10 +131,9 @@ CI/CD Overview
 
 - CI workflow (`.github/workflows/ci.yml`):
   - Matrix on Python 3.10/3.11/3.12.
-  - Runs `ruff format --check` and `ruff check`.
-  - Runs `ty` type checks via `make typecheck`.
-  - Runs schema freshness checks and a lightweight SQLite-backed pytest selection.
+  - Installs dev dependencies, then runs `make check-all`.
+  - `make check-all` covers `make lint-check`, `make typecheck`, `make schemas-check`, and `make ci`.
   - Triggers on PRs and pushes to `main` (to avoid duplicate branch + PR runs for the same commit).
 - Publish workflow (`.github/workflows/publish.yml`):
-  - Blocks build/publish on tests job (ruff + ty + schemas + SQLite test selection).
+  - Blocks build/publish on the same `make check-all` gate used locally and in CI.
   - Builds and uploads wheels, then deploys docs on tag.

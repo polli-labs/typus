@@ -1,4 +1,4 @@
-.PHONY: help dev-setup dev-install lint lint-check typecheck format test test-fast ci test-pg-smoke test-pg schemas schemas-check typus-sqlite docs check-all quick clean
+.PHONY: help dev-setup dev-install lint lint-check typecheck format test test-fast ci test-pg-smoke test-pg pg-indexes schemas schemas-check typus-sqlite docs check-all quick perf clean
 
 # Colors
 BLUE := \033[0;34m
@@ -18,9 +18,10 @@ help: ## Show this help message
 	@echo '$(BLUE)Available targets:$(NC)'
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-18s$(NC) %s\n", $$1, $$2}'
 
-dev-setup: ## Create venv and install dev + sqlite extras with uv
-	@echo "$(BLUE)Setting up venv (py310) and installing extras...$(NC)"
-	uv venv --python 3.10
+dev-setup: ## Ensure a py310 venv and install dev + sqlite + loader extras with uv
+	@echo "$(BLUE)Ensuring py310 via uv and syncing dev environment...$(NC)"
+	uv python install 3.10
+	uv venv --python 3.10 --allow-existing
 	uv pip install -e ".[dev,sqlite,loader]"
 	@echo "$(GREEN)✓ Environment ready$(NC)"
 
@@ -36,7 +37,7 @@ lint-check: ## Lint checks only (no auto-fixes)
 	uv run ruff format --check .
 	uv run ruff check .
 
-typecheck: ## Type-check package (ty)
+typecheck: ## Type-check runtime/tests/scripts with ty (warnings fail)
 	uv run ty check
 
 format: ## Format (ruff)
@@ -80,7 +81,7 @@ schemas-check: ## Verify schemas are fresh
 perf: ## Run name-search perf harness (writes dev/agents/perf_report.md)
 	TYPUS_PERF_WRITE=1 uv run python scripts/perf_report.py
 
-check-all: format lint typecheck test ## Format, lint, type-check, test
+check-all: lint-check typecheck schemas-check ci ## Canonical local quality gate (matches CI/publish)
 
 quick: format lint ## Format + lint only
 

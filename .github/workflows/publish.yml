@@ -28,20 +28,11 @@ jobs:
         run: |
           uv venv
           uv pip install -e ".[dev,sqlite,loader]"
-      - name: Lint (ruff)
-        run: |
-          make lint-check
-      - name: Type check (ty)
-        run: |
-          make typecheck
-      - name: Schema freshness (export + diff)
-        run: |
-          make schemas-check
-      - name: Run tests (SQLite fixture, no DSN)
+      - name: Canonical quality gate
         env:
           TYPUS_ELEVATION_TEST: "0"
         run: |
-          make ci
+          make check-all
 
   build-and-publish:
     needs: test

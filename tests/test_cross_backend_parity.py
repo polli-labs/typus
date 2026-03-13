@@ -6,6 +6,7 @@ from typing import List
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from tests.helpers import taxon_ids
 from tests.pg_test_utils import is_database_unavailable_error, resolve_test_dsn
 from typus.services import PostgresTaxonomyService, SQLiteTaxonomyService, load_expanded_taxa
 
@@ -68,7 +69,7 @@ async def test_cross_backend_parity_seeded_queries():
             fuzzy=False,
             limit=100,
         )
-        baseline[(c.query, c.scope, c.match)] = [t.taxon_id for t in res]
+        baseline[(c.query, c.scope, c.match)] = taxon_ids(res)
 
     dsn = resolve_test_dsn()
     if not dsn:
@@ -100,7 +101,7 @@ async def test_cross_backend_parity_seeded_queries():
             if is_database_unavailable_error(e):
                 pytest.skip(f"Postgres database unavailable: {e}")
             raise
-        pg_ids = [t.taxon_id for t in res_pg]
+        pg_ids = taxon_ids(res_pg)
         base_ids = baseline[(c.query, c.scope, c.match)]
 
         if datasets_match:
