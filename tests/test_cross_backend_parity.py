@@ -6,11 +6,9 @@ from typing import List
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from tests.helpers import taxon_ids
 from tests.pg_test_utils import is_database_unavailable_error, resolve_test_dsn
-from typus.models.taxon import Taxon
 from typus.services import PostgresTaxonomyService, SQLiteTaxonomyService, load_expanded_taxa
-
-SearchTaxaResult = list[Taxon] | list[tuple[Taxon, float]]
 
 
 @dataclass
@@ -30,10 +28,6 @@ CASES: List[QueryCase] = [
     # Substring on binomial
     QueryCase("mellif", "scientific", "substring"),
 ]
-
-
-def taxon_ids(results: SearchTaxaResult) -> list[int]:
-    return [item[0].taxon_id if isinstance(item, tuple) else item.taxon_id for item in results]
 
 
 def sqlite_fixture_count() -> int:
