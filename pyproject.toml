@@ -121,11 +121,11 @@ docstring-code-format = true
 python-version = "3.10"
 
 [tool.ty.src]
-include = ["typus/**/*.py"]
+include = ["typus/**/*.py", "tests/**/*.py", "scripts/**/*.py"]
 
 [tool.ty.terminal]
 output-format = "full"
-error-on-warning = false
+error-on-warning = true
 
 [tool.pytest.ini_options]
 addopts    = "-q"

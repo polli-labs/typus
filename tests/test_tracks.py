@@ -408,16 +408,24 @@ class TestTrack:
 
         # Invalid validation status
         with pytest.raises(ValidationError):
-            Track(
-                track_id="track_001",
-                clip_id="video_20240108",
-                detections=[Detection(frame_number=100, bbox=[10, 20, 50, 60], confidence=0.90)],
-                start_frame=100,
-                end_frame=100,
-                duration_frames=1,
-                duration_seconds=0.03,
-                confidence=0.90,
-                validation_status="invalid_status",  # Not in allowed values
+            Track.model_validate(
+                {
+                    "track_id": "track_001",
+                    "clip_id": "video_20240108",
+                    "detections": [
+                        {
+                            "frame_number": 100,
+                            "bbox": [10, 20, 50, 60],
+                            "confidence": 0.90,
+                        }
+                    ],
+                    "start_frame": 100,
+                    "end_frame": 100,
+                    "duration_frames": 1,
+                    "duration_seconds": 0.03,
+                    "confidence": 0.90,
+                    "validation_status": "invalid_status",
+                }
             )
 
     def test_track_json_serialization(self, sample_detections):
@@ -452,7 +460,7 @@ class TestTrack:
     def test_backward_compatibility(self):
         """Test that Track can handle legacy data formats."""
         # Simulate legacy format from distillation pipeline
-        legacy_data = {
+        legacy_data: dict[str, object] = {
             "track_id": "legacy_001",
             "clip_id": "video_legacy",
             "detections": [{"frame_number": 50, "bbox": [100, 200, 50, 60], "confidence": 0.85}],
@@ -464,7 +472,7 @@ class TestTrack:
         }
 
         # Should be able to create Track from legacy data
-        track = Track(**legacy_data)
+        track = Track.model_validate(legacy_data)
         assert track.track_id == "legacy_001"
         assert track.validation_status == "pending"  # Default value
         assert track.smoothing_applied is False  # Default value

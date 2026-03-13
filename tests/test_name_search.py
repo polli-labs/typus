@@ -4,7 +4,14 @@ import pytest
 
 from tests.pg_test_utils import is_database_unavailable_error, resolve_test_dsn
 from typus.constants import RankLevel
+from typus.models.taxon import Taxon
 from typus.services import SQLiteTaxonomyService
+
+SearchTaxaResult = list[Taxon] | list[tuple[Taxon, float]]
+
+
+def taxon_ids(results: SearchTaxaResult) -> list[int]:
+    return [item[0].taxon_id if isinstance(item, tuple) else item.taxon_id for item in results]
 
 
 @pytest.mark.asyncio
@@ -107,7 +114,7 @@ async def test_sqlite_search_accepts_text_boolean_taxon_active(tmp_path):
     finally:
         svc.close()
 
-    assert [t.taxon_id for t in res] == [47219]
+    assert taxon_ids(res) == [47219]
 
 
 @pytest.mark.asyncio
@@ -127,4 +134,4 @@ async def test_postgres_parity_when_available():
         if is_database_unavailable_error(e):
             pytest.skip(f"Postgres database unavailable: {e}")
         raise
-    assert any(t.taxon_id == 47219 for t in res)
+    assert 47219 in taxon_ids(res)
