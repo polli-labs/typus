@@ -1,45 +1,99 @@
-# AGENTS.md – Coding conventions & environment bootstrap
+---
+title: "Typus-dev — Agent/Dev Guide"
+doc_type: "agents"
+status: "active"
+owner: "polli-labs"
+last_modified: "2026-04-17T21:30:00Z"
+last_reviewed: "2026-04-17T21:30:00Z"
+scope: "repository:typus-dev"
+---
 
-Obey these rules when modifying Typus.
+# Typus-dev — Agent/Dev Guide
 
-1. **Python version** Target **3.10+**.
-   All new syntax should compile on 3.10; do *not* use 3.11-only features.
+Repo-specific guide for `polli-labs/typus-dev`, the private development mirror
+for Polli Typus.
 
-2. **Formatting / lint**
-   * Run `ruff format .` to auto-format.
-   * Run `ruff check .` and fix all errors except E501 (line length) which is
-     ignored – the formatter wraps strings automatically.
-   * Ensure the lightweight test subset passes before opening a PR (see docs/contributing.md).
+## Repository contract
 
-3. **Dependencies**
-   * Use the `[project.optional-dependencies]` groups in *pyproject.toml*.
-     – postgres extras for Postgres-specific code
-     – sqlite extras for SQLite-only helpers
-   * **Never** add a runtime dependency without asking the maintainer.
+- Private dev repo: `polli-labs/typus-dev`
+- Public release repo: `polli-labs/typus`
+- Local main clone: `~/dev/typus/dev`
+- Local worktrees: `~/dev/typus/wt/<branch>`
+- Public inspection clone: `~/dev/typus/public/typus`
+- Private remote: `origin`
+- Public remote: `public`
 
-4. **Environment**
-   * Always use uv, not pip.
-    * Create/update env: `make dev-setup` (uv venv + uv pip install -e .[dev,sqlite])
-    * Run tools: `uv run ruff …`, `uv run pytest …`, `uv run pre-commit …`
-  * Formatting & lint
-    * Local: `ruff format . && ruff check .` (via `make format` / `make lint`)
-    * CI is check-only (no auto-apply). Pre-commit shows diffs on failure.
-  * Don’t introduce pip install commands in scripts, docs, or CI.
-  * Prefer Makefile targets for common flows: `format`, `lint`, `test`, `ci`.
-  * When pre-commit disagrees with `uv run ruff`, align versions by pinning ruff dev extra to match pre-commit rev.
+`typus-dev/main` is the day-to-day source of truth. Treat public `typus` as a
+release surface, not a second independent development line.
 
-4. **Tests**
-   * New modules must include unit tests under `tests/`.
-   * Use the `taxonomy_service` fixture provided by `conftest.py`
-     (auto-selects Postgres or SQLite).
-        * Note: becuase Codex environments are sandboxed, you must generate the sqlite fixture via `scripts/gen_fixture_sqlite.py` (postgres not an option without network access).
-   * **Optional Database Tests**: Some tests in `test_async_compatibility.py` require
-     a real PostgreSQL database and will be skipped in CI unless `TYPUS_TEST_DSN` is set.
-     CI-friendly mock versions are provided in `test_async_compatibility_ci.py`.
-   * See `docs/contributing.md` for the exact `pytest -k` expression used by pre-commit/CI.
+For the dev/public contract and promotion rules, read:
+- `docs/migration/dev_public_release_contract.md`
 
+## Start Here
 
-5. **Docs**
-   * Public models require docstrings; update `README.md` if public API grows.
-   * After adding a Pydantic model, append its dotted path to
-     `typus/export_schemas.py` so the JSON-Schema exporter picks it up.
+1. Confirm whether you are in `~/dev/typus/dev` or a worktree under
+   `~/dev/typus/wt/<branch>`.
+2. Read `docs/contributing.md` and `skills/typus/SKILL.md`.
+3. Use `./dev/scripts/bootstrap-dev.sh` if the environment looks stale.
+4. Run `make check-all` before handoff.
+5. Leave receipts: changed files, verification commands, commit SHA, PR link,
+   and any public follow-up still required.
+
+## Canonical model
+
+- Package: `polli-typus`
+- Public exports entrypoint: `typus/__init__.py`
+- Python target: `>=3.10`
+- Canonical bootstrap: `./dev/scripts/bootstrap-dev.sh`
+- Canonical local quality gate: `make check-all`
+
+Typus provides Polli taxonomy primitives, canonical geometry helpers, and the
+track or classification DTOs used across the broader stack.
+
+## Key repo surfaces
+
+- `typus/` — package code and public exports
+- `typus/export_schemas.py` — JSON Schema export surface for public models
+- `docs/contributing.md` — contributor setup and CI-friendly test policy
+- `scripts/` — bootstrap helpers and fixture tooling
+- `skills/typus/` — repo-local agent skill
+- `tests/` — unit, contract, and optional database coverage
+
+## Working rules
+
+- Use `uv`, not `pip`.
+- Keep new syntax compatible with Python 3.10+.
+- Do not add new runtime dependencies without maintainer approval.
+- Run the Makefile targets humans use:
+  - `make format`
+  - `make lint`
+  - `make typecheck`
+  - `make test`
+  - `make check-all`
+- If you add a public Pydantic model, append it to `typus/export_schemas.py`
+  and regenerate `typus/schemas/*.json`.
+- Update `README.md` when the public API grows.
+- Land daily work in `typus-dev` first.
+- Treat `~/dev/typus/public/typus` as read/sync/release-only unless you are
+  explicitly doing a public promotion.
+- If a direct public change happens, classify it immediately as backmerge debt,
+  public-owned exception, or selective follow-up only.
+
+## Testing notes
+
+- New modules should include unit tests under `tests/`.
+- Optional PostgreSQL-backed tests may require `TYPUS_TEST_DSN`; keep CI-safe
+  mock coverage in place when a real database is not available.
+- Prefer the contributor guide's exact `pytest -k` filters when matching CI or
+  pre-commit behavior.
+
+## Canonical commands
+
+```bash
+./dev/scripts/bootstrap-dev.sh
+make check-all
+make format
+make lint
+make typecheck
+make test
+```
