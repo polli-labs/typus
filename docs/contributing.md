@@ -9,7 +9,7 @@ Environment
 - Preferred bootstrap path for contributors:
 
 ```
-./dev/scripts/bootstrap-dev.sh   # ensures uv + Python 3.10, syncs .venv, installs hooks
+./dev/scripts/bootstrap-dev.sh   # ensures uv + Python 3.10, syncs the full dev/docs .venv, installs hooks
 ```
 
 - Lower-level env sync targets remain available when you only need to refresh part of the setup:
@@ -33,10 +33,16 @@ Type checking
 make typecheck      # uv run ty check (warnings fail)
 ```
 
+Docs
+
+```
+make docs           # creates a py310 .venv if missing, ensures docs extras, then builds the MkDocs site
+```
+
 Canonical local quality gate
 
 ```
-make check-all      # lint-check + typecheck + schemas-check + ci
+make check-all      # lint-check + typecheck + docs + schemas-check + ci
 ```
 
 Tests
@@ -132,7 +138,7 @@ CI/CD Overview
 - CI workflow (`.github/workflows/ci.yml`):
   - Matrix on Python 3.10/3.11/3.12.
   - Installs dev dependencies, then runs `make check-all`.
-  - `make check-all` covers `make lint-check`, `make typecheck`, `make schemas-check`, and `make ci`.
+  - `make check-all` covers `make lint-check`, `make typecheck`, `make docs`, `make schemas-check`, and `make ci`.
   - Triggers on PRs and pushes to `main` (to avoid duplicate branch + PR runs for the same commit).
 - Publish workflow (`.github/workflows/publish.yml`):
   - Blocks build/publish on the same `make check-all` gate used locally and in CI.

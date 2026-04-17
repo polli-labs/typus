@@ -18,7 +18,7 @@ help: ## Show this help message
 	@echo '$(BLUE)Available targets:$(NC)'
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-18s$(NC) %s\n", $$1, $$2}'
 
-dev-setup: ## Ensure a py310 venv and install dev + sqlite + loader extras with uv
+dev-setup: ## Ensure a py310 venv and install the full dev toolchain with uv
 	@echo "$(BLUE)Ensuring py310 via uv and syncing dev environment...$(NC)"
 	uv python install 3.10
 	uv venv --python 3.10 --allow-existing
@@ -66,7 +66,8 @@ pg-indexes: ## Ensure Postgres indexes for expanded_taxa (uses POSTGRES_DSN or T
 typus-sqlite: ## Download/build latest expanded_taxa SQLite DB to .cache/typus/expanded_taxa.sqlite
 	uv run typus-load-sqlite --sqlite .cache/typus/expanded_taxa.sqlite
 
-docs: ## Build docs with mkdocs (requires extras [docs])
+docs: ## Build docs with mkdocs (bootstraps docs extras into .venv if needed)
+	@if [ ! -d .venv ]; then uv python install 3.10 && uv venv --python 3.10; fi
 	uv pip install -e ".[docs]"
 	uv run mkdocs build
 
@@ -81,7 +82,7 @@ schemas-check: ## Verify schemas are fresh
 perf: ## Run name-search perf harness (writes dev/agents/perf_report.md)
 	TYPUS_PERF_WRITE=1 uv run python scripts/perf_report.py
 
-check-all: lint-check typecheck schemas-check ci ## Canonical local quality gate (matches CI/publish)
+check-all: lint-check typecheck docs schemas-check ci ## Canonical local quality gate (matches CI/publish)
 
 quick: format lint ## Format + lint only
 
