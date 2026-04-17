@@ -1,13 +1,13 @@
 ---
 name: typus
 description: "Typus-dev repo knowledge for the private development mirror of Polli taxonomy primitives, canonical geometry, and DTO contracts. Use before modifying typus or its dev/public release workflow."
-version: "0.3.1"
+version: "0.3.2"
 x:
   source_repo: "typus-dev"
   source_branch: "main"
-  source_commit: "3e547c8"
+  source_commit: "ba571eb"
   package_version: "0.5.0"
-  last_modified: "2026-04-17T21:30:00Z"
+  last_modified: "2026-04-17T22:00:00Z"
 ---
 
 # Typus
