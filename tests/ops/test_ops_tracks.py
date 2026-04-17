@@ -35,9 +35,10 @@ def test_group_detections_by_frame_unsorted_input_preserves_order_and_sorting():
 def test_detection_xyxy_px_matches_geometry_converter():
     W, H = 1920, 1080
     d = _det(10, 0.1, 0.2, 0.4, 0.5, 0.95)
+    assert d.bbox_norm is not None
 
     xyxy_from_ops = detection_xyxy_px(d, W, H)
-    xyxy_from_geom = to_xyxy_px(d.bbox_norm, W, H)  # type: ignore[arg-type]
+    xyxy_from_geom = to_xyxy_px(d.bbox_norm, W, H)
     assert tuple(xyxy_from_geom) == xyxy_from_ops
 
 

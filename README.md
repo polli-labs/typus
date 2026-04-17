@@ -185,6 +185,12 @@ Contributor setup and the canonical gate live in [`docs/contributing.md`](docs/c
   make format
   ```
 
+* **Build docs**
+
+  ```bash
+  make docs
+  ```
+
 * **JSON Schemas** – `make schemas` → `typus/schemas/`
 * **Type checking** – `make typecheck`
 * **Contributor guide** – `docs/contributing.md`
