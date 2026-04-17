@@ -12,7 +12,8 @@ x:
 
 # Typus
 
-Use this skill before changing Typus internals or any integration that depends on Typus contracts.
+Use this skill before changing Typus internals or any integration that depends
+on Typus contracts.
 
 ## Quick Facts
 
@@ -21,6 +22,10 @@ Use this skill before changing Typus internals or any integration that depends o
 - Public exports entrypoint: `typus/__init__.py`
 - Optional extras: `[postgres]`, `[sqlite]`, `[loader]`, `[pgvector]`, `[dev]`, `[docs]`
 - Core domains: taxonomy service contract, canonical geometry, track/classification DTOs
+- Stack role: Typus is the canonical taxonomy authority and shared contract
+  layer for downstream Polli systems
+- Current shared-contract posture: Typus owns the canonical classification DTO
+  surface consumed downstream by Linnaeus, Ibrida, and Polli UI/reporting
 - Canonical contributor docs: `docs/contributing.md`
 - Canonical bootstrap: `./dev/scripts/bootstrap-dev.sh`
 - Canonical local quality gate: `make check-all`
@@ -69,6 +74,10 @@ Use this skill when the task touches one or more of these:
 - Do not add new runtime dependencies without maintainer approval.
 - Land daily work in `typus-dev` first; treat public `typus` as a release
   surface, not a second independent mainline.
+- Treat Typus as the stack's contract owner for taxonomy semantics and
+  cross-repo geometry/classification DTOs; if a change will ripple into
+  Linnaeus, Ibrida, ibridaDB, or Polli, capture that migration surface before
+  coding.
 - Preserve canonical geometry as TL-normalized `xywh` and convert only at boundaries.
 - If you add a public Pydantic model, append it to `typus/export_schemas.py` and regenerate `typus/schemas/*.json`.
 
