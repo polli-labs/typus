@@ -37,10 +37,10 @@ on Typus contracts.
 - Local main clone: `~/dev/typus/dev`
 - Local worktrees: `~/dev/typus/wt/<branch>`
 - Public inspection clone: `~/dev/typus/public/typus`
-- Private repo is the day-to-day source of truth; public releases should be
-  promoted intentionally from private work.
-- If a task touches public promotion or public drift, also read
-  `docs/migration/dev_public_release_contract.md`.
+- Canonical dev/public policy lives in the org-level `polli-dev-conventions`
+  skill (`references/release-ritual.md` in `agents-infra`).
+- Use `docs/migration/dev_public_release_contract.md` only for repo-local
+  paths, remotes, and standing overrides.
 
 ## Trigger Conditions
 
@@ -62,7 +62,8 @@ Use this skill when the task touches one or more of these:
 3. Keep changes backwards compatible unless a breaking change is explicitly requested.
 4. Use `docs/contributing.md` for contributor setup and gate policy instead of duplicating setup steps in task notes.
 5. Bootstrap or resync the local dev environment with `./dev/scripts/bootstrap-dev.sh` when needed.
-6. If the task touches public release work, read
+6. If the task touches public release work, read the canonical
+   `polli-dev-conventions` release ritual and this repo's local contract doc:
    `docs/migration/dev_public_release_contract.md`.
 7. Run `make check-all` before handoff. Use focused commands like
    `make typecheck` or `make test` only for narrower loops during
@@ -72,8 +73,9 @@ Use this skill when the task touches one or more of these:
 
 - Use `uv` and Makefile workflows; do not add `pip install` flows.
 - Do not add new runtime dependencies without maintainer approval.
-- Land daily work in `typus-dev` first; treat public `typus` as a release
-  surface, not a second independent mainline.
+- For public-promotion work, follow the canonical `polli-dev-conventions`
+  policy and use `docs/migration/dev_public_release_contract.md` for local
+  paths, remotes, and standing overrides.
 - Treat Typus as the stack's contract owner for taxonomy semantics and
   cross-repo geometry/classification DTOs; if a change will ripple into
   Linnaeus, Ibrida, ibridaDB, or Polli, capture that migration surface before

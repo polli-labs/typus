@@ -23,11 +23,12 @@ for Polli Typus.
 - Private remote: `origin`
 - Public remote: `public`
 
-`typus-dev/main` is the day-to-day source of truth. Treat public `typus` as a
-release surface, not a second independent development line.
+Use the org-level `polli-dev-conventions` release ritual as the canonical
+dev/public policy for this repo family.
 
-For the dev/public contract and promotion rules, read:
-- `docs/migration/dev_public_release_contract.md`
+For dev/public guidance, use:
+- Org policy: `polli-dev-conventions` -> `references/release-ritual.md`
+- Repo-local paths, remotes, and standing overrides: `docs/migration/dev_public_release_contract.md`
 
 ## Start Here
 
@@ -73,11 +74,9 @@ track or classification DTOs used across the broader stack.
 - If you add a public Pydantic model, append it to `typus/export_schemas.py`
   and regenerate `typus/schemas/*.json`.
 - Update `README.md` when the public API grows.
-- Land daily work in `typus-dev` first.
-- Treat `~/dev/typus/public/typus` as read/sync/release-only unless you are
-  explicitly doing a public promotion.
-- If a direct public change happens, classify it immediately as backmerge debt,
-  public-owned exception, or selective follow-up only.
+- For public-promotion work, follow the org-level `polli-dev-conventions`
+  policy and use `docs/migration/dev_public_release_contract.md` for this
+  repo's local paths and remotes.
 
 ## Testing notes
 
