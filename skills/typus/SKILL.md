@@ -73,6 +73,8 @@ Use this skill when the task touches one or more of these:
 
 - Use `uv` and Makefile workflows; do not add `pip install` flows.
 - Do not add new runtime dependencies without maintainer approval.
+- The repo-managed skill source is `skills/typus`; do not edit installed
+  mirrors under `~/.agents`, `~/.codex`, or other harness output paths.
 - For public-promotion work, follow the canonical `polli-dev-conventions`
   policy and use `docs/migration/dev_public_release_contract.md` for local
   paths, remotes, and standing overrides.

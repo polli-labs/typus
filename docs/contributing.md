@@ -75,15 +75,17 @@ make test-pg
 
 # Elevation smoke tests (guarded; requires raster table)
 TYPUS_ELEVATION_TEST=1 uv run pytest -q -k elevation_service
+```
 
 Important: `make test` and CI exclude `pg_optional` tests by marker. Run
-`make test-pg-smoke` + `make test-pg` explicitly when you want live Postgres coverage. Some tests
-assert counts that are specific to the SQLite sample fixture and will not match
-the full production dataset. The recommended workflow is:
+`make test-pg-smoke` + `make test-pg` explicitly when you want live Postgres
+coverage. Some tests assert counts that are specific to the SQLite sample
+fixture and will not match the full production dataset. The recommended
+workflow is:
 
-1) Run `make ci` / `make test` to exercise the SQLite fixture path.
-2) Run `make test-pg-smoke` and then `make test-pg` for Postgres-specific coverage.
-```
+1. Run `make ci` / `make test` to exercise the SQLite fixture path.
+2. Run `make test-pg-smoke` and then `make test-pg` for Postgres-specific
+   coverage.
 
 Notes:
 

@@ -4,8 +4,63 @@ This document describes the Pydantic models used in Typus for representing vario
 
 ## Classification Models
 
-Refer to existing documentation or source code for `HierarchicalClassificationResult` and `TaxonomyContext`.
-*(Assumption: These are documented elsewhere or users should refer to code. If this file were being extended, this section would already exist.)*
+These DTOs are part of Typus' public contract. They are exported from
+`typus/__init__.py`, included in the generated schema surface, and consumed by
+downstream inference, UI, and reporting surfaces rather than re-defined in each
+consumer.
+
+### `TaskPrediction`
+
+Represents the top predictions for one taxonomic rank level.
+
+- `rank_level: RankLevel`: the rank this task predicts, such as species,
+  genus, family, or another Typus rank level.
+- `temperature: float`: positive calibration temperature used for the task.
+- `predictions: list[tuple[int, float]]`: ordered `(taxon_id, probability)`
+  pairs. Validation rejects values whose probabilities sum to more than `1.0`,
+  allowing a small `1e-6` tolerance for floating-point rounding.
+
+### `TaxonomyContext`
+
+Identifies the taxonomy source used to produce or interpret classification
+results.
+
+- `source: str = "CoL2024"`: taxonomy source label.
+- `version: str | None = None`: optional source version or snapshot identifier.
+
+### `HierarchicalClassificationResult`
+
+Bundles the taxonomy context with one or more rank-level prediction tasks.
+
+- `taxonomy_context: TaxonomyContext`: source context for the result.
+- `tasks: list[TaskPrediction]`: per-rank prediction outputs.
+- `subtree_roots: set[int] | None = None`: optional taxon IDs that constrained
+  the candidate subtree for the classification run.
+
+**Example:**
+
+```python
+from typus import (
+    HierarchicalClassificationResult,
+    RankLevel,
+    TaskPrediction,
+    TaxonomyContext,
+)
+
+result = HierarchicalClassificationResult(
+    taxonomy_context=TaxonomyContext(source="CoL2024", version="2024-12"),
+    tasks=[
+        TaskPrediction(
+            rank_level=RankLevel.L10,
+            temperature=1.0,
+            predictions=[(123, 0.72), (456, 0.18)],
+        )
+    ],
+    subtree_roots={789},
+)
+
+json_payload = result.to_json(indent=2)
+```
 
 ## Taxonomy summaries (v0.4.2+)
 
@@ -236,9 +291,6 @@ if typus_results:
     for instance in img_result_from_coco.instances:
         print(f"Instance {instance.instance_id}, BBox: {instance.bbox.coords}, Score: {instance.score}")
 ```
-
-This provides a basic structure. Diagrams would need to be created separately and embedded if this were a full Markdown rendering environment.
-
 ## ExpandedTaxa ORM columns
 
 | Column | Description |
