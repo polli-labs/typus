@@ -20,12 +20,17 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - uses: astral-sh/setup-uv@v3
-      - name: Install docs extras
+        with:
+          version: "0.10.12"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+      - name: Sync locked docs environment
         run: |
-          uv venv
-          uv pip install -e ".[docs]"
+          uv sync --locked --extra docs
       - name: Build docs
-        run: uv run mkdocs build
+        run: uv run --locked --extra docs mkdocs build
       - name: Add SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:

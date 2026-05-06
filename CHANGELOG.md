@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.6.0 – 2026-05-06
+
+### Added
+- **Canonical `ClassificationResult` v1.2.1 contract** ([POL-980](https://linear.app/polli-labs/issue/POL-980)). Replaces `HierarchicalClassificationResult` / `TaskPrediction` as the typus-owned classification DTO shared across `linnaeus → ibrida → polli`. Distinguishes raw model belief, curated assertions, and synthetic demo mass at the schema level. Full spec: [`docs/models.md`](docs/models.md#classificationresult).
+- Tagged candidate union: `TaxonCandidate` / `RankNullCandidate` / `ResidualBelowTaxonCandidate`. The third variant is a forward-compatible representation for "known to genus, unresolved below" that future calibrated-abstention flows (Chow, Deep Gamblers, conformal) can populate without abusing rank-null.
+- `score` + `scoreSemantics` replacing naked `probability: number`. `ScoreSemantics` enumerates `rank_softmax_probability | temperature_scaled_rank_probability | calibrated_rank_probability | authored_assertion_weight | synthetic_demo_weight | conformal_set_membership | display_weight`.
+- `ClassificationSourceKind` enum: `model_inference | curated_taxon_card | synthetic_demo | cache_replay | test_fixture`.
+- Provenance split into orthogonal blocks: `modelEvidence` (head kind, routing, abstention signal kind), `calibration` (post-hoc calibration metadata), `decisionPolicies[]` (ordered chain of decision rules — `argmax | max_probability_threshold | hierarchy_repair | conformal_frontier | rank_null_argmax | cost_sensitive_policy | demo_projection`).
+- `ClassificationInputContext` decomposed into orthogonal `evidenceShape` × `aggregation: {stage, poolingMode}` × `attribution: {granularity, semantics}`.
+- Per-candidate `parentTaxonId` and `ancestorTaxonIdsByRank` for conditional-flow reconstruction without live taxonomy lookup.
+- `TaxonSnapshot` with `taxonomyVersion` for portable artifacts (demo cache, distillation outputs, replay caches).
+- Ref-shaped `OutcomeAdjustment` (`appliedCandidate` / `suppressedFrom: CandidateRef`) with validator-enforced ref resolution into `ranks[i].candidates`.
+- `DecisionScoreSemantics` distinct from candidate `ScoreSemantics`.
+- New `typus.helpers.classification` module: `derive_lineage`, `derive_tree`, `apply_argmax`, `apply_chow_threshold`, `apply_hierarchy_repair`, `apply_temperature_scaling`, `apply_conformal_calibration` (stub), `as_probability` (returns `None` when score semantics are not probability-bearing).
+- Round-trip fixture validation (`tests/fixtures/classification/`): seven canonical fixtures covering raw inference, hierarchy_repair, temperature-scaled Chow, composed temperature → Chow → hierarchy_repair, curated taxon card, synthetic demo cache, and cache replay. Validated via `jsonschema` and Python `TypeAdapter` round-trip.
+- JSON Schema export for `ClassificationResult` (`typus/schemas/ClassificationResult.json`).
+- Release supply-chain hardening: committed `uv.lock`, seven-day uv dependency cooldown, locked CI/docs/publish environments, locked `twine` release tooling, and a lock upload-age gate.
+
+### Deprecated
+- `HierarchicalClassificationResult` and `TaskPrediction` are deprecated for one release window. Both remain exported with `DeprecationWarning` emitted on construction. New code should use `ClassificationResult`. `HierarchicalClassificationResult.to_classification_result()` provides a converter that preserves the legacy raw inference shape (`sourceKind = 'model_inference'`, no calibration, no decision policies). Removal is dependency-driven, not date-driven: after `linnaeus`, `ibrida`, and `polli` have landed canonical consumers and one public typus release has passed.
+
+### Notes
+- TypeScript fixture validation is deferred to the polli-side consumer PR (POL-980 PR4); this release validates fixtures through JSON Schema and Python `TypeAdapter` round-trip.
+- `apply_conformal_calibration()` is intentionally a stub raising `NotImplementedError`; real conformal support remains future work.
+- `InstancePrediction.classification` retains the legacy `HierarchicalClassificationResult | None` field for backward compatibility during the deprecation window. New producers should emit `ClassificationResult` directly.
+
 ## 0.5.0 – 2026-02-13
 ### Added
 - `scripts/pg_smoke.py` and `make test-pg-smoke` for explicit optional-Postgres smoke validation (`current_database()` + table presence) before running `pg_optional` tests.

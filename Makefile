@@ -1,4 +1,4 @@
-.PHONY: help dev-setup dev-install lint lint-check typecheck format test test-fast ci test-pg-smoke test-pg pg-indexes schemas schemas-check typus-sqlite docs check-all quick perf clean
+.PHONY: help dev-setup dev-install lock-age-check lint lint-check typecheck format test test-fast ci test-pg-smoke test-pg pg-indexes schemas schemas-check typus-sqlite docs check-all quick perf clean
 
 # Colors
 BLUE := \033[0;34m
@@ -13,6 +13,9 @@ PYTEST_NO_PG_MARKER := -m "not pg_optional"
 PYTEST_PG_MARKER := -m "pg_optional"
 PYTEST_CI_K_EXPR := not ancestry_verification and not ancestor_descendant_distance and not perf_name_search_local
 PYTEST_CI_ARGS := $(PYTEST_NO_PG_MARKER) -k "$(PYTEST_CI_K_EXPR)"
+UV_CHECK_EXTRAS := --extra dev --extra sqlite --extra loader --extra docs
+UV_RUN := uv run --locked $(UV_CHECK_EXTRAS)
+UV_SYNC := uv sync --locked $(UV_CHECK_EXTRAS)
 
 help: ## Show this help message
 	@echo '$(BLUE)Available targets:$(NC)'
@@ -22,67 +25,68 @@ dev-setup: ## Ensure a py310 venv and install the full dev toolchain with uv
 	@echo "$(BLUE)Ensuring py310 via uv and syncing dev environment...$(NC)"
 	uv python install 3.10
 	uv venv --python 3.10 --allow-existing
-	uv pip install -e ".[dev,sqlite,loader]"
+	$(UV_SYNC)
 	@echo "$(GREEN)✓ Environment ready$(NC)"
 
 dev-install: ## Install pre-commit hooks
-	uv run pre-commit install
-	uv run pre-commit install --hook-type pre-push
+	$(UV_RUN) pre-commit install
+	$(UV_RUN) pre-commit install --hook-type pre-push
 	@echo "$(GREEN)✓ Pre-commit hooks installed$(NC)"
 
+lock-age-check: ## Verify locked artifacts respect the dependency cooldown
+	$(UV_RUN) python scripts/check_lock_upload_age.py --max-age-days 7
+
 lint: ## Lint (ruff)
-	uv run ruff check --fix .
+	$(UV_RUN) ruff check --fix .
 
 lint-check: ## Lint checks only (no auto-fixes)
-	uv run ruff format --check .
-	uv run ruff check .
+	$(UV_RUN) ruff format --check .
+	$(UV_RUN) ruff check .
 
 typecheck: ## Type-check runtime/tests/scripts with ty (warnings fail)
-	uv run ty check
+	$(UV_RUN) ty check
 
 format: ## Format (ruff)
-	uv run ruff format .
+	$(UV_RUN) ruff format .
 
 test: ## Run default suite (excludes optional Postgres-backed tests)
-	uv run pytest -q $(PYTEST_NO_PG_MARKER)
+	$(UV_RUN) pytest -q $(PYTEST_NO_PG_MARKER)
 
 test-fast: ## Run tests, verbose output
-	uv run pytest -v
+	$(UV_RUN) pytest -v
 
 ci: ## CI-friendly tests (skip optional Postgres + full-ancestry checks)
-	uv run pytest -q $(PYTEST_CI_ARGS)
+	$(UV_RUN) pytest -q $(PYTEST_CI_ARGS)
 
 test-pg-smoke: ## Validate DSN/database/table before optional Postgres tests
-	uv run python scripts/pg_smoke.py
+	$(UV_RUN) python scripts/pg_smoke.py
 
 test-pg: ## Run optional Postgres-backed tests (requires TYPUS_TEST_DSN or POSTGRES_DSN)
 	@([ -n "$$TYPUS_TEST_DSN" ] || [ -n "$$POSTGRES_DSN" ]) || (echo "$(YELLOW)TYPUS_TEST_DSN/POSTGRES_DSN not set; skipping PG tests$(NC)" && exit 0)
 	@$(MAKE) test-pg-smoke
-	uv run pytest -q $(PYTEST_PG_MARKER)
+	$(UV_RUN) pytest -q $(PYTEST_PG_MARKER)
 
 pg-indexes: ## Ensure Postgres indexes for expanded_taxa (uses POSTGRES_DSN or TYPUS_TEST_DSN)
-	uv run typus-pg-ensure-indexes
+	$(UV_RUN) typus-pg-ensure-indexes
 
 typus-sqlite: ## Download/build latest expanded_taxa SQLite DB to .cache/typus/expanded_taxa.sqlite
-	uv run typus-load-sqlite --sqlite .cache/typus/expanded_taxa.sqlite
+	$(UV_RUN) typus-load-sqlite --sqlite .cache/typus/expanded_taxa.sqlite
 
-docs: ## Build docs with mkdocs (bootstraps docs extras into .venv if needed)
-	@if [ ! -d .venv ]; then uv python install 3.10 && uv venv --python 3.10; fi
-	uv pip install -e ".[docs]"
-	uv run mkdocs build
+docs: ## Build docs with mkdocs from the locked uv environment
+	$(UV_RUN) mkdocs build
 
 schemas: ## Export JSON Schemas and show changes
-	uv run python -m typus.export_schemas
+	$(UV_RUN) python -m typus.export_schemas
 	@git status --porcelain typus/schemas || true
 
 schemas-check: ## Verify schemas are fresh
-	uv run python -m typus.export_schemas
+	$(UV_RUN) python -m typus.export_schemas
 	git diff --exit-code typus/schemas
 
 perf: ## Run name-search perf harness (writes dev/agents/perf_report.md)
-	TYPUS_PERF_WRITE=1 uv run python scripts/perf_report.py
+	TYPUS_PERF_WRITE=1 $(UV_RUN) python scripts/perf_report.py
 
-check-all: lint-check typecheck docs schemas-check ci ## Canonical local quality gate (matches CI/publish)
+check-all: lock-age-check lint-check typecheck docs schemas-check ci ## Canonical local quality gate (matches CI/publish)
 
 quick: format lint ## Format + lint only
 
