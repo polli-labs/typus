@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "classification-result.v1",
+  "taxonomyContext": {
+    "source": "CoL2024",
+    "version": "2024",
+    "rootTaxonIds": [
+      1
+    ],
+    "nullTaxonIdsByRank": {}
+  },
+  "provenance": {
+    "sourceKind": "curated_taxon_card",
+    "producer": "polli.taxaCatalog",
+    "decisionPolicies": []
+  },
+  "inputContext": {
+    "entityType": "card",
+    "evidenceShape": "authored_card",
+    "unitCount": 1,
+    "aggregation": {
+      "stage": "none"
+    },
+    "attribution": {
+      "granularity": "none"
+    }
+  },
+  "consistency": {
+    "hierarchyChecked": false,
+    "isConsistent": true
+  },
+  "ranks": [
+    {
+      "rankLevel": 40,
+      "rankName": "order",
+      "candidates": [
+        {
+          "rankLevel": 40,
+          "rankName": "order",
+          "score": 1.0,
+          "scoreSemantics": "authored_assertion_weight",
+          "kind": "taxon",
+          "taxonId": 400
+        }
+      ]
+    },
+    {
+      "rankLevel": 30,
+      "rankName": "family",
+      "candidates": [
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 1.0,
+          "scoreSemantics": "authored_assertion_weight",
+          "kind": "taxon",
+          "taxonId": 300,
+          "parentTaxonId": 400,
+          "ancestorTaxonIdsByRank": {
+            "40": 400
+          }
+        }
+      ]
+    }
+  ]
+}

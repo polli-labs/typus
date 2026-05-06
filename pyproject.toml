@@ -1,6 +1,6 @@
 [project]
 name            = "polli-typus"
-version         = "0.5.0"
+version         = "0.6.0"
 description     = "Taxonomic types, projections and async taxonomy services for Polli-Labs."
 readme          = { file = "README.md", content-type = "text/markdown" }
 license         = "MIT"
@@ -63,6 +63,7 @@ dev = [
   "mkdocstrings-python>=1.10,<2",
   "pytest-httpserver>=1.0",
   "twine>=5.1,<7",
+  "jsonschema>=4,<5",
 ]
 
 # Docs extra – everything you need to run `mkdocs build` or `mkdocs serve`
@@ -85,22 +86,49 @@ typus-pg-ensure-indexes = "typus.services.pg_index_helper:cli"
 # Build backend
 # ---------------------------------------------------------------------------
 [build-system]
-requires      = ["hatchling>=1.18"]
+requires      = ["hatchling==1.27.0"]
 build-backend = "hatchling.build"
+
+[tool.uv]
+exclude-newer = "7 days"
 
 [tool.hatch.metadata]
 allow-plugins = true
 
 [tool.hatch.build]
 exclude = [
+  "/.git",
+  "/.github",
+  "/dist",
+  "/site",
   "tests*",
   "scripts*",
   "dev*",            # Exclude development artifacts
+  "skills*",
   "**/*.tsv",
   "**/*.sql",
   "**/*.sqlite",
   "/.ruff_cache",
   "/.pytest_cache",
+]
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+  "typus",
+  "README.md",
+  "LICENSE",
+  "CHANGELOG.md",
+  "pyproject.toml",
+]
+exclude = [
+  "/.git",
+  "/.github",
+  "/dist",
+  "/site",
+  "/tests",
+  "/scripts",
+  "/dev",
+  "/skills",
 ]
 
 [tool.hatch.build.targets.wheel]

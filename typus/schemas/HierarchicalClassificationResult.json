@@ -38,7 +38,7 @@
       "type": "integer"
     },
     "TaskPrediction": {
-      "description": "Top\u2011k probabilities for one rank level.",
+      "description": "Deprecated per-rank top-k legacy DTO; use `RankBelief` instead.",
       "properties": {
         "rankLevel": {
           "$ref": "#/$defs/RankLevel"
@@ -92,12 +92,27 @@
           ],
           "default": null,
           "title": "Version"
+        },
+        "rootTaxonIds": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Roottaxonids",
+          "type": "array"
+        },
+        "nullTaxonIdsByRank": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Nulltaxonidsbyrank",
+          "type": "object"
         }
       },
       "title": "TaxonomyContext",
       "type": "object"
     }
   },
+  "description": "Deprecated POL-980 alias kept for one release window.\n\nUse `ClassificationResult` v1.2.1 for new producers. This model remains\nimportable while linnaeus, ibrida, and polli migrate onto the canonical\nTypus contract.",
   "properties": {
     "taxonomyContext": {
       "$ref": "#/$defs/TaxonomyContext"

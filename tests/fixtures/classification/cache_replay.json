@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "classification-result.v1",
+  "taxonomyContext": {
+    "source": "CoL2024",
+    "version": "2024",
+    "rootTaxonIds": [
+      1
+    ],
+    "nullTaxonIdsByRank": {
+      "30": -30
+    }
+  },
+  "provenance": {
+    "sourceKind": "cache_replay",
+    "producer": "linnaeus.cache@fixture",
+    "modelName": "linnaeus-fixture",
+    "modelVersion": "0.1.0",
+    "inferenceTimestamp": "2026-05-05T00:00:00Z",
+    "decisionPolicies": []
+  },
+  "inputContext": {
+    "entityType": "crop",
+    "evidenceShape": "single_image",
+    "unitCount": 1,
+    "aggregation": {
+      "stage": "none"
+    },
+    "attribution": {
+      "granularity": "none"
+    }
+  },
+  "consistency": {
+    "hierarchyChecked": false,
+    "isConsistent": true
+  },
+  "ranks": [
+    {
+      "rankLevel": 30,
+      "rankName": "family",
+      "candidates": [
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 0.8,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "taxon",
+          "taxonId": 300,
+          "parentTaxonId": 400,
+          "ancestorTaxonIdsByRank": {
+            "40": 400
+          },
+          "taxonSnapshot": {
+            "scientificName": "Apidae",
+            "commonName": "bees",
+            "rankLevel": 30,
+            "rankName": "family",
+            "parentTaxonId": 400,
+            "ancestorTaxonIdsByRank": {
+              "40": 400
+            },
+            "taxonomyVersion": "CoL2024"
+          }
+        },
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 0.2,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "rank_null",
+          "nullTaxonId": -30
+        }
+      ]
+    }
+  ]
+}

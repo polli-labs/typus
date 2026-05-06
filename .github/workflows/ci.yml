@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "**" ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -23,19 +27,16 @@ jobs:
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
-
-      - name: Cache uv package cache
-        uses: actions/cache@v4
         with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-${{ matrix.python-version }}-
+          version: "0.10.12"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
 
-      - name: Install dependencies (dev + sqlite + loader extras)
+      - name: Sync locked dependencies (dev + sqlite + loader + docs extras)
         run: |
-          uv venv
-          uv pip install -e ".[dev,sqlite,loader]"
+          uv sync --locked --extra dev --extra sqlite --extra loader --extra docs
 
       - name: Canonical quality gate
         env:

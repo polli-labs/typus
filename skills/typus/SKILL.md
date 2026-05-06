@@ -1,18 +1,19 @@
 ---
 name: typus
-description: "Typus repo knowledge for taxonomy primitives, canonical geometry, and integration-safe usage patterns. Use before modifying typus or consumers of taxonomy/geometry DTO contracts."
-version: "0.3.0"
+description: "Typus-dev repo knowledge for the private development mirror of Polli taxonomy primitives, canonical geometry, and DTO contracts. Use before modifying typus or its dev/public release workflow."
+version: "0.3.2"
 x:
-  source_repo: "typus"
+  source_repo: "typus-dev"
   source_branch: "main"
-  source_commit: "a5e6742"
+  source_commit: "ba571eb"
   package_version: "0.5.0"
-  last_modified: "2026-03-13T18:35:00Z"
+  last_modified: "2026-04-17T22:00:00Z"
 ---
 
 # Typus
 
-Use this skill before changing Typus internals or any integration that depends on Typus contracts.
+Use this skill before changing Typus internals or any integration that depends
+on Typus contracts.
 
 ## Quick Facts
 
@@ -21,9 +22,25 @@ Use this skill before changing Typus internals or any integration that depends o
 - Public exports entrypoint: `typus/__init__.py`
 - Optional extras: `[postgres]`, `[sqlite]`, `[loader]`, `[pgvector]`, `[dev]`, `[docs]`
 - Core domains: taxonomy service contract, canonical geometry, track/classification DTOs
+- Stack role: Typus is the canonical taxonomy authority and shared contract
+  layer for downstream Polli systems
+- Current shared-contract posture: Typus owns the canonical classification DTO
+  surface consumed downstream by Linnaeus, Ibrida, and Polli UI/reporting
 - Canonical contributor docs: `docs/contributing.md`
 - Canonical bootstrap: `./dev/scripts/bootstrap-dev.sh`
 - Canonical local quality gate: `make check-all`
+
+## Dev/Public Contract
+
+- Private dev repo: `polli-labs/typus-dev`
+- Public release repo: `polli-labs/typus`
+- Local main clone: `~/dev/typus/dev`
+- Local worktrees: `~/dev/typus/wt/<branch>`
+- Public inspection clone: `~/dev/typus/public/typus`
+- Canonical dev/public policy lives in the org-level `polli-dev-conventions`
+  skill (`references/release-ritual.md` in `agents-infra`).
+- Use `docs/migration/dev_public_release_contract.md` only for repo-local
+  paths, remotes, and standing overrides.
 
 ## Trigger Conditions
 
@@ -45,12 +62,26 @@ Use this skill when the task touches one or more of these:
 3. Keep changes backwards compatible unless a breaking change is explicitly requested.
 4. Use `docs/contributing.md` for contributor setup and gate policy instead of duplicating setup steps in task notes.
 5. Bootstrap or resync the local dev environment with `./dev/scripts/bootstrap-dev.sh` when needed.
-6. Run `make check-all` before handoff. Use focused commands like `make typecheck` or `make test` only for narrower loops during implementation.
+6. If the task touches public release work, read the canonical
+   `polli-dev-conventions` release ritual and this repo's local contract doc:
+   `docs/migration/dev_public_release_contract.md`.
+7. Run `make check-all` before handoff. Use focused commands like
+   `make typecheck` or `make test` only for narrower loops during
+   implementation.
 
 ## Guardrails
 
 - Use `uv` and Makefile workflows; do not add `pip install` flows.
 - Do not add new runtime dependencies without maintainer approval.
+- The repo-managed skill source is `skills/typus`; do not edit installed
+  mirrors under `~/.agents`, `~/.codex`, or other harness output paths.
+- For public-promotion work, follow the canonical `polli-dev-conventions`
+  policy and use `docs/migration/dev_public_release_contract.md` for local
+  paths, remotes, and standing overrides.
+- Treat Typus as the stack's contract owner for taxonomy semantics and
+  cross-repo geometry/classification DTOs; if a change will ripple into
+  Linnaeus, Ibrida, ibridaDB, or Polli, capture that migration surface before
+  coding.
 - Preserve canonical geometry as TL-normalized `xywh` and convert only at boundaries.
 - If you add a public Pydantic model, append it to `typus/export_schemas.py` and regenerate `typus/schemas/*.json`.
 

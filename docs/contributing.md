@@ -75,15 +75,17 @@ make test-pg
 
 # Elevation smoke tests (guarded; requires raster table)
 TYPUS_ELEVATION_TEST=1 uv run pytest -q -k elevation_service
+```
 
 Important: `make test` and CI exclude `pg_optional` tests by marker. Run
-`make test-pg-smoke` + `make test-pg` explicitly when you want live Postgres coverage. Some tests
-assert counts that are specific to the SQLite sample fixture and will not match
-the full production dataset. The recommended workflow is:
+`make test-pg-smoke` + `make test-pg` explicitly when you want live Postgres
+coverage. Some tests assert counts that are specific to the SQLite sample
+fixture and will not match the full production dataset. The recommended
+workflow is:
 
-1) Run `make ci` / `make test` to exercise the SQLite fixture path.
-2) Run `make test-pg-smoke` and then `make test-pg` for Postgres-specific coverage.
-```
+1. Run `make ci` / `make test` to exercise the SQLite fixture path.
+2. Run `make test-pg-smoke` and then `make test-pg` for Postgres-specific
+   coverage.
 
 Notes:
 
@@ -137,9 +139,21 @@ CI/CD Overview
 
 - CI workflow (`.github/workflows/ci.yml`):
   - Matrix on Python 3.10/3.11/3.12.
-  - Installs dev dependencies, then runs `make check-all`.
+  - Syncs dependencies from `uv.lock` with `uv sync --locked`, then runs `make check-all`.
   - `make check-all` covers `make lint-check`, `make typecheck`, `make docs`, `make schemas-check`, and `make ci`.
   - Triggers on PRs and pushes to `main` (to avoid duplicate branch + PR runs for the same commit).
 - Publish workflow (`.github/workflows/publish.yml`):
   - Blocks build/publish on the same `make check-all` gate used locally and in CI.
+  - Uses locked project tooling for `twine` and docs builds instead of `uvx` or live dependency resolution.
   - Builds and uploads wheels, then deploys docs on tag.
+
+Supply-chain guardrails:
+
+- Typus keeps normal runtime dependency ranges for downstream consumers, but repo-owned CI,
+  docs, build, and publish environments are lockfile-governed.
+- `pyproject.toml` configures a seven-day uv `exclude-newer` cooldown. Lock refreshes should
+  be intentional, reviewed, and committed with the code or workflow change that needs them.
+- `make check-all` includes `make lock-age-check`, which fails when `uv.lock` references
+  artifacts uploaded inside the cooldown window.
+- Release workflows should use `uv sync --locked` / `uv run --locked`; avoid `uvx` for tools
+  already present in the project lock.

@@ -9,13 +9,52 @@ Use this reference when planning or implementing Typus changes that affect downs
 - Convert external geometry inputs at system boundaries, then keep canonical `BBoxXYWHNorm` internally.
 - Prefer additive, backward-compatible model changes unless a breaking release is intentional.
 
+## Stack Role
+
+Typus currently plays four distinct roles in the Polli stack:
+
+- canonical taxonomy authority for biological taxon IDs, names, ancestry, LCA,
+  and distance queries
+- canonical geometry and detection/track DTO surface at the package boundary
+- shared classification/result contract owner for downstream inference and UI
+  consumers
+- API/service facade over data ultimately sourced from ibridaDB tables and
+  SQLite extracts
+
+That means Typus changes often propagate outward even when the repo-local diff
+looks small.
+
 ## Common Consumer Patterns
 
 - service callers consume taxonomy APIs (`get_taxon`, `search_taxa`, `ancestors`, `lca`, `distance`)
 - inference/tracking callers consume DTOs (`Detection`, `Track`, classification models)
 - UI/reporting callers consume summary helpers (`TaxonSummary`, `PollinatorGroup`)
 
+Concrete downstream ownership today:
+
+- `ibridaDB` is the authoritative storage plane for `expanded_taxa` and related
+  taxonomy/elevation data; Typus is the service and contract layer over that
+  data
+- `linnaeus` depends on Typus-owned taxonomy and classification contracts for
+  inference-facing outputs and postprocessing
+- `ibrida` and serving/reporting flows consume Typus geometry and
+  classification/taxonomy DTOs rather than re-defining their own
+- `polli` UI/reporting surfaces should treat Typus-owned generated schemas and
+  DTOs as canonical when the data crosses the API boundary
+
 If you need to change these surfaces, document migration impact before code lands.
+
+## Sequencing Rule
+
+For shared contract changes, the safe rollout order is usually:
+
+1. `typus`
+2. `linnaeus`
+3. `ibrida`
+4. `polli`
+
+If a change does not fit that order, call it out explicitly in the issue or
+release notes before implementation.
 
 ## Dependency and Environment Pattern
 

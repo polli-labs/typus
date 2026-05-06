@@ -1,0 +1,1118 @@
+{
+  "$defs": {
+    "AdjustmentReason": {
+      "enum": [
+        "commit_top_candidate",
+        "commit_thresholded",
+        "commit_after_repair",
+        "abstain_model_natural",
+        "abstain_threshold_not_met",
+        "abstain_parent_abstained",
+        "abstain_hierarchy_conflict",
+        "abstain_unmapped_taxon",
+        "abstain_conformal_set_open",
+        "curated_authored"
+      ],
+      "title": "AdjustmentReason",
+      "type": "string"
+    },
+    "AggregationStage": {
+      "enum": [
+        "none",
+        "pooled_before_heads",
+        "aggregated_after_heads",
+        "unknown"
+      ],
+      "title": "AggregationStage",
+      "type": "string"
+    },
+    "AttributionGranularity": {
+      "enum": [
+        "none",
+        "view",
+        "frame",
+        "patch",
+        "segment",
+        "tracklet"
+      ],
+      "title": "AttributionGranularity",
+      "type": "string"
+    },
+    "AttributionSemantics": {
+      "enum": [
+        "attention_weight",
+        "per_unit_logits",
+        "gradient",
+        "heuristic"
+      ],
+      "title": "AttributionSemantics",
+      "type": "string"
+    },
+    "CalibrationMethod": {
+      "enum": [
+        "temperature_scaling",
+        "isotonic",
+        "platt",
+        "conformal"
+      ],
+      "title": "CalibrationMethod",
+      "type": "string"
+    },
+    "CalibrationProvenance": {
+      "properties": {
+        "method": {
+          "$ref": "#/$defs/CalibrationMethod"
+        },
+        "calibrationSetId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calibrationsetid"
+        },
+        "parameters": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameters"
+        },
+        "targetCoverage": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Targetcoverage"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "title": "CalibrationProvenance",
+      "type": "object"
+    },
+    "CandidateRef": {
+      "properties": {
+        "rankLevel": {
+          "title": "Ranklevel",
+          "type": "integer"
+        },
+        "match": {
+          "discriminator": {
+            "mapping": {
+              "rank_null": "#/$defs/RankNullCandidateMatch",
+              "residual_below_taxon": "#/$defs/ResidualBelowTaxonCandidateMatch",
+              "taxon": "#/$defs/TaxonCandidateMatch"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/TaxonCandidateMatch"
+            },
+            {
+              "$ref": "#/$defs/RankNullCandidateMatch"
+            },
+            {
+              "$ref": "#/$defs/ResidualBelowTaxonCandidateMatch"
+            }
+          ],
+          "title": "Match"
+        }
+      },
+      "required": [
+        "rankLevel",
+        "match"
+      ],
+      "title": "CandidateRef",
+      "type": "object"
+    },
+    "ClassificationConsistency": {
+      "properties": {
+        "hierarchyChecked": {
+          "title": "Hierarchychecked",
+          "type": "boolean"
+        },
+        "isConsistent": {
+          "title": "Isconsistent",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "hierarchyChecked",
+        "isConsistent"
+      ],
+      "title": "ClassificationConsistency",
+      "type": "object"
+    },
+    "ClassificationInputContext": {
+      "properties": {
+        "entityType": {
+          "enum": [
+            "image",
+            "crop",
+            "detection",
+            "track",
+            "observation",
+            "card"
+          ],
+          "title": "Entitytype",
+          "type": "string"
+        },
+        "evidenceShape": {
+          "$ref": "#/$defs/EvidenceShape"
+        },
+        "unitCount": {
+          "title": "Unitcount",
+          "type": "integer"
+        },
+        "unitIds": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unitids"
+        },
+        "aggregation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InputAggregation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "attribution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InputAttribution"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "entityType",
+        "evidenceShape",
+        "unitCount"
+      ],
+      "title": "ClassificationInputContext",
+      "type": "object"
+    },
+    "ClassificationProvenance": {
+      "properties": {
+        "sourceKind": {
+          "$ref": "#/$defs/ClassificationSourceKind"
+        },
+        "producer": {
+          "title": "Producer",
+          "type": "string"
+        },
+        "modelName": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Modelname"
+        },
+        "modelVersion": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Modelversion"
+        },
+        "checkpointUri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpointuri"
+        },
+        "checkpointSha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpointsha"
+        },
+        "inferenceTimestamp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inferencetimestamp"
+        },
+        "requestedTopK": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requestedtopk"
+        },
+        "handlerVersion": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handlerversion"
+        },
+        "modelEvidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelEvidenceProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "calibration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CalibrationProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "decisionPolicies": {
+          "items": {
+            "$ref": "#/$defs/DecisionPolicy"
+          },
+          "title": "Decisionpolicies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sourceKind",
+        "producer",
+        "decisionPolicies"
+      ],
+      "title": "ClassificationProvenance",
+      "type": "object"
+    },
+    "ClassificationSourceKind": {
+      "enum": [
+        "model_inference",
+        "curated_taxon_card",
+        "synthetic_demo",
+        "cache_replay",
+        "test_fixture"
+      ],
+      "title": "ClassificationSourceKind",
+      "type": "string"
+    },
+    "DecisionOutcome": {
+      "properties": {
+        "rankLevel": {
+          "title": "Ranklevel",
+          "type": "integer"
+        },
+        "decision": {
+          "enum": [
+            "commit",
+            "abstain"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "resolvedTo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CandidateRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "decisionScore": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decisionscore"
+        },
+        "decisionScoreSemantics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DecisionScoreSemantics"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "derivedFromPolicyId": {
+          "title": "Derivedfrompolicyid",
+          "type": "string"
+        },
+        "adjustment": {
+          "$ref": "#/$defs/OutcomeAdjustment"
+        }
+      },
+      "required": [
+        "rankLevel",
+        "decision",
+        "derivedFromPolicyId",
+        "adjustment"
+      ],
+      "title": "DecisionOutcome",
+      "type": "object"
+    },
+    "DecisionPolicy": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/DecisionPolicyKind"
+        },
+        "parameters": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameters"
+        },
+        "chainOrder": {
+          "title": "Chainorder",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "chainOrder"
+      ],
+      "title": "DecisionPolicy",
+      "type": "object"
+    },
+    "DecisionPolicyKind": {
+      "enum": [
+        "argmax",
+        "rank_null_argmax",
+        "max_probability_threshold",
+        "hierarchy_repair",
+        "conformal_frontier",
+        "cost_sensitive_policy",
+        "demo_projection"
+      ],
+      "title": "DecisionPolicyKind",
+      "type": "string"
+    },
+    "DecisionScoreSemantics": {
+      "enum": [
+        "selected_candidate_score",
+        "threshold_margin",
+        "policy_confidence",
+        "coverage_target",
+        "display_weight"
+      ],
+      "title": "DecisionScoreSemantics",
+      "type": "string"
+    },
+    "EvidenceShape": {
+      "enum": [
+        "single_image",
+        "multi_view_observation",
+        "temporal_sequence",
+        "authored_card"
+      ],
+      "title": "EvidenceShape",
+      "type": "string"
+    },
+    "InputAggregation": {
+      "properties": {
+        "stage": {
+          "$ref": "#/$defs/AggregationStage"
+        },
+        "poolingMode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PoolingMode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "poolingTemperature": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Poolingtemperature"
+        },
+        "selectionStrategy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selectionstrategy"
+        }
+      },
+      "required": [
+        "stage"
+      ],
+      "title": "InputAggregation",
+      "type": "object"
+    },
+    "InputAttribution": {
+      "properties": {
+        "granularity": {
+          "$ref": "#/$defs/AttributionGranularity"
+        },
+        "semantics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AttributionSemantics"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "granularity"
+      ],
+      "title": "InputAttribution",
+      "type": "object"
+    },
+    "ModelEvidenceProvenance": {
+      "properties": {
+        "headKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "conditional_classifier",
+                "hierarchical_softmax",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Headkind"
+        },
+        "routing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RoutingProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "abstentionSignalKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "rank_null_candidate",
+                "selector_head",
+                "evidential_dirichlet",
+                "rl_action_head",
+                "gambler_class",
+                "none"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Abstentionsignalkind"
+        }
+      },
+      "title": "ModelEvidenceProvenance",
+      "type": "object"
+    },
+    "OutcomeAdjustment": {
+      "properties": {
+        "reason": {
+          "$ref": "#/$defs/AdjustmentReason"
+        },
+        "appliedCandidate": {
+          "$ref": "#/$defs/CandidateRef"
+        },
+        "suppressedFrom": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CandidateRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "reason",
+        "appliedCandidate"
+      ],
+      "title": "OutcomeAdjustment",
+      "type": "object"
+    },
+    "PoolingMode": {
+      "enum": [
+        "mean",
+        "logsumexp",
+        "attention",
+        "other"
+      ],
+      "title": "PoolingMode",
+      "type": "string"
+    },
+    "RankBelief": {
+      "properties": {
+        "rankLevel": {
+          "title": "Ranklevel",
+          "type": "integer"
+        },
+        "rankName": {
+          "title": "Rankname",
+          "type": "string"
+        },
+        "candidates": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "rank_null": "#/$defs/RankNullCandidate",
+                "residual_below_taxon": "#/$defs/ResidualBelowTaxonCandidate",
+                "taxon": "#/$defs/TaxonCandidate"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/TaxonCandidate"
+              },
+              {
+                "$ref": "#/$defs/RankNullCandidate"
+              },
+              {
+                "$ref": "#/$defs/ResidualBelowTaxonCandidate"
+              }
+            ]
+          },
+          "title": "Candidates",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rankLevel",
+        "rankName",
+        "candidates"
+      ],
+      "title": "RankBelief",
+      "type": "object"
+    },
+    "RankNullCandidate": {
+      "properties": {
+        "rankLevel": {
+          "title": "Ranklevel",
+          "type": "integer"
+        },
+        "rankName": {
+          "title": "Rankname",
+          "type": "string"
+        },
+        "score": {
+          "title": "Score",
+          "type": "number"
+        },
+        "scoreSemantics": {
+          "$ref": "#/$defs/ScoreSemantics"
+        },
+        "kind": {
+          "const": "rank_null",
+          "default": "rank_null",
+          "title": "Kind",
+          "type": "string"
+        },
+        "nullTaxonId": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nulltaxonid"
+        }
+      },
+      "required": [
+        "rankLevel",
+        "rankName",
+        "score",
+        "scoreSemantics"
+      ],
+      "title": "RankNullCandidate",
+      "type": "object"
+    },
+    "RankNullCandidateMatch": {
+      "properties": {
+        "kind": {
+          "const": "rank_null",
+          "default": "rank_null",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "RankNullCandidateMatch",
+      "type": "object"
+    },
+    "ResidualBelowTaxonCandidate": {
+      "properties": {
+        "rankLevel": {
+          "title": "Ranklevel",
+          "type": "integer"
+        },
+        "rankName": {
+          "title": "Rankname",
+          "type": "string"
+        },
+        "score": {
+          "title": "Score",
+          "type": "number"
+        },
+        "scoreSemantics": {
+          "$ref": "#/$defs/ScoreSemantics"
+        },
+        "kind": {
+          "const": "residual_below_taxon",
+          "default": "residual_below_taxon",
+          "title": "Kind",
+          "type": "string"
+        },
+        "parentTaxonId": {
+          "title": "Parenttaxonid",
+          "type": "integer"
+        },
+        "targetRankLevel": {
+          "title": "Targetranklevel",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rankLevel",
+        "rankName",
+        "score",
+        "scoreSemantics",
+        "parentTaxonId",
+        "targetRankLevel"
+      ],
+      "title": "ResidualBelowTaxonCandidate",
+      "type": "object"
+    },
+    "ResidualBelowTaxonCandidateMatch": {
+      "properties": {
+        "kind": {
+          "const": "residual_below_taxon",
+          "default": "residual_below_taxon",
+          "title": "Kind",
+          "type": "string"
+        },
+        "parentTaxonId": {
+          "title": "Parenttaxonid",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "parentTaxonId"
+      ],
+      "title": "ResidualBelowTaxonCandidateMatch",
+      "type": "object"
+    },
+    "RoutingProvenance": {
+      "properties": {
+        "strategy": {
+          "$ref": "#/$defs/RoutingStrategy"
+        },
+        "temperature": {
+          "title": "Temperature",
+          "type": "number"
+        },
+        "hierarchyMatrixApplied": {
+          "title": "Hierarchymatrixapplied",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "strategy",
+        "temperature",
+        "hierarchyMatrixApplied"
+      ],
+      "title": "RoutingProvenance",
+      "type": "object"
+    },
+    "RoutingStrategy": {
+      "enum": [
+        "soft",
+        "hard",
+        "gumbel"
+      ],
+      "title": "RoutingStrategy",
+      "type": "string"
+    },
+    "ScoreSemantics": {
+      "enum": [
+        "rank_softmax_probability",
+        "temperature_scaled_rank_probability",
+        "calibrated_rank_probability",
+        "authored_assertion_weight",
+        "synthetic_demo_weight",
+        "conformal_set_membership",
+        "display_weight"
+      ],
+      "title": "ScoreSemantics",
+      "type": "string"
+    },
+    "TaxonCandidate": {
+      "properties": {
+        "rankLevel": {
+          "title": "Ranklevel",
+          "type": "integer"
+        },
+        "rankName": {
+          "title": "Rankname",
+          "type": "string"
+        },
+        "score": {
+          "title": "Score",
+          "type": "number"
+        },
+        "scoreSemantics": {
+          "$ref": "#/$defs/ScoreSemantics"
+        },
+        "kind": {
+          "const": "taxon",
+          "default": "taxon",
+          "title": "Kind",
+          "type": "string"
+        },
+        "taxonId": {
+          "title": "Taxonid",
+          "type": "integer"
+        },
+        "parentTaxonId": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parenttaxonid"
+        },
+        "ancestorTaxonIdsByRank": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ancestortaxonidsbyrank"
+        },
+        "taxonSnapshot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaxonSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "rankLevel",
+        "rankName",
+        "score",
+        "scoreSemantics",
+        "taxonId"
+      ],
+      "title": "TaxonCandidate",
+      "type": "object"
+    },
+    "TaxonCandidateMatch": {
+      "properties": {
+        "kind": {
+          "const": "taxon",
+          "default": "taxon",
+          "title": "Kind",
+          "type": "string"
+        },
+        "taxonId": {
+          "title": "Taxonid",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "taxonId"
+      ],
+      "title": "TaxonCandidateMatch",
+      "type": "object"
+    },
+    "TaxonSnapshot": {
+      "properties": {
+        "scientificName": {
+          "title": "Scientificname",
+          "type": "string"
+        },
+        "commonName": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commonname"
+        },
+        "rankLevel": {
+          "title": "Ranklevel",
+          "type": "integer"
+        },
+        "rankName": {
+          "title": "Rankname",
+          "type": "string"
+        },
+        "parentTaxonId": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parenttaxonid"
+        },
+        "ancestorTaxonIdsByRank": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Ancestortaxonidsbyrank",
+          "type": "object"
+        },
+        "taxonomyVersion": {
+          "title": "Taxonomyversion",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scientificName",
+        "rankLevel",
+        "rankName",
+        "taxonomyVersion"
+      ],
+      "title": "TaxonSnapshot",
+      "type": "object"
+    },
+    "TaxonomyContext": {
+      "properties": {
+        "source": {
+          "default": "CoL2024",
+          "title": "Source",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        },
+        "rootTaxonIds": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Roottaxonids",
+          "type": "array"
+        },
+        "nullTaxonIdsByRank": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Nulltaxonidsbyrank",
+          "type": "object"
+        }
+      },
+      "title": "TaxonomyContext",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "schemaVersion": {
+      "const": "classification-result.v1",
+      "default": "classification-result.v1",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "taxonomyContext": {
+      "$ref": "#/$defs/TaxonomyContext"
+    },
+    "provenance": {
+      "$ref": "#/$defs/ClassificationProvenance"
+    },
+    "inputContext": {
+      "$ref": "#/$defs/ClassificationInputContext"
+    },
+    "consistency": {
+      "$ref": "#/$defs/ClassificationConsistency"
+    },
+    "ranks": {
+      "items": {
+        "$ref": "#/$defs/RankBelief"
+      },
+      "title": "Ranks",
+      "type": "array"
+    },
+    "outcomes": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/DecisionOutcome"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Outcomes"
+    }
+  },
+  "required": [
+    "taxonomyContext",
+    "provenance",
+    "inputContext",
+    "consistency",
+    "ranks"
+  ],
+  "title": "ClassificationResult",
+  "type": "object"
+}

@@ -10,7 +10,7 @@ Documentation: https://docs.polli.ai/typus
 
 Typus centralises every domain object that the rest of our platform —
 `linnaeus`, `pollinalysis-server`, dashboards … — needs: taxon records,
-clades, hierarchical classification results, projection helpers and async
+clades, canonical classification results, projection helpers and async
 database services. Anything that speaks taxonomy imports **Typus** and stays DRY.
 
 ---
@@ -21,8 +21,8 @@ database services. Anything that speaks taxonomy imports **Typus** and stays DRY
   on a single row for constant‑time lineage queries.
 * **Async services** – `PostgresTaxonomyService` (ltree) &
   `SQLiteTaxonomyService` (fixture) share one interface.
-* **Pydantic v2 models** – `Taxon`, `Clade`,
-  `HierarchicalClassificationResult`, all JSON‑Schema‑exportable.
+* **Pydantic v2 models** – `Taxon`, `Clade`, `ClassificationResult`, and
+  one-release deprecated classification aliases, all JSON-Schema-exportable.
 * **Taxonomy summaries & pollinator groups** – `TaxonSummary` trails plus coarse
   `PollinatorGroup` helpers for UI labels.
 * **Projection utils** – lat/lon ↔ unit‑sphere, cyclical‑time features,

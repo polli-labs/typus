@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "classification-result.v1",
+  "taxonomyContext": {
+    "source": "CoL2024",
+    "version": "2024",
+    "rootTaxonIds": [
+      1
+    ],
+    "nullTaxonIdsByRank": {
+      "30": -30
+    }
+  },
+  "provenance": {
+    "sourceKind": "synthetic_demo",
+    "producer": "wfc.demoCache@fixture",
+    "decisionPolicies": [
+      {
+        "id": "p0",
+        "kind": "demo_projection",
+        "chainOrder": 0
+      }
+    ]
+  },
+  "inputContext": {
+    "entityType": "observation",
+    "evidenceShape": "multi_view_observation",
+    "unitCount": 3,
+    "unitIds": [
+      "demo-view-1",
+      "demo-view-2",
+      "demo-view-3"
+    ],
+    "aggregation": {
+      "stage": "aggregated_after_heads",
+      "selectionStrategy": "fixture"
+    },
+    "attribution": {
+      "granularity": "view",
+      "semantics": "heuristic"
+    }
+  },
+  "consistency": {
+    "hierarchyChecked": false,
+    "isConsistent": true
+  },
+  "ranks": [
+    {
+      "rankLevel": 30,
+      "rankName": "family",
+      "candidates": [
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 0.7,
+          "scoreSemantics": "synthetic_demo_weight",
+          "kind": "taxon",
+          "taxonId": 300,
+          "parentTaxonId": 400,
+          "ancestorTaxonIdsByRank": {
+            "40": 400
+          },
+          "taxonSnapshot": {
+            "scientificName": "Apidae",
+            "commonName": "bees",
+            "rankLevel": 30,
+            "rankName": "family",
+            "parentTaxonId": 400,
+            "ancestorTaxonIdsByRank": {
+              "40": 400
+            },
+            "taxonomyVersion": "CoL2024"
+          }
+        }
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "rankLevel": 30,
+      "decision": "commit",
+      "resolvedTo": {
+        "rankLevel": 30,
+        "match": {
+          "kind": "taxon",
+          "taxonId": 300
+        }
+      },
+      "decisionScore": 0.7,
+      "decisionScoreSemantics": "display_weight",
+      "derivedFromPolicyId": "p0",
+      "adjustment": {
+        "reason": "commit_top_candidate",
+        "appliedCandidate": {
+          "rankLevel": 30,
+          "match": {
+            "kind": "taxon",
+            "taxonId": 300
+          }
+        }
+      }
+    }
+  ]
+}

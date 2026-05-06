@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "classification-result.v1",
+  "taxonomyContext": {
+    "source": "CoL2024",
+    "version": "2024",
+    "rootTaxonIds": [
+      1
+    ],
+    "nullTaxonIdsByRank": {
+      "40": -40,
+      "30": -30
+    }
+  },
+  "provenance": {
+    "sourceKind": "model_inference",
+    "producer": "linnaeus@fixture",
+    "modelName": "linnaeus-fixture",
+    "modelVersion": "0.1.0",
+    "requestedTopK": 2,
+    "modelEvidence": {
+      "headKind": "conditional_classifier",
+      "routing": {
+        "strategy": "soft",
+        "temperature": 1.0,
+        "hierarchyMatrixApplied": false
+      },
+      "abstentionSignalKind": "rank_null_candidate"
+    },
+    "decisionPolicies": []
+  },
+  "inputContext": {
+    "entityType": "image",
+    "evidenceShape": "single_image",
+    "unitCount": 1,
+    "aggregation": {
+      "stage": "none"
+    },
+    "attribution": {
+      "granularity": "none"
+    }
+  },
+  "consistency": {
+    "hierarchyChecked": false,
+    "isConsistent": true
+  },
+  "ranks": [
+    {
+      "rankLevel": 40,
+      "rankName": "order",
+      "candidates": [
+        {
+          "rankLevel": 40,
+          "rankName": "order",
+          "score": 0.9,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "taxon",
+          "taxonId": 400
+        },
+        {
+          "rankLevel": 40,
+          "rankName": "order",
+          "score": 0.1,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "rank_null",
+          "nullTaxonId": -40
+        }
+      ]
+    },
+    {
+      "rankLevel": 30,
+      "rankName": "family",
+      "candidates": [
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 0.8,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "taxon",
+          "taxonId": 300,
+          "parentTaxonId": 400,
+          "ancestorTaxonIdsByRank": {
+            "40": 400
+          }
+        },
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 0.2,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "rank_null",
+          "nullTaxonId": -30
+        }
+      ]
+    }
+  ]
+}
