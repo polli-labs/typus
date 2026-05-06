@@ -1,0 +1,100 @@
+{
+  "schemaVersion": "classification-result.v1",
+  "taxonomyContext": {
+    "source": "CoL2024",
+    "version": "2024",
+    "rootTaxonIds": [
+      1
+    ],
+    "nullTaxonIdsByRank": {
+      "30": -30
+    }
+  },
+  "provenance": {
+    "sourceKind": "model_inference",
+    "producer": "linnaeus@fixture",
+    "calibration": {
+      "method": "temperature_scaling",
+      "parameters": {
+        "T": 2.0
+      }
+    },
+    "decisionPolicies": [
+      {
+        "id": "p0",
+        "kind": "max_probability_threshold",
+        "parameters": {
+          "tau_by_rank": {
+            "30": 0.6
+          }
+        },
+        "chainOrder": 0
+      }
+    ]
+  },
+  "inputContext": {
+    "entityType": "image",
+    "evidenceShape": "single_image",
+    "unitCount": 1,
+    "aggregation": {
+      "stage": "none"
+    },
+    "attribution": {
+      "granularity": "none"
+    }
+  },
+  "consistency": {
+    "hierarchyChecked": false,
+    "isConsistent": true
+  },
+  "ranks": [
+    {
+      "rankLevel": 30,
+      "rankName": "family",
+      "candidates": [
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 0.75,
+          "scoreSemantics": "temperature_scaled_rank_probability",
+          "kind": "taxon",
+          "taxonId": 300
+        },
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 0.25,
+          "scoreSemantics": "temperature_scaled_rank_probability",
+          "kind": "rank_null",
+          "nullTaxonId": -30
+        }
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "rankLevel": 30,
+      "decision": "commit",
+      "resolvedTo": {
+        "rankLevel": 30,
+        "match": {
+          "kind": "taxon",
+          "taxonId": 300
+        }
+      },
+      "decisionScore": 0.15,
+      "decisionScoreSemantics": "threshold_margin",
+      "derivedFromPolicyId": "p0",
+      "adjustment": {
+        "reason": "commit_thresholded",
+        "appliedCandidate": {
+          "rankLevel": 30,
+          "match": {
+            "kind": "taxon",
+            "taxonId": 300
+          }
+        }
+      }
+    }
+  ]
+}

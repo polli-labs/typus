@@ -1,0 +1,163 @@
+{
+  "schemaVersion": "classification-result.v1",
+  "taxonomyContext": {
+    "source": "CoL2024",
+    "version": "2024",
+    "rootTaxonIds": [
+      1
+    ],
+    "nullTaxonIdsByRank": {
+      "40": -40,
+      "30": -30
+    }
+  },
+  "provenance": {
+    "sourceKind": "model_inference",
+    "producer": "linnaeus@fixture",
+    "modelEvidence": {
+      "headKind": "conditional_classifier",
+      "abstentionSignalKind": "rank_null_candidate"
+    },
+    "decisionPolicies": [
+      {
+        "id": "p0",
+        "kind": "hierarchy_repair",
+        "chainOrder": 0
+      }
+    ]
+  },
+  "inputContext": {
+    "entityType": "image",
+    "evidenceShape": "single_image",
+    "unitCount": 1,
+    "aggregation": {
+      "stage": "none"
+    },
+    "attribution": {
+      "granularity": "none"
+    }
+  },
+  "consistency": {
+    "hierarchyChecked": true,
+    "isConsistent": true
+  },
+  "ranks": [
+    {
+      "rankLevel": 40,
+      "rankName": "order",
+      "candidates": [
+        {
+          "rankLevel": 40,
+          "rankName": "order",
+          "score": 0.9,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "taxon",
+          "taxonId": 400
+        },
+        {
+          "rankLevel": 40,
+          "rankName": "order",
+          "score": 0.1,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "rank_null",
+          "nullTaxonId": -40
+        }
+      ]
+    },
+    {
+      "rankLevel": 30,
+      "rankName": "family",
+      "candidates": [
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 0.7,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "taxon",
+          "taxonId": 301,
+          "parentTaxonId": 401,
+          "ancestorTaxonIdsByRank": {
+            "40": 401
+          }
+        },
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 0.6,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "taxon",
+          "taxonId": 300,
+          "parentTaxonId": 400,
+          "ancestorTaxonIdsByRank": {
+            "40": 400
+          }
+        },
+        {
+          "rankLevel": 30,
+          "rankName": "family",
+          "score": 0.1,
+          "scoreSemantics": "rank_softmax_probability",
+          "kind": "rank_null",
+          "nullTaxonId": -30
+        }
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "rankLevel": 40,
+      "decision": "commit",
+      "resolvedTo": {
+        "rankLevel": 40,
+        "match": {
+          "kind": "taxon",
+          "taxonId": 400
+        }
+      },
+      "decisionScore": 0.9,
+      "decisionScoreSemantics": "selected_candidate_score",
+      "derivedFromPolicyId": "p0",
+      "adjustment": {
+        "reason": "commit_top_candidate",
+        "appliedCandidate": {
+          "rankLevel": 40,
+          "match": {
+            "kind": "taxon",
+            "taxonId": 400
+          }
+        }
+      }
+    },
+    {
+      "rankLevel": 30,
+      "decision": "commit",
+      "resolvedTo": {
+        "rankLevel": 30,
+        "match": {
+          "kind": "taxon",
+          "taxonId": 300
+        }
+      },
+      "decisionScore": 0.6,
+      "decisionScoreSemantics": "selected_candidate_score",
+      "derivedFromPolicyId": "p0",
+      "adjustment": {
+        "reason": "commit_after_repair",
+        "appliedCandidate": {
+          "rankLevel": 30,
+          "match": {
+            "kind": "taxon",
+            "taxonId": 300
+          }
+        },
+        "suppressedFrom": {
+          "rankLevel": 30,
+          "match": {
+            "kind": "taxon",
+            "taxonId": 301
+          }
+        }
+      }
+    }
+  ]
+}

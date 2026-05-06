@@ -63,6 +63,7 @@ dev = [
   "mkdocstrings-python>=1.10,<2",
   "pytest-httpserver>=1.0",
   "twine>=5.1,<7",
+  "jsonschema>=4,<5",
 ]
 
 # Docs extra – everything you need to run `mkdocs build` or `mkdocs serve`

@@ -9,16 +9,47 @@ These DTOs are part of Typus' public contract. They are exported from
 downstream inference, UI, and reporting surfaces rather than re-defined in each
 consumer.
 
-### `TaskPrediction`
+### `ClassificationResult`
 
-Represents the top predictions for one taxonomic rank level.
+`ClassificationResult` is the canonical POL-980 v1.2.1 classification
+contract. It separates source identity, per-rank belief, score semantics,
+calibration provenance, decision policies, and policy-applied outcomes so
+model inference, curated taxon cards, synthetic demo caches, replayed caches,
+and test fixtures can share one envelope without pretending they mean the same
+thing.
 
-- `rank_level: RankLevel`: the rank this task predicts, such as species,
-  genus, family, or another Typus rank level.
-- `temperature: float`: positive calibration temperature used for the task.
-- `predictions: list[tuple[int, float]]`: ordered `(taxon_id, probability)`
-  pairs. Validation rejects values whose probabilities sum to more than `1.0`,
-  allowing a small `1e-6` tolerance for floating-point rounding.
+Top-level fields:
+
+- `schema_version: Literal["classification-result.v1"]`
+- `taxonomy_context: TaxonomyContext`
+- `provenance: ClassificationProvenance`
+- `input_context: ClassificationInputContext`
+- `consistency: ClassificationConsistency`
+- `ranks: list[RankBelief]`
+- `outcomes: list[DecisionOutcome] | None`
+
+Each `RankBelief` contains a discriminated `candidates` union:
+
+- `TaxonCandidate` for biological taxon scores.
+- `RankNullCandidate` for rank-level null or abstention mass.
+- `ResidualBelowTaxonCandidate` for "known to parent taxon, unresolved below"
+  mass.
+
+Every candidate carries `score` plus `score_semantics`. Probability-bearing
+scores are explicit (`rank_softmax_probability`,
+`temperature_scaled_rank_probability`, `calibrated_rank_probability`);
+authored cards, synthetic demo mass, conformal set membership, and display
+weights use different semantics so consumers do not silently treat every number
+as a calibrated probability.
+
+`outcomes` are present exactly when `provenance.decision_policies` is non-empty.
+Validators enforce rank ordering, policy-id resolution, and `CandidateRef`
+resolution into the corresponding rank's candidates. Curated taxon cards must
+use `authored_assertion_weight` for every candidate.
+
+Helper functions in `typus.helpers.classification` derive lineage/tree views
+and apply reference decision or calibration projections such as argmax, Chow
+thresholds, hierarchy repair, and temperature scaling.
 
 ### `TaxonomyContext`
 
@@ -27,8 +58,32 @@ results.
 
 - `source: str = "CoL2024"`: taxonomy source label.
 - `version: str | None = None`: optional source version or snapshot identifier.
+- `root_taxon_ids: list[int] = []`: optional root taxon IDs for this taxonomy
+  slice.
+- `null_taxon_ids_by_rank: dict[int, int] = {}`: rank-specific synthetic null
+  taxon IDs used for compatibility with older producers.
 
-### `HierarchicalClassificationResult`
+### Deprecated legacy classification models
+
+`TaskPrediction` and `HierarchicalClassificationResult` remain importable for a
+one-release migration window. They emit `DeprecationWarning` when constructed.
+`HierarchicalClassificationResult.to_classification_result()` converts the old
+per-rank prediction shape into a canonical raw `ClassificationResult` with
+`source_kind = "model_inference"`, no calibration, no decision policies, and
+no outcomes.
+
+#### `TaskPrediction`
+
+Represents the deprecated top predictions for one taxonomic rank level.
+
+- `rank_level: RankLevel`: the rank this task predicts, such as species,
+  genus, family, or another Typus rank level.
+- `temperature: float`: positive calibration temperature used for the task.
+- `predictions: list[tuple[int, float]]`: ordered `(taxon_id, probability)`
+  pairs. Validation rejects values whose probabilities sum to more than `1.0`,
+  allowing a small `1e-6` tolerance for floating-point rounding.
+
+#### `HierarchicalClassificationResult`
 
 Bundles the taxonomy context with one or more rank-level prediction tasks.
 
@@ -60,6 +115,7 @@ result = HierarchicalClassificationResult(
 )
 
 json_payload = result.to_json(indent=2)
+canonical = result.to_classification_result()
 ```
 
 ## Taxonomy summaries (v0.4.2+)
@@ -182,7 +238,7 @@ Represents a single detected instance within an image.
 *   `mask: EncodedMask | None = None`: The instance mask (optional).
 *   `score: float`: The confidence score of the detection (between 0 and 1).
 *   `taxon_id: int | None = None`: Optional taxonomic identifier for the instance.
-*   `classification: HierarchicalClassificationResult | None = None`: Optional hierarchical classification result for the instance.
+*   `classification: HierarchicalClassificationResult | None = None`: Optional legacy hierarchical classification result for the instance. New classification producers should emit `ClassificationResult` directly while this field remains backward-compatible for older detection payloads.
 
 **Example:**
 
