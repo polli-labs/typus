@@ -10,6 +10,7 @@ MODELS = [
     "typus.models.summary.TaxonSummary",
     "typus.models.lineage.LineageMap",
     "typus.models.clade.Clade",
+    "typus.models.classification.BaseCandidate",
     "typus.models.classification.ClassificationResult",
     "typus.models.classification.HierarchicalClassificationResult",
     "typus.models.geometry.BBox",

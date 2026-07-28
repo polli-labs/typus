@@ -1,14 +1,10 @@
-import os
 import pytest
-
-# ruff: noqa
-from sqlalchemy import create_engine as sqlalchemy_create_engine, text
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine  # Correct imports for async
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession  # Correct imports for async
-from typus.services.taxonomy import PostgresTaxonomyService  # Import the concrete service
-from typus.models.taxon import Taxon  # For constructing expected Taxon object
 
 from typus.constants import RankLevel
+from typus.services.taxonomy import PostgresTaxonomyService  # Import the concrete service
 
 DSN = "postgresql+asyncpg://typus:typus@localhost:5432/typus_test"
 
@@ -41,6 +37,39 @@ async def test_lca_distance(taxonomy_service):
     lca_minor = await taxonomy_service.lca(
         {BEE_ANTHOPHILA, WASP_VESPIDAE}, include_minor_ranks=True
     )
+    assert (lca_minor.taxon_id, lca_minor.rank_level) == (LCA_ACULEATA_ID, RankLevel.L35)
+    assert lca_minor.scientific_name == "Aculeata"
+
+    lca_major = await taxonomy_service.lca(
+        {BEE_ANTHOPHILA, WASP_VESPIDAE}, include_minor_ranks=False
+    )
+    assert (lca_major.taxon_id, lca_major.rank_level) == (LCA_HYMENOPTERA_ID, RankLevel.L40)
+    assert lca_major.scientific_name == "Hymenoptera"
+
+    # The fixture has both Anthophila and Vespidae with Aculeata as a common ancestor
+    # When minor ranks are included, the distance should be:
+    # Anthophila -> Apoidea -> Aculeata <- Vespoidea <- Vespidae
+    # (i.e., 2 steps from each to the common ancestor, for a total of 4)
+    distance_with_minors = await taxonomy_service.distance(
+        BEE_ANTHOPHILA, WASP_VESPIDAE, include_minor_ranks=True
+    )
+    assert distance_with_minors == 4
+
+    # When only major ranks are considered:
+    # Anthophila (L32, minor) contributes one immediate-major edge to Hymenoptera (L40)
+    # Vespidae (L30, major) contributes one immediate-major edge to Hymenoptera (L40)
+    # Total distance = 1 + 1 = 2
+    distance_major_only = await taxonomy_service.distance(
+        BEE_ANTHOPHILA, WASP_VESPIDAE, include_minor_ranks=False
+    )
+    assert distance_major_only == 2
+
+    dist_species = await taxonomy_service.distance(
+        VESPA_MANDARINIA,
+        VESPA_CRABRO,
+        include_minor_ranks=True,
+    )
+    assert dist_species == 2
 
 
 @pytest.mark.asyncio
@@ -124,40 +153,6 @@ async def test_postgres_lca_fallback_mechanism():
 
     # Clean up the async engine
     await async_engine.dispose()
-    assert (lca_minor.taxon_id, lca_minor.rank_level) == (LCA_ACULEATA_ID, RankLevel.L35)
-    assert lca_minor.scientific_name == "Aculeata"
-
-    lca_major = await taxonomy_service.lca(
-        {BEE_ANTHOPHILA, WASP_VESPIDAE}, include_minor_ranks=False
-    )
-    assert (lca_major.taxon_id, lca_major.rank_level) == (LCA_HYMENOPTERA_ID, RankLevel.L40)
-    assert lca_major.scientific_name == "Hymenoptera"
-
-    # The fixture has both Anthophila and Vespidae with Aculeata as a common ancestor
-    # When minor ranks are included, the distance should be:
-    # Anthophila -> Apoidea -> Aculeata <- Vespoidea <- Vespidae
-    # (i.e., 2 steps from each to the common ancestor, for a total of 4)
-    distance_with_minors = await taxonomy_service.distance(
-        BEE_ANTHOPHILA, WASP_VESPIDAE, include_minor_ranks=True
-    )
-    assert distance_with_minors == 4
-
-    # When only major ranks are considered:
-    # Anthophila (L32, minor) → filtered out, maps to major ancestry ending at Hymenoptera (L40)
-    # Vespidae (L30, major) → Hymenoptera (L40) = 1 edge
-    # Total distance = 0 + 1 = 1
-    distance_major_only = await taxonomy_service.distance(
-        BEE_ANTHOPHILA, WASP_VESPIDAE, include_minor_ranks=False
-    )
-    assert distance_major_only == 1
-
-    # ---- NEW: species-level sibling distance inside Vespa ----
-    dist_species = await taxonomy_service.distance(
-        VESPA_MANDARINIA,  # Vespa mandarinia
-        VESPA_CRABRO,  # Vespa crabro
-        include_minor_ranks=True,
-    )
-    assert dist_species == 2  # mandarinia -> Vespa (genus) -> crabro
 
 
 @pytest.mark.asyncio

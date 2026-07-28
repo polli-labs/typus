@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from .pg_test_ops import normalize_test_dsn, resolve_test_dsn
+from .sql_ident import quote_identifier
 
 
 @dataclass
@@ -64,14 +65,18 @@ async def ensure_expanded_taxa_indexes(
     - Plain name btree is omitted by default; lower(name) pattern index supersedes our queries.
     - Trigram indexes require pg_trgm; enabling `ensure_pg_trgm_extension` attempts CREATE EXTENSION.
     """
+    fqtn = (
+        f"{quote_identifier(schema)}.{quote_identifier(table)}"
+        if schema
+        else quote_identifier(table)
+    )
+
     if isinstance(engine_or_dsn, str):
         engine = create_async_engine(engine_or_dsn, pool_pre_ping=True)
         _own_engine = True
     else:
         engine = engine_or_dsn
         _own_engine = False
-
-    fqtn = f'"{schema}".{table}' if schema else table
 
     ddls: list[str] = []
     ddls.extend([s.format(fqtn=fqtn) for s in DDL_CORE])

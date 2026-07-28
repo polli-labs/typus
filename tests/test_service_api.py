@@ -7,6 +7,7 @@ async def test_children_returns_list(taxonomy_service):
     res = await taxonomy_service.children_list(52747, depth=2)
     assert isinstance(res, list)
     assert all(getattr(t, "taxon_id", None) for t in res)
+    assert all(t.source == "iNaturalist" for t in res)
 
 
 @pytest.mark.asyncio
@@ -18,6 +19,7 @@ async def test_get_many_batched_matches_individual(taxonomy_service):
         t = await taxonomy_service.get_taxon(i)
         assert batched[i].taxon_id == t.taxon_id
         assert batched[i].scientific_name == t.scientific_name
+        assert batched[i].source == t.source == "iNaturalist"
 
 
 @pytest.mark.asyncio

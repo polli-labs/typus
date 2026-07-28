@@ -36,8 +36,6 @@ def test_classification_fixture_round_trips_against_schema(fixture_name):
     assert serialized == payload
     Draft202012Validator(_classification_schema()).validate(serialized)
     assert ClassificationResult.model_validate_json(json.dumps(serialized)) == result
-
-    # TODO(POL-980 PR4): run this same fixture corpus through generated TS types in polli.
     assert TypeAdapter(ClassificationResult).validate_python(serialized) == result
 
 

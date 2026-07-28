@@ -27,6 +27,14 @@ class AbstractTaxonomyService:
 
 The return types are `Taxon` models or simple dictionaries. All methods are `async` so they can be awaited inside any asyncio application.
 
+### Taxon source semantics
+
+The current `expanded_taxa` graph uses iNaturalist taxon concept IDs, so every backend and
+read path returns `Taxon.source == "iNaturalist"`. Catalogue of Life common-name enrichment
+does not make those IDs CoL concepts. A caller constructing a taxon from another authority
+must set `source` explicitly; source-qualified crosswalks must not compare naked numeric IDs
+across authorities.
+
 ## Postgres service
 
 ```python
@@ -61,7 +69,7 @@ path = load_expanded_taxa(Path("expanded_taxa.sqlite"))
 usage: typus-load-sqlite --sqlite PATH [--tsv TSV] [--url URL] [--replace] [--cache DIR] [--with-indexes/--no-with-indexes]
 ```
 
-Downloads come from `https://assets.polli.ai/expanded_taxa/latest/expanded_taxa.sqlite` by default and are cached in `~/.cache/typus` (override with `$TYPUS_CACHE_DIR`). Use `--replace` to overwrite an existing file or `--tsv my.tsv` to populate from a local TSV dump. The loader creates recommended indexes by default for fast name search; disable with `--no-with-indexes`.
+Downloads come from `https://f005.backblazeb2.com/file/public-0/expanded_taxa/latest/expanded_taxa.sqlite` by default and are cached in `~/.cache/typus` (override with `$TYPUS_CACHE_DIR`). Point the loader at a different source with `--url` or `$TYPUS_EXPANDED_TAXA_URL`. Use `--replace` to overwrite an existing file or `--tsv my.tsv` to populate from a local TSV dump. The loader creates recommended indexes by default for fast name search; disable with `--no-with-indexes`.
 
 See [Offline mode](offline_mode.md) for more details on the loader.
 

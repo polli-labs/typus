@@ -1,6 +1,6 @@
 [project]
 name            = "polli-typus"
-version         = "0.6.0"
+version         = "0.7.0"
 description     = "Taxonomic types, projections and async taxonomy services for Polli-Labs."
 readme          = { file = "README.md", content-type = "text/markdown" }
 license         = "MIT"
@@ -22,19 +22,31 @@ classifiers = [
   "Typing :: Typed",
 ]
 
-# --- core runtime (no heavy DB drivers) --------------------------------------
+# --- core runtime: pure DTO/geometry surface, pydantic only -------------------
+# Taxonomy/elevation services, the ORM, and fuzzy rank inference live behind the
+# [services] / [fuzzy] extras and are imported lazily.
 dependencies = [
     "pydantic>=2.7,<3",
-    "sqlalchemy[asyncio]>=2.0,<3",
-    "rapidfuzz>=3.6,<4",
 ]
 
 [project.optional-dependencies]
+# fuzzy rank-name inference (`typus.constants.infer_rank` beyond exact matches)
+fuzzy = ["rapidfuzz>=3.6,<4"]
+
+# taxonomy/elevation services + ORM (sqlalchemy async stack)
+services = [
+  "polli-typus[fuzzy]",
+  "sqlalchemy[asyncio]>=2.0,<3",
+]
+
 # install with: uv pip install "polli-typus[postgres]"
-postgres = ["asyncpg>=0.29"]
+postgres = ["polli-typus[services]", "asyncpg>=0.29"]
 
 # uv pip install "polli-typus[sqlite]"
-sqlite   = ["aiosqlite>=0.19"]
+sqlite   = ["polli-typus[services]", "aiosqlite>=0.19"]
+
+# everything except loader/docs tooling
+all = ["polli-typus[services,postgres,sqlite,pgvector]"]
 
 # uv pip install "polli-typus[loader]"
 loader = [
@@ -49,6 +61,7 @@ pgvector = ["psycopg-binary>=3.1"]
 
 # uv pip install "polli-typus[dev]" (ruff, pytest, pre-commit, build tooling …)
 dev = [
+  "polli-typus[all]",
   "ruff==0.4.4",
   "ty>=0.0.1a0,<1",
   "pytest>=8.2",

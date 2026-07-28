@@ -15,7 +15,8 @@ Environment
 - Lower-level env sync targets remain available when you only need to refresh part of the setup:
 
 ```
-make dev-setup      # creates .venv (py310) and installs -e .[dev,sqlite,loader]
+make dev-setup      # creates .venv (py310); see the Makefile for the exact extras
+                    # ([dev] pulls [all], so sqlite/postgres come along)
 make dev-install    # installs pre-commit hooks
 ```
 

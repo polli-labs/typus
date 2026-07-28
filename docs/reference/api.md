@@ -13,6 +13,7 @@
         - iou_xyxy
         - area_xyxy
         - intersect_xyxy
+        - union_xyxy
         - clamp_xyxy
         - to_xywh_px
         - from_xywh_px

@@ -1,6 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
+import typus.helpers as helpers
+import typus.helpers.classification as classification_helpers
 from typus.constants import RankLevel
 from typus.helpers.classification import (
     apply_argmax,
@@ -37,6 +39,12 @@ from typus.models.classification import (
     TaxonCandidate,
     TaxonomyContext,
 )
+
+
+def test_conformal_calibration_stub_is_not_exported():
+    assert not hasattr(classification_helpers, "apply_conformal_calibration")
+    assert not hasattr(helpers, "apply_conformal_calibration")
+    assert "apply_conformal_calibration" not in helpers.__all__
 
 
 def test_serialise_roundtrip():

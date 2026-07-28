@@ -1,5 +1,106 @@
 # Changelog
 
+## Unreleased
+
+## 0.7.0 – 2026-07-27
+
+### Changed (BREAKING — packaging)
+- **Carved a dependency-light pure-DTO core**
+  ([POL-1968](https://linear.app/polli-labs/issue/POL-1968)). `sqlalchemy` and
+  `rapidfuzz` are no longer core runtime `dependencies`; the core install is
+  now **pydantic only**. `import typus`, `typus.models.*`, `typus.ops`, and
+  `typus.services.projections` no longer load sqlalchemy (~129 submodules) or
+  rapidfuzz.
+
+  **This is a breaking packaging change.** Anyone who installs bare
+  `polli-typus` and then imports a service symbol — `TaxonomyService`,
+  `SQLiteTaxonomyService`, `PostgresTaxonomyService`, `TaxonomyServiceError`,
+  `BackendConnectionError`, `TaxonNotFoundError`, `ElevationService`,
+  `PostgresRasterElevation` — or calls `infer_rank` on a non-exact name, gets a
+  `ModuleNotFoundError` naming the extra to install. The same applies to those
+  symbols accessed via `typus.services`. Importing a service **submodule**
+  directly (`typus.services.taxonomy`, `typus.services.elevation`, `typus.orm`)
+  surfaces the underlying `ModuleNotFoundError: No module named 'sqlalchemy'`
+  instead, since there is no import hook on those paths.
+
+  **Migration:** change `polli-typus` to `polli-typus[services]` (taxonomy +
+  elevation + ORM), `polli-typus[postgres]` or `polli-typus[sqlite]` (services
+  plus a driver), or `polli-typus[all]`. `[postgres]` and `[sqlite]` now imply
+  `[services]`, so dependents already pinning those extras need no change.
+  No import path or symbol name changed. Behavior changes in one respect: a
+  bare `import typus` no longer binds the `typus.services.*` and `typus.orm`
+  submodules as a side effect, so code relying on `typus.services.taxonomy`
+  being reachable after only `import typus` must now import it explicitly.
+- Service symbols re-exported from `typus` and `typus.services` are now
+  resolved lazily through a PEP 562 module `__getattr__` instead of eager
+  imports. Attribute access, `from typus import X`, `dir()`, and static typing
+  (via `TYPE_CHECKING` declarations) are unchanged. Note that
+  `from typus import *` eagerly resolves the lazy service symbols and therefore
+  requires `polli-typus[services]`.
+- `typus.models.clade` imports `AbstractTaxonomyService` under `TYPE_CHECKING`
+  only; it was used solely as a method annotation. `Clade`'s exported JSON
+  Schema is byte-identical.
+- `typus.constants.infer_rank` imports `rapidfuzz` lazily, immediately before
+  the fuzzy match. The exact-name fast path works with zero optional
+  dependencies.
+
+### Added (packaging)
+- New extras: `fuzzy` (`rapidfuzz`), `services` (`sqlalchemy[asyncio]` +
+  `[fuzzy]`), and `all` (`[services,postgres,sqlite,pgvector]`). `postgres` and
+  `sqlite` now depend on `[services]`; `dev` now pulls `[all]`.
+- `tests/test_import_purity.py` enforces the core-import purity contract in
+  fresh subprocess interpreters, including the POL-1968 acceptance criterion
+  and a check that laziness is real deferral rather than removal.
+
+### Changed
+- Corrected `Taxon.source` and every built-in `expanded_taxa` read path to report
+  `iNaturalist`, the authority of the numeric concept IDs. CoL/ColDP common-name
+  enrichment no longer causes those taxa to serialize with a false CoL default;
+  explicit external-authority sources remain supported. Callers serializing with
+  `exclude_defaults=True` now omit `iNaturalist` rather than the former false `CoL`.
+- Demoted the COCO detection conversion helpers in docs and docstrings to
+  experimental/best-effort interoperability status. The helpers remain
+  importable with unchanged behavior, but Typus no longer presents their mask
+  or category handling as a stable public COCO contract.
+
+### Added
+- `union_xyxy` geometry op ([POL-1968](https://linear.app/polli-labs/issue/POL-1968) GEOM-3):
+  the smallest `xyxy` rectangle enclosing one or more boxes, variadic so the
+  common two-box call is a drop-in for downstream private `_union_boxes`
+  helpers. Unlike `intersect_xyxy` it never returns `None` (disjoint inputs
+  yield the enclosing rectangle); degenerate boxes are tolerated like
+  `area_xyxy`; calling it with no boxes raises `ValueError`. Exported from
+  `typus.ops` and the package root.
+- Widened the package-root public API ([POL-1975](https://linear.app/polli-labs/issue/POL-1975)).
+  Sixteen symbols that already existed and were already public via submodule
+  paths are now importable directly from `typus`: the geometry ops
+  `iou_xyxy`, `area_xyxy`, `intersect_xyxy`, `clamp_xyxy`, `to_xywh_px`,
+  `from_xywh_px`, `xyxy_to_xywh`, `xywh_to_xyxy`; the detection/mask contracts
+  `BBox`, `EncodedMask`, `BBoxFormat`, `MaskEncoding`, `InstancePrediction`,
+  `ImageDetectionResult`; and the helpers `derive_lineage` and `RANK_CANON`.
+  Purely additive — nothing was renamed, moved, or removed, and no new types
+  were introduced.
+- `typus/schemas/BaseCandidate.json`, plus a `tests/test_public_api_schema_coverage.py`
+  gate asserting that every Pydantic model exported from `typus.__all__` is
+  covered by `export_schemas.MODELS` (directly or transitively via a container
+  model's `$defs`), and that `typus/schemas/` holds exactly one file per
+  `MODELS` entry. `BaseCandidate` was the only public model with no schema:
+  Pydantic inlines the concrete candidate variants and never references their
+  base class. Coverage is matched by class identity, not by class name.
+- `expected_utility_policy()` and `TaxonomyCostMatrix` helpers for the POL-1304
+  hierarchy-aware cost-sensitive decision policy. The helper appends
+  `cost_sensitive_policy` provenance, emits per-rank outcomes with
+  policy-confidence scores, and ships conservative/balanced/aggressive v0 cost
+  profiles for comparative smoke testing.
+- `commit_expected_utility` and `abstain_expected_utility` adjustment reasons
+  for Bayes-risk policy outcomes.
+
+### Removed
+- Removed the unimplemented `apply_conformal_calibration()` helper stub from
+  `typus.helpers.classification` and `typus.helpers`. Conformal calibration
+  remains reserved wire vocabulary in the `ClassificationResult` schema until a
+  separate calibrated-policy design lands.
+
 ## 0.6.0 – 2026-05-06
 
 ### Added

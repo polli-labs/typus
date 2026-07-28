@@ -102,9 +102,11 @@ class DecisionPolicyKind(str, Enum):
 class AdjustmentReason(str, Enum):
     COMMIT_TOP_CANDIDATE = "commit_top_candidate"
     COMMIT_THRESHOLDED = "commit_thresholded"
+    COMMIT_EXPECTED_UTILITY = "commit_expected_utility"
     COMMIT_AFTER_REPAIR = "commit_after_repair"
     ABSTAIN_MODEL_NATURAL = "abstain_model_natural"
     ABSTAIN_THRESHOLD_NOT_MET = "abstain_threshold_not_met"
+    ABSTAIN_EXPECTED_UTILITY = "abstain_expected_utility"
     ABSTAIN_PARENT_ABSTAINED = "abstain_parent_abstained"
     ABSTAIN_HIERARCHY_CONFLICT = "abstain_hierarchy_conflict"
     ABSTAIN_UNMAPPED_TAXON = "abstain_unmapped_taxon"

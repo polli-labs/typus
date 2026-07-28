@@ -12,6 +12,13 @@ from typus.models.geometry import (  # Added BBoxFormat and MaskEncoding
 def to_coco(image: ImageDetectionResult, category_map: Dict[int, int]) -> Dict:
     """Return a minimal COCO-style dict for a single image.
 
+    This is an experimental best-effort interoperability helper, not a stable
+    Typus COCO contract. It preserves the existing lightweight annotation shape
+    but does not implement full COCO dataset or mask semantics. RLE masks are
+    passed through as ``counts`` strings with image ``size``; polygon masks are
+    flattened with the current simple coordinate-list assumption; PNG base64
+    masks are omitted from annotation ``segmentation``.
+
     Args:
         image: Parsed detection result.
         category_map: Mapping typus taxon_id → COCO category_id.
@@ -120,7 +127,14 @@ def to_coco(image: ImageDetectionResult, category_map: Dict[int, int]) -> Dict:
 
 
 def from_coco(coco: Dict) -> List[ImageDetectionResult]:
-    """Convert standard COCO JSON into a list of ImageDetectionResult.
+    """Convert COCO-style JSON into ImageDetectionResult objects.
+
+    This is an experimental best-effort interoperability helper, not a stable
+    Typus COCO contract. It expects lightweight COCO-style dictionaries and
+    keeps the current assumptions: RLE ``counts`` are retained as mask data,
+    simple polygons are grouped into ``[x, y]`` pairs, and COCO categories are
+    not reverse-mapped to Typus ``taxon_id`` values.
+
     NB: This function expects a COCO JSON that might contain info for *multiple* images.
     The output is a list of ImageDetectionResult, one for each image in the COCO data.
 

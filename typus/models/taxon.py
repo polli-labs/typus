@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..constants import RankLevel
 
+INATURALIST_TAXON_SOURCE = "iNaturalist"
+
 
 class Taxon(BaseModel):
     """Immutable scientific taxon object."""
@@ -13,7 +15,13 @@ class Taxon(BaseModel):
     rank_level: RankLevel
     parent_id: int | None = Field(default=None, description="Immediate ancestor taxon_id")
     ancestry: list[int] = Field(default_factory=list, description="Root→self inclusive")
-    source: str = Field(default="CoL", description="Originating authority: CoL/iNat/GBIF")
+    source: str = Field(
+        default=INATURALIST_TAXON_SOURCE,
+        description=(
+            "Authority governing taxon_id, parent_id, and ancestry IDs. "
+            "Enrichment fields may have separate provenance."
+        ),
+    )
     vernacular: dict[str, list[str]] = Field(default_factory=dict)
 
     model_config = ConfigDict(

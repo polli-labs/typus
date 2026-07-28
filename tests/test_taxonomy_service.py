@@ -1,5 +1,6 @@
 import pytest
 
+from typus import Taxon
 from typus.constants import RankLevel
 
 DSN = "postgresql+asyncpg://typus:typus@localhost:5432/typus_test"
@@ -12,6 +13,28 @@ async def test_get_taxon_smoke(taxonomy_service):
     bee = await taxonomy_service.get_taxon(bee_id)
     assert bee.scientific_name == "Anthophila"
     assert bee.rank_level == RankLevel.L32  # Anthophila is L32 (epifamily) in sample data
+    assert bee.source == "iNaturalist"
+
+
+def test_taxon_default_source_matches_expanded_taxa_concept_ids():
+    taxon = Taxon(
+        taxon_id=47219,
+        scientific_name="Apis mellifera",
+        rank_level=RankLevel.L10,
+    )
+
+    assert taxon.source == "iNaturalist"
+
+
+def test_taxon_explicit_external_source_is_preserved():
+    taxon = Taxon(
+        taxon_id=1341976,
+        scientific_name="Apis mellifera",
+        rank_level=RankLevel.L10,
+        source="GBIF",
+    )
+
+    assert taxon.source == "GBIF"
 
 
 @pytest.mark.asyncio

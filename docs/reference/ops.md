@@ -1,7 +1,8 @@
 # Ops Helpers
 
 Lightweight utilities for common geometry and tracking operations. These are
-pure-Python helpers with no heavy dependencies and are designed to complement
+pure-Python helpers — importing `typus.ops` pulls in no dependency beyond
+pydantic (no sqlalchemy, rapidfuzz, or DB driver) — and are designed to complement
 the canonical geometry in `typus.models.geometry` and the tracking models in
 `typus.models.tracks`.
 
@@ -11,6 +12,9 @@ the canonical geometry in `typus.models.geometry` and the tracking models in
   boxes are disjoint or just touching.
 - `area_xyxy(b) -> float` – Area in pixel^2; clamps negative extents to `0`.
 - `intersect_xyxy(a, b) -> tuple | None` – Intersection `xyxy` or `None` if no overlap.
+- `union_xyxy(*boxes) -> tuple` – Smallest `xyxy` enclosing one or more boxes. A
+  union always exists, so unlike `intersect_xyxy` this never returns `None`;
+  raises `ValueError` when called with no boxes.
 - `clamp_xyxy(b, W, H) -> tuple` – Clamp to `[0,W] × [0,H]`, preserving ordering.
 - `to_xywh_px(bbox_norm, W, H) -> tuple` – Convert normalized TL‑`xywh` to pixel TL‑`xywh`.
 - `from_xywh_px(x, y, w, h, W, H) -> BBoxXYWHNorm` – Convert pixel TL‑`xywh` to normalized.
@@ -53,7 +57,8 @@ grouped = group_detections_by_frame([d])
 
 ## Design Principles
 
-- No heavy deps (no numpy in core helpers).
+- No heavy deps: no numpy, and `import typus.ops` does not load sqlalchemy,
+  rapidfuzz, or any DB driver (enforced by `tests/test_import_purity.py`).
 - Return tuples for simple geometry to keep the surface area minimal.
 - Canonical model geometry is normalized TL‑`xywh`.
 - Pixel helpers are convenience utilities; they mirror semantics of

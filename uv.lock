@@ -1255,15 +1255,20 @@ wheels = [
 
 [[package]]
 name = "polli-typus"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
-    { name = "rapidfuzz" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "aiosqlite" },
+    { name = "asyncpg" },
+    { name = "psycopg-binary" },
+    { name = "rapidfuzz" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
 dev = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -1273,11 +1278,14 @@ dev = [
     { name = "mkdocstrings" },
     { name = "mkdocstrings-python" },
     { name = "pre-commit" },
+    { name = "psycopg-binary" },
     { name = "pyarrow" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-httpserver" },
+    { name = "rapidfuzz" },
     { name = "ruff" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "twine" },
     { name = "ty" },
 ]
@@ -1286,6 +1294,9 @@ docs = [
     { name = "mkdocs-material" },
     { name = "mkdocstrings" },
     { name = "mkdocstrings-python" },
+]
+fuzzy = [
+    { name = "rapidfuzz" },
 ]
 loader = [
     { name = "pandas" },
@@ -1298,9 +1309,17 @@ pgvector = [
 ]
 postgres = [
     { name = "asyncpg" },
+    { name = "rapidfuzz" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+services = [
+    { name = "rapidfuzz" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 sqlite = [
     { name = "aiosqlite" },
+    { name = "rapidfuzz" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 
 [package.metadata]
@@ -1320,6 +1339,11 @@ requires-dist = [
     { name = "mkdocstrings-python", marker = "extra == 'docs'", specifier = ">=1.10,<2" },
     { name = "pandas", marker = "extra == 'loader'", specifier = ">=2.0,<3" },
     { name = "polars", marker = "extra == 'loader'", specifier = ">=0.20,<2" },
+    { name = "polli-typus", extras = ["all"], marker = "extra == 'dev'" },
+    { name = "polli-typus", extras = ["fuzzy"], marker = "extra == 'services'" },
+    { name = "polli-typus", extras = ["services"], marker = "extra == 'postgres'" },
+    { name = "polli-typus", extras = ["services"], marker = "extra == 'sqlite'" },
+    { name = "polli-typus", extras = ["services", "postgres", "sqlite", "pgvector"], marker = "extra == 'all'" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7" },
     { name = "psycopg-binary", marker = "extra == 'pgvector'", specifier = ">=3.1" },
     { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=23.0.1,<24" },
@@ -1327,15 +1351,15 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
     { name = "pytest-httpserver", marker = "extra == 'dev'", specifier = ">=1.0" },
-    { name = "rapidfuzz", specifier = ">=3.6,<4" },
+    { name = "rapidfuzz", marker = "extra == 'fuzzy'", specifier = ">=3.6,<4" },
     { name = "requests", marker = "extra == 'loader'", specifier = ">=2.32,<4" },
     { name = "ruff", marker = "extra == 'dev'", specifier = "==0.4.4" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0,<3" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'services'", specifier = ">=2.0,<3" },
     { name = "tqdm", marker = "extra == 'loader'", specifier = ">=4.66" },
     { name = "twine", marker = "extra == 'dev'", specifier = ">=5.1,<7" },
     { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.1a0,<1" },
 ]
-provides-extras = ["postgres", "sqlite", "loader", "pgvector", "dev", "docs"]
+provides-extras = ["fuzzy", "services", "postgres", "sqlite", "all", "loader", "pgvector", "dev", "docs"]
 
 [[package]]
 name = "pre-commit"

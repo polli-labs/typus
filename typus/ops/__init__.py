@@ -10,6 +10,7 @@ Import convenience:
         iou_xyxy,
         area_xyxy,
         intersect_xyxy,
+        union_xyxy,
         clamp_xyxy,
         to_xywh_px,
         from_xywh_px,
@@ -25,6 +26,7 @@ from .bbox import (
     intersect_xyxy,
     iou_xyxy,
     to_xywh_px,
+    union_xyxy,
     xywh_to_xyxy,
     xyxy_to_xywh,
 )
@@ -34,6 +36,7 @@ __all__ = [
     "iou_xyxy",
     "area_xyxy",
     "intersect_xyxy",
+    "union_xyxy",
     "clamp_xyxy",
     "to_xywh_px",
     "from_xywh_px",

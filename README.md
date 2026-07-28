@@ -23,12 +23,18 @@ database services. Anything that speaks taxonomy imports **Typus** and stays DRY
   `SQLiteTaxonomyService` (fixture) share one interface.
 * **Pydantic v2 models** – `Taxon`, `Clade`, `ClassificationResult`, and
   one-release deprecated classification aliases, all JSON-Schema-exportable.
+* **Classification decision helpers** – Chow thresholds, hierarchy repair, and
+  cost-sensitive expected-utility policies operate on calibrated
+  `ClassificationResult` belief without retraining.
 * **Taxonomy summaries & pollinator groups** – `TaxonSummary` trails plus coarse
   `PollinatorGroup` helpers for UI labels.
 * **Projection utils** – lat/lon ↔ unit‑sphere, cyclical‑time features,
   multi‑scale elevation sinusoids.
-* **Optional drivers only when you need them** – install
-  `polli-typus[postgres]`, `[sqlite]`, or `[loader]`; core install stays lightweight.
+* **Optional dependencies only when you need them** – the core install is
+  pydantic-only: DTOs, geometry, and `typus.ops` import without sqlalchemy or
+  rapidfuzz. Add `polli-typus[services]` for the taxonomy/elevation services,
+  `[postgres]` / `[sqlite]` for a driver, `[fuzzy]` for fuzzy rank inference,
+  `[loader]` for TSV/HTTP ingest, or `[all]` for everything.
 * **Offline SQLite loader** – `typus-load-sqlite` CLI builds and caches the offline dataset
 
 ---
@@ -41,34 +47,48 @@ database services. Anything that speaks taxonomy imports **Typus** and stays DRY
 
 ## Installation
 
-### Core (no DB drivers)
+### Core (pydantic only)
 
 ```bash
 uv pip install polli-typus        # import typus
 ```
 
-### With Postgres backend
+The core install depends on **pydantic alone**. Models, canonical geometry,
+`typus.ops`, projections, and the classification/decision helpers all import
+without sqlalchemy, rapidfuzz, or any DB driver.
+
+### Extras
+
+| Extra | Adds | Needed for |
+| --- | --- | --- |
+| `fuzzy` | `rapidfuzz` | fuzzy (non-exact) `infer_rank` lookups |
+| `services` | `sqlalchemy[asyncio]` + `[fuzzy]` | `TaxonomyService`, `SQLiteTaxonomyService`, `PostgresTaxonomyService`, `ElevationService`, `typus.orm` |
+| `postgres` | `[services]` + `asyncpg` | Postgres taxonomy/elevation backends |
+| `sqlite` | `[services]` + `aiosqlite` | offline SQLite backend (CI, sandboxes) |
+| `pgvector` | `psycopg-binary` | pgvector helpers |
+| `loader` | polars/pandas/requests/tqdm | `typus-load-sqlite` TSV/HTTP ingest |
+| `all` | `[services,postgres,sqlite,pgvector]` | everything except loader/docs tooling |
 
 ```bash
-uv pip install "polli-typus[postgres]"    # adds asyncpg
+uv pip install "polli-typus[postgres]"    # services + asyncpg
+uv pip install "polli-typus[sqlite]"      # services + aiosqlite
+uv pip install "polli-typus[loader]"      # TSV/HTTP ingest tooling
+uv pip install "polli-typus[all]"         # services + every driver
 ```
 
-### With SQLite only (CI, offline, sandboxes)
-
-```bash
-uv pip install "polli-typus[sqlite]"
-```
-
-### With SQLite loader tooling (TSV/HTTP ingest)
-
-```bash
-uv pip install "polli-typus[loader]"
-```
+The service symbols re-exported from `typus` (`TaxonomyService`,
+`SQLiteTaxonomyService`, `PostgresTaxonomyService`, `TaxonomyServiceError`,
+`BackendConnectionError`, `TaxonNotFoundError`, `ElevationService`,
+`PostgresRasterElevation`) are resolved lazily on first attribute access, so a
+bare `polli-typus` install can still `import typus`. Accessing one without the
+extra raises a `ModuleNotFoundError` naming the extra to install. Note that
+`from typus import *` eagerly resolves all of them and therefore requires
+`polli-typus[services]`.
 
 ### Development / tests / lint
 
 ```bash
-uv pip install -e ".[dev,sqlite,loader]"   # pytest, ruff, ty, pre-commit, loader deps …
+uv pip install -e ".[dev,loader]"   # [dev] pulls [all] plus pytest, ruff, ty, pre-commit …
 ```
 
 ---
@@ -90,6 +110,7 @@ from typus.services import SQLiteTaxonomyService
 svc = SQLiteTaxonomyService(Path("expanded_taxa.sqlite"))
 bee = await svc.get_taxon(630955)           # Anthophila
 print(bee.scientific_name, bee.rank_level)  # Anthophila RankLevel.L32
+assert bee.source == "iNaturalist"          # authority of the numeric concept IDs
 ```
 
 You can also load on-demand in code (will download if missing):

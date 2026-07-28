@@ -1,0 +1,42 @@
+{
+  "$defs": {
+    "ScoreSemantics": {
+      "enum": [
+        "rank_softmax_probability",
+        "temperature_scaled_rank_probability",
+        "calibrated_rank_probability",
+        "authored_assertion_weight",
+        "synthetic_demo_weight",
+        "conformal_set_membership",
+        "display_weight"
+      ],
+      "title": "ScoreSemantics",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "rankLevel": {
+      "title": "Ranklevel",
+      "type": "integer"
+    },
+    "rankName": {
+      "title": "Rankname",
+      "type": "string"
+    },
+    "score": {
+      "title": "Score",
+      "type": "number"
+    },
+    "scoreSemantics": {
+      "$ref": "#/$defs/ScoreSemantics"
+    }
+  },
+  "required": [
+    "rankLevel",
+    "rankName",
+    "score",
+    "scoreSemantics"
+  ],
+  "title": "BaseCandidate",
+  "type": "object"
+}
