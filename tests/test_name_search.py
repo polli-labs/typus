@@ -15,6 +15,7 @@ async def test_scientific_exact_name(taxonomy_service):
         "Apis mellifera", scopes={"scientific"}, match="exact", fuzzy=False
     )
     assert 47219 in taxon_ids(res)
+    assert all(t.source == "iNaturalist" for t in res)
 
 
 @pytest.mark.asyncio

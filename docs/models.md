@@ -49,7 +49,43 @@ use `authored_assertion_weight` for every candidate.
 
 Helper functions in `typus.helpers.classification` derive lineage/tree views
 and apply reference decision or calibration projections such as argmax, Chow
-thresholds, hierarchy repair, and temperature scaling.
+thresholds, hierarchy repair, expected-utility cost-sensitive policy, and
+temperature scaling. Conformal terms in the schema are reserved contract
+vocabulary for portable artifacts; Typus does not currently ship a conformal
+calibration helper or policy implementation.
+
+### Cost-sensitive expected-utility policy
+
+`expected_utility_policy(result, costs)` applies the POL-1304 hierarchy-aware
+Bayes-risk decision rule to probability-bearing `RankBelief` candidates. It
+appends `DecisionPolicy(kind="cost_sensitive_policy")`, records the selected
+cost profile in `parameters["cost_matrix"]`, and emits terminal `outcomes`
+whose `decision_score_semantics` is `policy_confidence`.
+
+The v0 helper is intentionally post-hoc: no training changes, no new runtime
+dependencies, and no live taxonomy service requirement. It greedily walks
+coarse-to-fine ranks, commits when expected utility exceeds abstention, and
+requires child-rank commits to remain descendants of the previously committed
+parent. The cost matrix separates three design levers:
+
+- specificity reward, with named shapes (`linear`, `sqrt`, `log`);
+- overclaim cost, scaled by committed rank depth;
+- wrong-branch cost, based on LCA rank-depth gap rather than raw graph edge
+  count.
+
+Typus ships three explicit v0 profiles:
+
+- `v0_conservative`: log specificity reward, higher overclaim and wrong-branch
+  penalties.
+- `v0_balanced`: sqrt specificity reward, 5x overclaim default, and rank-depth
+  LCA separation. This is the default.
+- `v0_aggressive`: linear specificity reward with lower penalties for smoke
+  comparison and downstream tuning.
+
+These defaults are calibration scaffolding, not a final ecological cost model.
+They are motivated by the current Insecta pilot distribution, where collapsed
+model-supported expert depths are mostly genus-safe, and should be tuned again
+against larger expert-calibrated data.
 
 ### `TaxonomyContext`
 
@@ -117,6 +153,14 @@ result = HierarchicalClassificationResult(
 json_payload = result.to_json(indent=2)
 canonical = result.to_classification_result()
 ```
+
+## Taxon identity
+
+`Taxon.source` names the authority governing `taxon_id`, `parent_id`, and `ancestry`, not
+the provenance of every display field. Typus's built-in `expanded_taxa` services return
+iNaturalist concept IDs and therefore use `source="iNaturalist"`; CoL/ColDP common-name
+enrichment does not alter that identity. Pass another source explicitly when constructing
+a `Taxon` for a different authority.
 
 ## Taxonomy summaries (v0.4.2+)
 
@@ -293,11 +337,35 @@ json_output = img_result.to_json(indent=2)
 print(json_output)
 ```
 
-## Helper Utilities (`typus.models.detection.utils`)
+## Experimental detection interoperability helpers (`typus.models.detection_utils`)
+
+The `to_coco()` and `from_coco()` helpers are best-effort interoperability aids,
+not a stable Typus public contract. They preserve the current lightweight
+behavior for smoke tests and one-off conversions, but they do not define full
+COCO dataset semantics. In particular:
+
+*   COCO RLE masks are passed through as `counts` strings with image `size`; the
+    helpers do not decode, validate, normalize, or re-encode mask payloads.
+*   Polygon masks are treated as simple coordinate lists. Multi-polygon and
+    coordinate-reference details remain intentionally unspecified.
+*   PNG base64 masks are not representable in this best-effort COCO output and
+    are omitted from annotation `segmentation`.
+*   `from_coco()` does not reverse-map COCO categories to Typus `taxon_id`
+    values.
+
+Use these helpers when a downstream integration can tolerate best-effort COCO
+shape compatibility. Do not treat them as the canonical Typus geometry or mask
+contract; internal Typus geometry should continue to use the canonical geometry
+models documented above.
 
 ### `to_coco()`
 
-Converts an `ImageDetectionResult` object into a COCO-style dictionary (primarily the "annotations" part).
+Returns a minimal COCO-style dictionary for one `ImageDetectionResult`.
+
+This helper emits an `annotations` list and keeps the existing lightweight
+conversion rules. It is suitable for experimental exchange, fixture generation,
+or exploratory adapters, but consumers that require strict COCO compliance
+should own validation and any RLE or polygon normalization outside Typus.
 
 *   `image: ImageDetectionResult`: The detection result to convert.
 *   `category_map: dict[int, int]`: A mapping from Typus `taxon_id` to COCO `category_id`.
@@ -306,7 +374,7 @@ Converts an `ImageDetectionResult` object into a COCO-style dictionary (primaril
 ```python
 from typus.models.detection import ImageDetectionResult, InstancePrediction
 from typus.models.geometry import BBox
-from typus.models.detection.utils import to_coco
+from typus.models.detection_utils import to_coco
 
 # (Assuming ImageDetectionResult 'img_result' is defined as above)
 category_map = {101: 1, 102: 2} # typus taxon_id -> coco category_id
@@ -322,13 +390,14 @@ coco_annotations = to_coco(img_result, category_map)
 
 ### `from_coco()`
 
-Converts a COCO-style JSON dictionary into a list of `ImageDetectionResult` objects.
+Converts a COCO-style JSON dictionary into a list of `ImageDetectionResult`
+objects using the same best-effort assumptions described above.
 
 *   `coco: dict`: The COCO JSON data (can contain information for multiple images).
 
 **Example:**
 ```python
-from typus.models.detection.utils import from_coco
+from typus.models.detection_utils import from_coco
 
 coco_json_data = {
     "images": [

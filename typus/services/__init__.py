@@ -1,13 +1,57 @@
 """Services for Typus (taxonomy, elevation, etc.)."""
 
-from .taxonomy import (
-    AbstractTaxonomyService,
-    BackendConnectionError,
-    PostgresTaxonomyService,
-    SQLiteTaxonomyService,
-    TaxonNotFoundError,
-    TaxonomyServiceError,
-)
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .taxonomy import (
+        AbstractTaxonomyService,
+        BackendConnectionError,
+        PostgresTaxonomyService,
+        SQLiteTaxonomyService,
+        TaxonNotFoundError,
+        TaxonomyServiceError,
+    )
+
+# Missing modules with these names mean an extra was not installed; anything else
+# is a genuine internal import bug and must surface unchanged.
+_OPTIONAL_SERVICE_DEPS = frozenset({"sqlalchemy", "greenlet", "rapidfuzz", "asyncpg", "aiosqlite"})
+
+# Taxonomy services pull in sqlalchemy; resolve them lazily so that importing
+# `typus.services` (e.g. for `projections`) stays dependency-light.
+_LAZY = {
+    "AbstractTaxonomyService",
+    "BackendConnectionError",
+    "PostgresTaxonomyService",
+    "SQLiteTaxonomyService",
+    "TaxonNotFoundError",
+    "TaxonomyServiceError",
+}
+
+
+if not TYPE_CHECKING:
+
+    def __getattr__(name: str) -> object:
+        if name not in _LAZY:
+            raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+        from importlib import import_module
+
+        try:
+            module = import_module("typus.services.taxonomy")
+        except ModuleNotFoundError as exc:  # pragma: no cover - dependency wiring guard
+            if exc.name in _OPTIONAL_SERVICE_DEPS:
+                raise ModuleNotFoundError(
+                    f"`typus.services.{name}` requires the optional service dependencies "
+                    f"(missing '{exc.name}'). Install with "
+                    '`uv pip install "polli-typus[services]"` '
+                    "(or [postgres] / [sqlite] for a driver)."
+                ) from exc
+            raise
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
+
+    def __dir__() -> list[str]:
+        return sorted((set(globals()) | _LAZY) - {"TYPE_CHECKING"})
 
 
 def load_expanded_taxa(*args, **kwargs):

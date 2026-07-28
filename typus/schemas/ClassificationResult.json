@@ -4,9 +4,11 @@
       "enum": [
         "commit_top_candidate",
         "commit_thresholded",
+        "commit_expected_utility",
         "commit_after_repair",
         "abstain_model_natural",
         "abstain_threshold_not_met",
+        "abstain_expected_utility",
         "abstain_parent_abstained",
         "abstain_hierarchy_conflict",
         "abstain_unmapped_taxon",

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Dict, Set
+from typing import TYPE_CHECKING, Dict, Set
 
 from pydantic import ConfigDict, Field
 
-from ..services.taxonomy import AbstractTaxonomyService
 from .serialise import CompactJsonMixin
 from .taxon import Taxon
+
+if TYPE_CHECKING:
+    from ..services.taxonomy import AbstractTaxonomyService
 
 
 class Clade(CompactJsonMixin):

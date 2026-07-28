@@ -195,6 +195,11 @@ async for child in service.children(630955, depth=2):
 - **Update Frequency**: Synchronized with iNaturalist data releases
 - **Generation Process**: Created via expand_taxa.sh script during ingestion pipeline
 
+`Taxon.source` therefore reports `iNaturalist` for objects constructed from
+`expanded_taxa`. The ColDP/CoL common-name columns are enrichment provenance; they do not
+change the authority of the numeric taxon concept ID. Callers constructing a `Taxon` from
+another authority must pass that source explicitly.
+
 ## Version History
 
 - **v0r1**: Added immediate ancestor columns, complete ColDP integration

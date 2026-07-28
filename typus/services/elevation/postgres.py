@@ -5,9 +5,12 @@ from typing import Optional
 from sqlalchemy import MetaData, Table, func, select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from ..sql_ident import quote_qualified_name
+
 
 class PostgresRasterElevation:
     def __init__(self, dsn: str, raster_table: str = "elevation_raster"):
+        self._quoted_tbl_name = quote_qualified_name(raster_table)
         self._engine = create_async_engine(dsn, pool_pre_ping=True)
         self._Session = async_sessionmaker(self._engine)
         self._tbl_name = raster_table
@@ -19,8 +22,12 @@ class PostgresRasterElevation:
 
                 def _reflect(sync_conn):
                     md = MetaData()
-                    Table(self._tbl_name, md, autoload_with=sync_conn)
-                    self._tbl = md.tables[self._tbl_name]
+                    parts = self._tbl_name.split(".")
+                    table_name = parts[-1]
+                    schema = parts[0] if len(parts) == 2 else None
+                    Table(table_name, md, schema=schema, autoload_with=sync_conn)
+                    table_key = f"{schema}.{table_name}" if schema else table_name
+                    self._tbl = md.tables[table_key]
 
                 await conn.run_sync(_reflect)
 
@@ -48,10 +55,15 @@ class PostgresRasterElevation:
             await self._ensure_table()
 
             # Build a VALUES list of (id, lon, lat)
+            params: dict[str, float | int] = {}
             values_rows: list[str] = []
             for i, (lat, lon) in enumerate(coords):
+                params[f"id{i}"] = int(i)
+                params[f"lon{i}"] = float(lon)
+                params[f"lat{i}"] = float(lat)
                 values_rows.append(
-                    f"({int(i)}, {float(lon)}::double precision, {float(lat)}::double precision)"
+                    f"(:id{i}, CAST(:lon{i} AS double precision), "
+                    f"CAST(:lat{i} AS double precision))"
                 )
 
             pts_cte = ", ".join(values_rows)
@@ -61,13 +73,13 @@ class PostgresRasterElevation:
                 "SELECT p.id, ("
                 "  SELECT ST_Value(er.rast, ST_SetSRID(ST_MakePoint(p.lon, p.lat), 4326)) "
                 "  FROM "
-                f"  {self._tbl_name} er "
+                f"  {self._quoted_tbl_name} er "
                 "  WHERE ST_Intersects(er.rast, ST_SetSRID(ST_MakePoint(p.lon, p.lat), 4326)) "
                 "  LIMIT 1"
                 ") AS val "
                 "FROM pts p ORDER BY p.id"
             )
-            res = await s.execute(text(sql))
+            res = await s.execute(text(sql), params)
             rows = res.fetchall()
             # Map by id to preserve order
             out_map: dict[int, Optional[float]] = {}

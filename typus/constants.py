@@ -6,8 +6,6 @@ import enum
 from functools import lru_cache
 from typing import Dict
 
-from rapidfuzz import fuzz, process
-
 
 class RankLevel(enum.IntEnum):
     # major ranks
@@ -103,6 +101,16 @@ def infer_rank(name: str, *, cutoff: int = 80) -> RankLevel | None:
     name_l = name.lower()
     if name_l in NAME_TO_RANK:
         return NAME_TO_RANK[name_l]
+
+    try:
+        from rapidfuzz import fuzz, process
+    except ModuleNotFoundError as exc:  # pragma: no cover - dependency wiring guard
+        raise ModuleNotFoundError(
+            "Fuzzy rank inference requires optional dependency 'rapidfuzz'. "
+            'Install with `uv pip install "polli-typus[fuzzy]"` '
+            "(exact rank-name lookups work without it)."
+        ) from exc
+
     match, score, _ = process.extractOne(
         name_l, NAME_TO_RANK.keys(), scorer=fuzz.WRatio, score_cutoff=cutoff
     ) or (None, 0, None)

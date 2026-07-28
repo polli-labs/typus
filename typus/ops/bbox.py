@@ -33,6 +33,35 @@ def intersect_xyxy(
     return (x1, y1, x2, y2)
 
 
+def union_xyxy(
+    *boxes: Tuple[float, float, float, float],
+) -> Tuple[float, float, float, float]:
+    """Smallest `xyxy` rectangle enclosing all input boxes.
+
+    Unlike `intersect_xyxy`, a union always exists for one or more boxes, so
+    disjoint inputs yield the enclosing rectangle rather than `None`.
+    Degenerate (zero-area) boxes are tolerated and simply contribute their
+    coordinates, mirroring `area_xyxy`'s policy.
+
+    Raises `ValueError` when called with no boxes: an empty union has no
+    meaningful rectangle, and returning a zero box would be a silent wrong
+    answer.
+
+    Inputs are assumed well-ordered (`x1 <= x2`, `y1 <= y2`); inverted boxes are
+    not re-ordered, so they can yield a rectangle that does not enclose them.
+    Use `clamp_xyxy` to repair ordering first. This matches the non-repairing
+    posture of `area_xyxy` and `intersect_xyxy`.
+    """
+    if not boxes:
+        raise ValueError("union_xyxy requires at least one box")
+    return (
+        min(b[0] for b in boxes),
+        min(b[1] for b in boxes),
+        max(b[2] for b in boxes),
+        max(b[3] for b in boxes),
+    )
+
+
 def iou_xyxy(a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]) -> float:
     """Intersection over Union for two `xyxy` pixel-space boxes.
 

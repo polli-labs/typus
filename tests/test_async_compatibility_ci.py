@@ -42,6 +42,7 @@ async def test_no_greenlet_with_mock():
     assert taxon.rank_level == RankLevel(10)
     assert taxon.parent_id == 578086
     assert isinstance(taxon.ancestry, list)
+    assert taxon.source == "iNaturalist"
 
 
 @pytest.mark.asyncio
@@ -78,6 +79,7 @@ async def test_row_to_taxon_mapping_without_ancestry():
     assert taxon.rank_level == RankLevel(10)
     assert taxon.parent_id == 578086
     assert isinstance(taxon.ancestry, list)
+    assert taxon.source == "iNaturalist"
 
 
 def test_no_greenlet_in_new_loop():
@@ -120,6 +122,7 @@ def test_no_greenlet_in_new_loop():
                 taxon = await service.get_taxon(47219)
                 assert taxon.scientific_name == "Apis mellifera"
                 assert isinstance(taxon.ancestry, list)
+                assert taxon.source == "iNaturalist"
 
         return True
 
@@ -161,3 +164,51 @@ async def test_sql_uses_correct_column_names():
         sql_call = mock_text.call_args[0][0]
         assert '"taxonID"' in sql_call
         assert "taxon_id" not in sql_call.replace('"taxonID"', "")  # Remove quoted version first
+
+
+@pytest.mark.asyncio
+async def test_sql_lca_recursive_fallback_binds_taxon_ids():
+    service = PostgresTaxonomyService("postgresql+asyncpg://mock:mock@localhost/mock")
+    mock_session = AsyncMock()
+    mock_session.scalar = AsyncMock(return_value=1)
+
+    with patch("typus.services.taxonomy.postgres.text", side_effect=lambda sql: sql):
+        result = await service._lca_recursive_fallback(mock_session, {2, 1})
+
+    assert result == 1
+    sql = mock_session.scalar.call_args.args[0]
+    params = mock_session.scalar.call_args.args[1]
+
+    assert ":tid0" in sql
+    assert ":tid1" in sql
+    assert ":taxon_count" in sql
+    assert 'WHERE "taxonID" = 1' not in sql
+    assert "VALUES (:tid0), (:tid1)" in sql
+    assert params == {"tid0": 1, "tid1": 2, "taxon_count": 2}
+
+
+@pytest.mark.asyncio
+async def test_sql_fetch_subtree_binds_root_ids():
+    service = PostgresTaxonomyService("postgresql+asyncpg://mock:mock@localhost/mock")
+    mock_session = AsyncMock()
+    row = MagicMock()
+    row.taxon_id = 7
+    row.parent_id = None
+    mock_session.execute = AsyncMock(return_value=[row])
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch.object(service, "_Session", return_value=mock_session),
+        patch("typus.services.taxonomy.postgres.text", side_effect=lambda sql: sql),
+    ):
+        subtree = await service.fetch_subtree({999, 7})
+
+    sql = mock_session.execute.call_args.args[0]
+    params = mock_session.execute.call_args.args[1]
+
+    assert subtree == {7: None}
+    assert "IN (:root0, :root1)" in sql
+    assert "IN (7,999)" not in sql
+    assert "IN (7, 999)" not in sql
+    assert params == {"root0": 7, "root1": 999}

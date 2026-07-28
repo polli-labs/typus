@@ -48,7 +48,7 @@ Backends:
 
 - Loader entrypoint: `typus/services/sqlite_loader.py`
 - CLI: `typus-load-sqlite --sqlite <path> [--tsv <path>] [--url <url>] [--replace] [--with-indexes|--no-with-indexes]`
-- Default asset URL is controlled by `TYPUS_EXPANDED_TAXA_URL`.
+- Default asset URL points at Backblaze B2 (`https://f005.backblazeb2.com/file/public-0/expanded_taxa/latest/expanded_taxa.sqlite`); override with `TYPUS_EXPANDED_TAXA_URL` or `--url`. (Interim host while a branded `assets.polli.ai` origin is restored — POL-1810.)
 - Cache root defaults to `~/.cache/typus` and can be overridden with `TYPUS_CACHE_DIR`.
 
 ## Optional Dependency Wiring

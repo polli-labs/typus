@@ -32,6 +32,11 @@ In the private integration clone:
 
 - Public inspection/release clone: `~/dev/typus/public/typus`
 - No standing repo-specific private-only paths or public-owned exceptions are
-  recorded here today.
+  recorded for package source, tests, docs, or lockfiles.
+- `.github/workflows/publish.yml` is a public-owned exception. In
+  `typus-dev` it is a manual, non-mutating candidate build and artifact
+  verification surface. In public `typus` it additionally owns release-tag
+  validation, TestPyPI/PyPI uploads, and GitHub Release creation. Release tags
+  must be pushed only to public `typus`.
 - Keep this page limited to local paths, remotes, and explicit long-lived
   overrides when they exist.

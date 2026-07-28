@@ -19,10 +19,15 @@ except ModuleNotFoundError as exc:  # pragma: no cover - dependency wiring guard
         'Install with `uv pip install "polli-typus[loader]"`.'
     ) from exc
 
+# Interim default points directly at the Backblaze B2 `public-0` object store.
+# The branded `assets.polli.ai` host was a now-retired VPS; restoring a branded
+# origin (Cloudflare / box in front of B2) is deferred (POL-1810). Override with
+# `$TYPUS_EXPANDED_TAXA_URL` or the loader/CLI `--url` flag.
 DEFAULT_URL = os.getenv(
     "TYPUS_EXPANDED_TAXA_URL",
-    "https://assets.polli.ai/expanded_taxa/latest/expanded_taxa.sqlite",
+    "https://f005.backblazeb2.com/file/public-0/expanded_taxa/latest/expanded_taxa.sqlite",
 )
+DOWNLOAD_TIMEOUT = (10, 120)
 
 
 def _schema_ok(conn: sqlite3.Connection) -> bool:
@@ -55,32 +60,55 @@ def _ensure_self_consistent(db: Path) -> None:
 
 def _download(url: str, dest: Path) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
-    resp = requests.get(url, stream=True)
-    resp.raise_for_status()
-    total = int(resp.headers.get("content-length", 0))
-    bar = tqdm(total=total, unit="B", unit_scale=True, disable=not sys.stderr.isatty())
-    with dest.open("wb") as fh:
-        for chunk in resp.iter_content(chunk_size=8192):
-            if chunk:
-                fh.write(chunk)
-                bar.update(len(chunk))
-    bar.close()
-
-    checksum_url = url + ".sha256"
+    tmp_dest = dest.with_name(dest.name + ".part")
+    tmp_dest.unlink(missing_ok=True)
     try:
-        r2 = requests.get(checksum_url)
-        if r2.ok:
-            expected = r2.text.strip().split()[0]
-            h = hashlib.sha256()
-            with dest.open("rb") as fh:
-                for b in iter(lambda: fh.read(8192), b""):
-                    h.update(b)
-            if h.hexdigest() != expected:
-                dest.unlink(missing_ok=True)
-                raise ValueError("Checksum mismatch for " + dest.name)
-    except requests.RequestException:
-        pass
+        resp = requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT)
+        resp.raise_for_status()
+        total = int(resp.headers.get("content-length", 0))
+        bar = tqdm(total=total, unit="B", unit_scale=True, disable=not sys.stderr.isatty())
+        try:
+            with tmp_dest.open("wb") as fh:
+                for chunk in resp.iter_content(chunk_size=8192):
+                    if chunk:
+                        fh.write(chunk)
+                        bar.update(len(chunk))
+        finally:
+            bar.close()
+
+        checksum_url = url + ".sha256"
+        try:
+            r2 = requests.get(checksum_url, timeout=DOWNLOAD_TIMEOUT)
+            if r2.ok:
+                expected = r2.text.strip().split()[0]
+                h = hashlib.sha256()
+                with tmp_dest.open("rb") as fh:
+                    for b in iter(lambda: fh.read(8192), b""):
+                        h.update(b)
+                if h.hexdigest() != expected:
+                    tmp_dest.unlink(missing_ok=True)
+                    raise ValueError("Checksum mismatch for " + dest.name)
+        except requests.RequestException:
+            pass
+        tmp_dest.replace(dest)
+    except Exception:
+        tmp_dest.unlink(missing_ok=True)
+        raise
     return dest
+
+
+def _cached_sqlite_ok(path: Path) -> bool:
+    try:
+        conn = sqlite3.connect(str(path))
+        try:
+            if not _schema_ok(conn):
+                return False
+            rows = conn.execute("PRAGMA quick_check;").fetchall()
+            return bool(rows) and all(row[0] == "ok" for row in rows)
+        finally:
+            conn.close()
+    except sqlite3.DatabaseError:
+        return False
 
 
 def _tsv_to_sqlite(tsv_path: Path, sqlite_path: Path, mode: Literal["replace", "append"]):
@@ -167,6 +195,17 @@ def load_expanded_taxa(
 ) -> Path:
     if cache_dir is None:
         cache_dir = Path(os.getenv("TYPUS_CACHE_DIR", Path.home() / ".cache" / "typus"))
+
+    def build_from_tsv_gz() -> Path:
+        gz_url = url.rsplit(".", 1)[0] + ".tsv.gz"
+        gz_path = cache_dir / Path(gz_url).name
+        _download(gz_url, gz_path)
+        with gzip.open(gz_path, "rb") as r, (cache_dir / "expanded_taxa.tsv").open("wb") as w:
+            w.write(r.read())
+        local_tsv_path = cache_dir / "expanded_taxa.tsv"
+        _tsv_to_sqlite(local_tsv_path, sqlite_path, "replace")
+        return sqlite_path
+
     if sqlite_path.exists():
         conn = sqlite3.connect(str(sqlite_path))
         if _schema_ok(conn) and if_exists == "fail":
@@ -213,18 +252,15 @@ def load_expanded_taxa(
     # download
     file_name = Path(url).name
     cached = cache_dir / file_name
+    validate_cached_sqlite = cached.suffix == ".sqlite"
+    if cached.exists() and validate_cached_sqlite and not _cached_sqlite_ok(cached):
+        cached.unlink()
     if not cached.exists():
         try:
             _download(url, cached)
         except Exception:
             # fallback to TSV
-            gz_url = url.rsplit(".", 1)[0] + ".tsv.gz"
-            gz_path = cache_dir / Path(gz_url).name
-            _download(gz_url, gz_path)
-            with gzip.open(gz_path, "rb") as r, (cache_dir / "expanded_taxa.tsv").open("wb") as w:
-                w.write(r.read())
-            tsv_path = cache_dir / "expanded_taxa.tsv"
-            _tsv_to_sqlite(tsv_path, sqlite_path, "replace")
+            build_from_tsv_gz()
             if force_self_consistent:
                 _ensure_self_consistent(sqlite_path)
             if create_indexes:
@@ -245,6 +281,10 @@ def load_expanded_taxa(
                 )
             return sqlite_path
     sqlite_path.write_bytes(cached.read_bytes())
+    if validate_cached_sqlite and not _cached_sqlite_ok(sqlite_path):
+        sqlite_path.unlink(missing_ok=True)
+        cached.unlink(missing_ok=True)
+        build_from_tsv_gz()
     if force_self_consistent:
         _ensure_self_consistent(sqlite_path)
     if create_indexes:

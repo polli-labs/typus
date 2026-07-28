@@ -33,12 +33,13 @@ jobs:
         run: |
           make check-all
 
-  build-and-publish:
+  build-verify-publish:
+    name: Build, verify, and publish artifacts
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # needed to upload release asset
-      id-token: write  # for OIDC (if you prefer it)
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v6
 
@@ -57,6 +58,38 @@ jobs:
             pyproject.toml
             uv.lock
 
+      - name: Verify package and changelog release versions
+        run: |
+          package_version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            tag_version="${GITHUB_REF_NAME#v}"
+            if [ "$tag_version" != "$package_version" ]; then
+              echo "::error::Release tag $GITHUB_REF_NAME does not match pyproject.toml version $package_version"
+              exit 1
+            fi
+          fi
+          PACKAGE_VERSION="$package_version" python - <<'PY'
+          import os
+          import re
+          from datetime import date
+          from pathlib import Path
+
+          version = os.environ["PACKAGE_VERSION"]
+          pattern = re.compile(
+              rf"^## {re.escape(version)} – (?P<date>\d{{4}}-\d{{2}}-\d{{2}})$",
+              re.MULTILINE,
+          )
+          matches = list(pattern.finditer(Path("CHANGELOG.md").read_text()))
+          assert len(matches) == 1, (
+              f"CHANGELOG.md must contain exactly one dated '## {version} – YYYY-MM-DD' "
+              f"heading; found {len(matches)}"
+          )
+          release_date = date.fromisoformat(matches[0].group("date"))
+          assert release_date <= date.today(), (
+              f"CHANGELOG.md release date {release_date} is in the future"
+          )
+          PY
+
       - name: Sync locked publish tools
         run: uv sync --locked --extra dev
 
@@ -64,6 +97,57 @@ jobs:
         run: |
           uv build --clear
           uv run --locked --extra dev twine check dist/*
+
+      - name: Verify built wheel in isolated core and services environments
+        run: |
+          wheel="$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
+          if [ -z "$wheel" ]; then
+            echo "::error::uv build did not produce a wheel"
+            exit 1
+          fi
+
+          core_env="$(mktemp -d)"
+          services_env="$(mktemp -d)"
+          trap 'rm -rf "$core_env" "$services_env"' EXIT
+
+          uv venv "$core_env"
+          uv pip install --python "$core_env/bin/python" "$wheel"
+          expected_version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          EXPECTED_VERSION="$expected_version" "$core_env/bin/python" - <<'PY'
+          import importlib.util
+          import os
+          import sys
+          from importlib.metadata import version
+
+          import typus
+          import typus.models.geometry
+          from typus import union_xyxy
+
+          assert version("polli-typus") == os.environ["EXPECTED_VERSION"]
+          assert importlib.util.find_spec("sqlalchemy") is None
+          assert importlib.util.find_spec("rapidfuzz") is None
+          assert "sqlalchemy" not in sys.modules
+          assert union_xyxy((0.0, 0.0, 1.0, 1.0), (2.0, 2.0, 3.0, 3.0)) == (
+              0.0,
+              0.0,
+              3.0,
+              3.0,
+          )
+          PY
+
+          uv venv "$services_env"
+          uv pip install --python "$services_env/bin/python" "${wheel}[services]"
+          EXPECTED_VERSION="$expected_version" "$services_env/bin/python" - <<'PY'
+          import os
+          from importlib.metadata import version
+
+          from typus import TaxonomyService
+          from typus.services import SQLiteTaxonomyService
+
+          assert version("polli-typus") == os.environ["EXPECTED_VERSION"]
+          assert TaxonomyService is not None
+          assert SQLiteTaxonomyService is not None
+          PY
 
       - name: Publish to TestPyPI
         if: startsWith(github.ref, 'refs/tags/v')
@@ -73,48 +157,14 @@ jobs:
         run: uv run --locked --extra dev twine upload -r testpypi dist/*
 
       - name: Publish to PyPI
-        if: startsWith(github.ref, 'refs/tags/v') && github.repository == 'polli-labs/typus'
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_KEY }}
         run: uv run --locked --extra dev twine upload dist/*
 
-      - name: Upload wheel as GitHub release asset
+      - name: Upload distributions as GitHub release assets
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           files: dist/*
-
-  deploy-docs:
-    name: Deploy Docs to VPS
-    runs-on: ubuntu-latest
-    needs: build-and-publish
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-    concurrency:
-      group: docs-deploy
-      cancel-in-progress: true
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with: { python-version: '3.12' }
-      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
-        with:
-          version: "0.10.12"
-          enable-cache: true
-          cache-dependency-glob: |
-            pyproject.toml
-            uv.lock
-      - run: uv sync --locked --extra docs
-      - run: uv run --locked --extra docs mkdocs build
-      - uses: webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555 # v0.10.0
-        with:
-          ssh-private-key: ${{ secrets.POLLISERVE0_SSH_PRIVATE_KEY }}
-      - name: Check SSH connectivity
-        run: |
-          echo "Checking SSH connectivity to docs host..."
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            ${{ secrets.POLLISERVE0_SSH_USER }}@${{ secrets.POLLISERVE0_SSH_PUBLIC_HOST }} echo ok
-      - run: |
-          rsync -avz --delete \
-            -e "ssh -o StrictHostKeyChecking=no" \
-            site/ ${{ secrets.POLLISERVE0_SSH_USER }}@${{ secrets.POLLISERVE0_SSH_PUBLIC_HOST }}:/var/www/docs.polli.ai/html/typus/

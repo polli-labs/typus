@@ -8,7 +8,7 @@ from typing import Any
 from rapidfuzz import fuzz
 
 from ...constants import RankLevel, is_major
-from ...models.taxon import Taxon
+from ...models.taxon import INATURALIST_TAXON_SOURCE, Taxon
 
 
 def col_prefix_for_level(level: RankLevel) -> str:
@@ -81,7 +81,7 @@ def score_taxon_match(
     return max(float(fuzz.WRatio(q_norm, candidate.lower()) / 100.0) for candidate in candidates)
 
 
-def taxon_from_search_row(
+def taxon_from_expanded_taxa_row(
     row: Mapping[str, Any],
     *,
     ancestry: list[int] | None = None,
@@ -118,5 +118,6 @@ def taxon_from_search_row(
         rank_level=RankLevel(int(rank_level_raw)),
         parent_id=int(parent_raw) if parent_raw is not None else None,
         ancestry=ancestry or [],
+        source=INATURALIST_TAXON_SOURCE,
         vernacular={"en": [str(common_name_raw)]} if common_name_raw else {},
     )

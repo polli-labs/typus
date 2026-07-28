@@ -73,8 +73,8 @@
       "type": "array"
     },
     "source": {
-      "default": "CoL",
-      "description": "Originating authority: CoL/iNat/GBIF",
+      "default": "iNaturalist",
+      "description": "Authority governing taxon_id, parent_id, and ancestry IDs. Enrichment fields may have separate provenance.",
       "title": "Source",
       "type": "string"
     },

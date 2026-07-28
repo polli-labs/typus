@@ -1,5 +1,7 @@
 import math
 
+import pytest
+
 from typus.models.geometry import BBoxXYWHNorm, to_xyxy_px
 from typus.ops import (
     area_xyxy,
@@ -8,6 +10,7 @@ from typus.ops import (
     intersect_xyxy,
     iou_xyxy,
     to_xywh_px,
+    union_xyxy,
     xywh_to_xyxy,
     xyxy_to_xywh,
 )
@@ -51,6 +54,40 @@ def test_intersect_xyxy():
     assert intersect_xyxy(a, b) is None
 
 
+def test_union_xyxy():
+    a = (0.0, 0.0, 10.0, 10.0)
+
+    # Overlapping
+    b = (5.0, 5.0, 15.0, 15.0)
+    assert union_xyxy(a, b) == (0.0, 0.0, 15.0, 15.0)
+
+    # Disjoint => enclosing rectangle, never None
+    b = (20.0, 20.0, 30.0, 30.0)
+    assert union_xyxy(a, b) == (0.0, 0.0, 30.0, 30.0)
+
+    # Containment
+    b_small = (2.0, 2.0, 8.0, 8.0)
+    assert union_xyxy(a, b_small) == a
+
+    # Identical
+    assert union_xyxy(a, a) == a
+
+    # Degenerate (zero-area) box still contributes its coordinates
+    point = (12.0, 3.0, 12.0, 3.0)
+    assert union_xyxy(a, point) == (0.0, 0.0, 12.0, 10.0)
+
+    # More than two boxes
+    assert union_xyxy(a, b, b_small) == (0.0, 0.0, 30.0, 30.0)
+
+    # Single box is its own union
+    assert union_xyxy(a) == a
+
+
+def test_union_xyxy_empty_raises():
+    with pytest.raises(ValueError, match="at least one box"):
+        union_xyxy()
+
+
 def test_clamp_xyxy():
     # Clamp negatives and overflows
     clamped = clamp_xyxy((-5.0, -5.0, 12.0, 14.0), 10, 12)
@@ -88,3 +125,13 @@ def test_xywh_px_roundtrip_and_consistency():
     xyxy_direct = to_xyxy_px(b, W, H)
     xyxy_via_rt = to_xyxy_px(b_rt, W, H)
     assert xyxy_direct == xyxy_via_rt
+
+
+def test_union_xyxy_does_not_reorder_inverted_input() -> None:
+    """Pins the non-repairing posture: an inverted box is passed through, not fixed.
+
+    `clamp_xyxy` deliberately re-orders inverted input; the pure math ops do not.
+    If someone later adds "helpful" reordering here, this test makes that a
+    deliberate semantic change rather than a silent one.
+    """
+    assert union_xyxy((10.0, 10.0, 0.0, 0.0)) == (10.0, 10.0, 0.0, 0.0)

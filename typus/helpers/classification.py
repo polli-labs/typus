@@ -34,6 +34,22 @@ _PROBABILITY_SEMANTICS = {
     ScoreSemantics.CALIBRATED_RANK_PROBABILITY,
 }
 
+_MODEL_RANK_DEPTHS = {
+    40: 1.0,  # order
+    30: 2.0,  # family
+    20: 3.0,  # genus
+    10: 4.0,  # species
+}
+
+_PHASE_D_RANK_WEIGHTS = {
+    40: 0.5,
+    30: 1.0,
+    20: 2.0,
+    10: 3.0,
+}
+
+SpecificityRewardShape = Literal["linear", "sqrt", "log"]
+
 
 @dataclass
 class LineageNode:
@@ -56,6 +72,161 @@ class TreeNode:
     parent_taxon_id: int | None = None
     taxon_snapshot: TaxonSnapshot | None = None
     children: list["TreeNode"] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class _UtilityCandidate:
+    candidate: TaxonCandidate
+    utility: float
+
+
+@dataclass(frozen=True)
+class TaxonomyCostMatrix:
+    """Serializable v0 cost profile for hierarchy-aware Bayes-risk decisions.
+
+    Rank depth is intentionally a configurable domain proxy rather than a raw
+    graph edge count. The default model-rank depths are linear for the current
+    order/family/genus/species heads, but minor ranks can be interpolated
+    between them when callers provide subrank candidates.
+    """
+
+    profile_name: str
+    specificity_reward_shape: SpecificityRewardShape = "sqrt"
+    specificity_reward_scale: float = 1.0
+    overclaim_cost_weight: float = 5.0
+    wrong_branch_cost_weight: float = 1.0
+    wrong_branch_exponent: float = 1.35
+    rank_depths: Mapping[int, float] = field(default_factory=lambda: dict(_MODEL_RANK_DEPTHS))
+    rank_weights: Mapping[int, float] = field(default_factory=lambda: dict(_PHASE_D_RANK_WEIGHTS))
+    min_commit_utility: float = 0.0
+    abstain_utility: float = 0.0
+
+    def specificity_reward(self, rank_level: int) -> float:
+        depth = self.rank_depth(rank_level)
+        max_depth = self.max_rank_depth()
+        if max_depth <= 0:
+            return 0.0
+        depth_fraction = max(depth / max_depth, 0.0)
+        if self.specificity_reward_shape == "linear":
+            shaped = depth_fraction
+        elif self.specificity_reward_shape == "sqrt":
+            shaped = math.sqrt(depth_fraction)
+        else:
+            shaped = math.log1p(depth) / math.log1p(max_depth)
+        return self.specificity_reward_scale * self.rank_weight(rank_level) * shaped
+
+    def overclaim_cost(self, rank_level: int) -> float:
+        max_depth = self.max_rank_depth()
+        if max_depth <= 0:
+            return 0.0
+        depth_fraction = max(self.rank_depth(rank_level) / max_depth, 0.0)
+        return self.overclaim_cost_weight * depth_fraction
+
+    def wrong_branch_cost(self, committed: TaxonCandidate, true_candidate: TaxonCandidate) -> float:
+        if committed.taxon_id == true_candidate.taxon_id:
+            return 0.0
+
+        committed_lineage = _lineage_taxa_by_rank(committed)
+        true_lineage = _lineage_taxa_by_rank(true_candidate)
+        if committed.taxon_id in true_lineage.values():
+            return 0.0
+        if true_candidate.taxon_id in committed_lineage.values():
+            return self.overclaim_cost(committed.rank_level)
+
+        lca_depth = _lowest_common_ancestor_depth(
+            committed_lineage,
+            true_lineage,
+            self,
+        )
+        deepest_compared = max(
+            self.rank_depth(committed.rank_level),
+            self.rank_depth(true_candidate.rank_level),
+        )
+        separation = max(deepest_compared - lca_depth, 0.0)
+        return self.wrong_branch_cost_weight * (
+            1.0 + math.pow(separation, self.wrong_branch_exponent)
+        )
+
+    def rank_depth(self, rank_level: int) -> float:
+        if rank_level in self.rank_depths:
+            return self.rank_depths[rank_level]
+
+        known_levels = sorted(self.rank_depths)
+        if not known_levels:
+            return 1.0
+
+        coarser_levels = [level for level in known_levels if level > rank_level]
+        deeper_levels = [level for level in known_levels if level < rank_level]
+        if coarser_levels and deeper_levels:
+            coarser = min(coarser_levels)
+            deeper = max(deeper_levels)
+            span = coarser - deeper
+            if span == 0:
+                return self.rank_depths[coarser]
+            fraction = (coarser - rank_level) / span
+            return self.rank_depths[coarser] + fraction * (
+                self.rank_depths[deeper] - self.rank_depths[coarser]
+            )
+        if coarser_levels:
+            return max(self.rank_depths[min(coarser_levels)] - 1.0, 0.0)
+        return self.rank_depths[max(deeper_levels)] + 1.0
+
+    def max_rank_depth(self) -> float:
+        if not self.rank_depths:
+            return 1.0
+        return max(self.rank_depths.values())
+
+    def rank_weight(self, rank_level: int) -> float:
+        if rank_level in self.rank_weights:
+            return self.rank_weights[rank_level]
+        return max(self.rank_depth(rank_level) / self.max_rank_depth(), 0.0)
+
+    def to_policy_parameters(self) -> dict[str, Any]:
+        return {
+            "profile_name": self.profile_name,
+            "specificity_reward_shape": self.specificity_reward_shape,
+            "specificity_reward_scale": self.specificity_reward_scale,
+            "overclaim_cost_weight": self.overclaim_cost_weight,
+            "wrong_branch_cost_weight": self.wrong_branch_cost_weight,
+            "wrong_branch_exponent": self.wrong_branch_exponent,
+            "rank_depths": {str(rank): depth for rank, depth in self.rank_depths.items()},
+            "rank_weights": {str(rank): weight for rank, weight in self.rank_weights.items()},
+            "min_commit_utility": self.min_commit_utility,
+            "abstain_utility": self.abstain_utility,
+        }
+
+
+def cost_matrix_v0_balanced() -> TaxonomyCostMatrix:
+    return TaxonomyCostMatrix(profile_name="v0_balanced")
+
+
+def cost_matrix_v0_conservative() -> TaxonomyCostMatrix:
+    return TaxonomyCostMatrix(
+        profile_name="v0_conservative",
+        specificity_reward_shape="log",
+        overclaim_cost_weight=7.5,
+        wrong_branch_cost_weight=1.25,
+        wrong_branch_exponent=1.5,
+    )
+
+
+def cost_matrix_v0_aggressive() -> TaxonomyCostMatrix:
+    return TaxonomyCostMatrix(
+        profile_name="v0_aggressive",
+        specificity_reward_shape="linear",
+        overclaim_cost_weight=3.0,
+        wrong_branch_cost_weight=0.75,
+        wrong_branch_exponent=1.15,
+    )
+
+
+def cost_matrix_v0_profiles() -> dict[str, TaxonomyCostMatrix]:
+    profiles = [
+        cost_matrix_v0_conservative(),
+        cost_matrix_v0_balanced(),
+        cost_matrix_v0_aggressive(),
+    ]
+    return {profile.profile_name: profile for profile in profiles}
 
 
 def derive_lineage(result: ClassificationResult) -> list[LineageNode]:
@@ -177,6 +348,110 @@ def apply_chow_threshold(
     return _validate(updated)
 
 
+def expected_utility_policy(
+    result: ClassificationResult,
+    costs: TaxonomyCostMatrix | None = None,
+) -> ClassificationResult:
+    """Apply the hierarchy-aware v0 expected-utility decision policy.
+
+    The policy greedily walks from coarse to fine ranks. At each rank it picks
+    the taxon candidate with the highest expected utility against the rank-local
+    posterior, commits only when that utility beats abstention, and forces
+    deeper commits to remain descendants of the previously committed parent.
+    """
+
+    matrix = costs or cost_matrix_v0_balanced()
+    updated, policy = _append_policy(
+        result,
+        DecisionPolicyKind.COST_SENSITIVE_POLICY,
+        parameters={
+            "algorithm": "greedy_hierarchy_frontier",
+            "selection_rule": "commit_when_expected_utility_exceeds_abstain",
+            "cost_matrix": matrix.to_policy_parameters(),
+        },
+    )
+
+    outcomes_by_rank: dict[int, DecisionOutcome] = {}
+    committed_parent_id: int | None = None
+    committed_parent_rank: int | None = None
+    parent_abstained = False
+
+    for rank in sorted(updated.ranks, key=lambda item: item.rank_level, reverse=True):
+        utilities = _expected_utility_candidates(rank, matrix)
+        natural = _best_utility_candidate(utilities)
+        applied: ClassificationCandidate
+        suppressed_from: ClassificationCandidate | None = None
+
+        if natural is None:
+            applied = _abstain_candidate(rank)
+            decision = "abstain"
+            reason = AdjustmentReason.ABSTAIN_MODEL_NATURAL
+            decision_score = None
+            parent_abstained = True
+        elif parent_abstained:
+            applied = _abstain_candidate(rank, fallback=natural.candidate)
+            suppressed_from = natural.candidate if applied is not natural.candidate else None
+            decision = "abstain"
+            reason = AdjustmentReason.ABSTAIN_PARENT_ABSTAINED
+            decision_score = natural.utility - matrix.abstain_utility
+        elif committed_parent_id is not None and not _is_descendant_of(
+            natural.candidate,
+            parent_id=committed_parent_id,
+            parent_rank_level=committed_parent_rank,
+            taxonomy_tree={},
+        ):
+            descendant = _best_descendant_utility_candidate(
+                utilities,
+                parent_id=committed_parent_id,
+                parent_rank_level=committed_parent_rank,
+            )
+            if descendant is not None and descendant.utility > matrix.min_commit_utility:
+                applied = descendant.candidate
+                suppressed_from = natural.candidate
+                decision = "commit"
+                reason = AdjustmentReason.COMMIT_AFTER_REPAIR
+                decision_score = descendant.utility - matrix.abstain_utility
+                committed_parent_id = descendant.candidate.taxon_id
+                committed_parent_rank = descendant.candidate.rank_level
+            else:
+                applied = _abstain_candidate(rank, fallback=natural.candidate)
+                suppressed_from = natural.candidate if applied is not natural.candidate else None
+                decision = "abstain"
+                reason = AdjustmentReason.ABSTAIN_HIERARCHY_CONFLICT
+                decision_score = natural.utility - matrix.abstain_utility
+                parent_abstained = True
+        elif natural.utility > matrix.min_commit_utility:
+            applied = natural.candidate
+            decision = "commit"
+            reason = AdjustmentReason.COMMIT_EXPECTED_UTILITY
+            decision_score = natural.utility - matrix.abstain_utility
+            committed_parent_id = natural.candidate.taxon_id
+            committed_parent_rank = natural.candidate.rank_level
+        else:
+            applied = _abstain_candidate(rank, fallback=natural.candidate)
+            suppressed_from = natural.candidate if applied is not natural.candidate else None
+            decision = "abstain"
+            reason = AdjustmentReason.ABSTAIN_EXPECTED_UTILITY
+            decision_score = natural.utility - matrix.abstain_utility
+            parent_abstained = True
+
+        outcomes_by_rank[rank.rank_level] = _outcome(
+            rank=rank,
+            candidate=applied,
+            policy_id=policy.id,
+            decision=decision,
+            reason=reason,
+            suppressed_from=suppressed_from,
+            decision_score=decision_score,
+            decision_score_semantics=DecisionScoreSemantics.POLICY_CONFIDENCE
+            if decision_score is not None
+            else None,
+        )
+
+    updated.outcomes = [outcomes_by_rank[rank.rank_level] for rank in updated.ranks]
+    return _validate(updated)
+
+
 def apply_hierarchy_repair(
     result: ClassificationResult,
     taxonomy_tree: Any,
@@ -266,19 +541,6 @@ def apply_temperature_scaling(result: ClassificationResult, T: float) -> Classif
             candidate.score = scaled_score
             candidate.score_semantics = ScoreSemantics.TEMPERATURE_SCALED_RANK_PROBABILITY
     return _validate(updated)
-
-
-def apply_conformal_calibration(
-    result: ClassificationResult,
-    calibration_set_id: str,
-    target_coverage: float,
-) -> ClassificationResult:
-    raise NotImplementedError(
-        "TODO(POL-980): conformal calibration requires a calibrated nonconformity "
-        "score implementation before Typus can rewrite candidate sets. "
-        f"Received calibration_set_id={calibration_set_id!r}, "
-        f"target_coverage={target_coverage!r}."
-    )
 
 
 def as_probability(candidate: ClassificationCandidate) -> float | None:
@@ -373,11 +635,101 @@ def _outcome(
     )
 
 
+def _expected_utility_candidates(
+    rank: RankBelief,
+    matrix: TaxonomyCostMatrix,
+) -> list[_UtilityCandidate]:
+    probability_candidates = [
+        (candidate, probability)
+        for candidate in rank.candidates
+        if (probability := as_probability(candidate)) is not None
+    ]
+    if not probability_candidates:
+        raise ValueError(f"rank {rank.rank_level} has no probability-bearing candidates")
+
+    missing_probability = max(
+        1.0 - sum(probability for _, probability in probability_candidates),
+        0.0,
+    )
+    utilities: list[_UtilityCandidate] = []
+    for committed, committed_probability in probability_candidates:
+        if not isinstance(committed, TaxonCandidate):
+            continue
+
+        utility = committed_probability * matrix.specificity_reward(committed.rank_level)
+        utility -= missing_probability * matrix.overclaim_cost(committed.rank_level)
+        for true_candidate, true_probability in probability_candidates:
+            if true_candidate is committed:
+                continue
+            if isinstance(true_candidate, TaxonCandidate):
+                utility -= true_probability * matrix.wrong_branch_cost(
+                    committed,
+                    true_candidate,
+                )
+            else:
+                utility -= true_probability * matrix.overclaim_cost(committed.rank_level)
+        utilities.append(_UtilityCandidate(candidate=committed, utility=utility))
+    return utilities
+
+
+def _best_utility_candidate(
+    utilities: list[_UtilityCandidate],
+) -> _UtilityCandidate | None:
+    if not utilities:
+        return None
+    return max(utilities, key=lambda item: (item.utility, item.candidate.score))
+
+
+def _best_descendant_utility_candidate(
+    utilities: list[_UtilityCandidate],
+    *,
+    parent_id: int,
+    parent_rank_level: int | None,
+) -> _UtilityCandidate | None:
+    descendants = [
+        item
+        for item in utilities
+        if _is_descendant_of(
+            item.candidate,
+            parent_id=parent_id,
+            parent_rank_level=parent_rank_level,
+            taxonomy_tree={},
+        )
+    ]
+    return _best_utility_candidate(descendants)
+
+
+def _abstain_candidate(
+    rank: RankBelief,
+    fallback: ClassificationCandidate | None = None,
+) -> ClassificationCandidate:
+    rank_null = _rank_null_candidate(rank)
+    if rank_null is not None:
+        return rank_null
+    residual = _top_residual_candidate(rank)
+    if residual is not None:
+        return residual
+    if fallback is not None:
+        return fallback
+    return _top_candidate(rank)
+
+
 def _rank_null_candidate(rank: RankBelief) -> RankNullCandidate | None:
     for candidate in rank.candidates:
         if isinstance(candidate, RankNullCandidate):
             return candidate
     return None
+
+
+def _top_residual_candidate(rank: RankBelief) -> ResidualBelowTaxonCandidate | None:
+    residual_candidates = [
+        candidate
+        for candidate in rank.candidates
+        if isinstance(candidate, ResidualBelowTaxonCandidate)
+    ]
+    if not residual_candidates:
+        return None
+    return max(residual_candidates, key=lambda candidate: candidate.score)
 
 
 def _top_candidate(rank: RankBelief) -> ClassificationCandidate:
@@ -464,6 +816,40 @@ def _is_descendant_of(
     if isinstance(taxonomy_tree, Mapping):
         return _mapping_contains_parent(taxonomy_tree, candidate.taxon_id, parent_id)
     return False
+
+
+def _lineage_taxa_by_rank(candidate: TaxonCandidate) -> dict[int, int]:
+    lineage: dict[int, int] = {}
+    if candidate.ancestor_taxon_ids_by_rank is not None:
+        lineage.update(
+            {
+                int(rank_level): int(taxon_id)
+                for rank_level, taxon_id in candidate.ancestor_taxon_ids_by_rank.items()
+            }
+        )
+    if candidate.taxon_snapshot is not None:
+        lineage.update(
+            {
+                int(rank_level): int(taxon_id)
+                for rank_level, taxon_id in (
+                    candidate.taxon_snapshot.ancestor_taxon_ids_by_rank.items()
+                )
+            }
+        )
+    lineage[int(candidate.rank_level)] = int(candidate.taxon_id)
+    return lineage
+
+
+def _lowest_common_ancestor_depth(
+    left_lineage: Mapping[int, int],
+    right_lineage: Mapping[int, int],
+    matrix: TaxonomyCostMatrix,
+) -> float:
+    common_depth = 0.0
+    for rank_level, taxon_id in left_lineage.items():
+        if right_lineage.get(rank_level) == taxon_id:
+            common_depth = max(common_depth, matrix.rank_depth(rank_level))
+    return common_depth
 
 
 def _mapping_contains_parent(

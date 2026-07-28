@@ -24,8 +24,10 @@ typus-load-sqlite --sqlite expanded_taxa.sqlite  # creates recommended indexes
 ```
 
 Pass `--replace` to overwrite, `--tsv my.tsv` to use a local dump. Downloads are
-stored in `~/.cache/typus` unless `$TYPUS_CACHE_DIR` is set. Override the source
-URL with `--url` or `$TYPUS_EXPANDED_TAXA_URL`.
+stored in `~/.cache/typus` unless `$TYPUS_CACHE_DIR` is set. The default source
+is the Backblaze B2 `public-0` object store
+(`https://f005.backblazeb2.com/file/public-0/expanded_taxa/latest/expanded_taxa.sqlite`);
+override it with `--url` or `$TYPUS_EXPANDED_TAXA_URL`.
 
 Indexes: By default the loader creates expression indexes to accelerate
 case-insensitive name search and rank filters, and runs `ANALYZE`. To opt out,

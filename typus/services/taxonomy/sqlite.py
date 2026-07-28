@@ -11,7 +11,7 @@ from .common import (
     ancestry_pairs_from_mapping,
     col_prefix_for_level,
     score_taxon_match,
-    taxon_from_search_row,
+    taxon_from_expanded_taxa_row,
 )
 from .errors import TaxonNotFoundError
 
@@ -113,14 +113,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         pairs = await self._expanded_ancestry_pairs(int(row["taxonID"]))
         ancestry_path = [tid for (tid, _lvl) in pairs]
 
-        return Taxon(
-            taxon_id=row["taxonID"],
-            scientific_name=row["name"],
-            rank_level=RankLevel(int(row["rankLevel"])),
-            parent_id=row["immediateAncestor_taxonID"],
-            ancestry=ancestry_path,
-            vernacular={"en": [row["commonName"]]} if row["commonName"] else {},
-        )
+        return taxon_from_expanded_taxa_row(dict(row), ancestry=ancestry_path)
 
     async def children(self, taxon_id: int, *, depth: int = 1) -> list[Taxon]:
         loop = asyncio.get_running_loop()
@@ -401,7 +394,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         results: List[Tuple[Taxon, float]] = []
         for r in superset:
             row_dict = dict(r)
-            tax = taxon_from_search_row(
+            tax = taxon_from_expanded_taxa_row(
                 row_dict,
                 ancestry=[],
             )
@@ -437,7 +430,7 @@ class SQLiteTaxonomyService(AbstractTaxonomyService):
         out: dict[int, Taxon] = {}
         for r in rows:
             row_dict = dict(r)
-            out[r["taxonID"]] = taxon_from_search_row(
+            out[r["taxonID"]] = taxon_from_expanded_taxa_row(
                 row_dict,
                 ancestry=await self.ancestors(r["taxonID"], include_minor_ranks=True),
             )

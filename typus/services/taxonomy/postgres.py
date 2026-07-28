@@ -19,7 +19,7 @@ from .common import (
     col_prefix_for_level,
     filtered_ancestry_ids,
     score_taxon_match,
-    taxon_from_search_row,
+    taxon_from_expanded_taxa_row,
 )
 from .errors import BackendConnectionError, TaxonNotFoundError
 
@@ -156,18 +156,20 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
 
     async def _lca_recursive_fallback(self, s, taxon_ids: set[int]) -> int | None:
         """LCA implementation using recursive CTE for all ranks."""
-        anchor_parts = []
-        for tid in taxon_ids:
-            anchor_parts.append(
-                'SELECT {tid} AS query_taxon_id, "taxonID" as taxon_id, "immediateAncestor_taxonID" AS parent_id, 0 AS lvl FROM expanded_taxa WHERE "taxonID" = {tid}'.format(
-                    tid=tid
-                )
-            )
-        anchor_sql = " UNION ALL ".join(anchor_parts)
+        taxon_list = sorted(int(tid) for tid in taxon_ids)
+        params: dict[str, int] = {f"tid{i}": tid for i, tid in enumerate(taxon_list)}
+        params["taxon_count"] = len(taxon_list)
+        input_values = ", ".join(f"(:tid{i})" for i in range(len(taxon_list)))
 
         recursive_sql = f"""
-            WITH RECURSIVE taxon_ancestors (query_taxon_id, taxon_id, parent_id, lvl) AS (
-                {anchor_sql}
+            WITH RECURSIVE
+            input_taxa(query_taxon_id) AS (
+                VALUES {input_values}
+            ),
+            taxon_ancestors (query_taxon_id, taxon_id, parent_id, lvl) AS (
+                SELECT input_taxa.query_taxon_id, et."taxonID" as taxon_id, et."immediateAncestor_taxonID" AS parent_id, 0 AS lvl
+                FROM input_taxa
+                JOIN expanded_taxa et ON et."taxonID" = input_taxa.query_taxon_id
                 UNION ALL
                 SELECT ta.query_taxon_id, et."taxonID" as taxon_id, et."immediateAncestor_taxonID", ta.lvl + 1
                 FROM expanded_taxa et
@@ -177,11 +179,11 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
             SELECT taxon_id
             FROM taxon_ancestors
             GROUP BY taxon_id
-            HAVING COUNT(DISTINCT query_taxon_id) = {len(taxon_ids)}
+            HAVING COUNT(DISTINCT query_taxon_id) = :taxon_count
             ORDER BY MAX(lvl) DESC
             LIMIT 1
         """
-        lca_tid = await s.scalar(text(recursive_sql))
+        lca_tid = await s.scalar(text(recursive_sql), params)
         return lca_tid
 
     async def lca(self, taxon_ids: set[int], *, include_minor_ranks: bool = False) -> Taxon:
@@ -274,7 +276,9 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
     async def fetch_subtree(self, root_ids: set[int]) -> dict[int, int | None]:
         if not root_ids:
             return {}
-        roots_sql = ",".join(str(tid) for tid in sorted(root_ids))
+        root_list = sorted(int(tid) for tid in root_ids)
+        params = {f"root{i}": tid for i, tid in enumerate(root_list)}
+        roots_sql = ", ".join(f":root{i}" for i in range(len(root_list)))
         sql = text(
             f"""
             WITH RECURSIVE sub AS (
@@ -288,7 +292,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
         )
         try:
             async with self._Session() as s:
-                res = await s.execute(sql)
+                res = await s.execute(sql, params)
                 return {r.taxon_id: r.parent_id for r in res}
         except SQLAlchemyError as exc:
             raise BackendConnectionError(
@@ -301,7 +305,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
     def _row_to_taxon(self, row: ExpandedTaxa) -> Taxon:
         # Allow MagicMock rows in tests without full mapper
         if not hasattr(row, "__mapper__"):
-            return taxon_from_search_row(
+            return taxon_from_expanded_taxa_row(
                 {
                     "taxon_id": getattr(row, "taxon_id"),
                     "scientific_name": getattr(row, "scientific_name"),
@@ -316,7 +320,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
             col.columns[0].name: getattr(row, col.key) for col in row.__mapper__.column_attrs
         }
         ancestry_ids = filtered_ancestry_ids(row_dict, include_minor_ranks=True)
-        return taxon_from_search_row(
+        return taxon_from_expanded_taxa_row(
             row_dict,
             ancestry=ancestry_ids,
         )
@@ -324,7 +328,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
     def _row_to_taxon_from_mapping(self, row_mapping) -> Taxon:
         row_dict = dict(row_mapping)
         ancestry_ids = filtered_ancestry_ids(row_dict, include_minor_ranks=True)
-        return taxon_from_search_row(
+        return taxon_from_expanded_taxa_row(
             row_dict,
             ancestry=ancestry_ids,
         )
@@ -501,7 +505,7 @@ class PostgresTaxonomyService(AbstractTaxonomyService):
             ) from exc
 
         for r in superset_rows:
-            tax = taxon_from_search_row(
+            tax = taxon_from_expanded_taxa_row(
                 r,
                 ancestry=[],
             )
