@@ -4,7 +4,8 @@ This page describes how to set up a local development environment, run tests, an
 
 Environment
 
-- Python 3.10+ (CI runs on 3.10, 3.11, 3.12)
+- Python 3.10+ (pull requests use the stable `test (3.12)` authority; pushes
+  to `main` and manual runs retain the 3.10/3.11/3.12 compatibility matrix)
 - Use `uv` and Makefile shortcuts (no plain `pip` in scripts/CI):
 - Preferred bootstrap path for contributors:
 
@@ -139,9 +140,13 @@ Service Backends
 CI/CD Overview
 
 - CI workflow (`.github/workflows/ci.yml`):
-  - Matrix on Python 3.10/3.11/3.12.
+  - Pull requests run only Python 3.12; the stable authority name is
+    `test (3.12)`.
+  - Pushes to `main` and `workflow_dispatch` retain the Python
+    3.10/3.11/3.12 compatibility matrix.
   - Syncs dependencies from `uv.lock` with `uv sync --locked`, then runs `make check-all`.
-  - `make check-all` covers `make lint-check`, `make typecheck`, `make docs`, `make schemas-check`, and `make ci`.
+  - `make check-all` is the local parity command and covers `make lint-check`,
+    `make typecheck`, `make docs`, `make schemas-check`, and `make ci`.
   - Triggers on PRs and pushes to `main` (to avoid duplicate branch + PR runs for the same commit).
 - Publish workflow (`.github/workflows/publish.yml`):
   - Blocks build/publish on the same `make check-all` gate used locally and in CI.
