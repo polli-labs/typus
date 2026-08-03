@@ -1,13 +1,13 @@
 ---
 name: typus
 description: "Typus-dev repo knowledge for the private development mirror of Polli taxonomy primitives, canonical geometry, and DTO contracts. Use before modifying typus or its dev/public release workflow."
-version: "0.3.2"
+version: "0.4.0"
 x:
   source_repo: "typus-dev"
   source_branch: "main"
-  source_commit: "ba571eb"
-  package_version: "0.5.0"
-  last_modified: "2026-04-17T22:00:00Z"
+  source_commit: "9c941ea"
+  package_version: "0.8.0"
+  last_modified: "2026-08-03T00:00:00Z"
 ---
 
 # Typus
@@ -17,11 +17,12 @@ on Typus contracts.
 
 ## Quick Facts
 
-- Package: `polli-typus` (`pyproject.toml` version `0.5.0`)
+- Package: `polli-typus` (`pyproject.toml` version `0.8.0`)
 - Python target: `>=3.10`
 - Public exports entrypoint: `typus/__init__.py`
 - Optional extras: `[postgres]`, `[sqlite]`, `[loader]`, `[pgvector]`, `[dev]`, `[docs]`
-- Core domains: taxonomy service contract, canonical geometry, track/classification DTOs
+- Core domains: taxonomy service contract, canonical geometry, portable spatial
+  observations, and classification DTOs
 - Stack role: Typus is the canonical taxonomy authority and shared contract
   layer for downstream Polli systems
 - Current shared-contract posture: Typus owns the canonical classification DTO
@@ -48,7 +49,7 @@ Use this skill when the task touches one or more of these:
 
 - taxonomy primitives or taxonomy service behavior
 - canonical bbox geometry or provider mapping
-- track/detection/classification model contracts
+- spatial-observation or classification model contracts
 - schema export surface used by downstream validation
 - Typus integration planning in other Polli repositories
 
@@ -83,6 +84,8 @@ Use this skill when the task touches one or more of these:
   Linnaeus, Ibrida, ibridaDB, or Polli, capture that migration surface before
   coding.
 - Preserve canonical geometry as TL-normalized `xywh` and convert only at boundaries.
+- Never reduce temporal evidence identity to frame number or implicit FPS; carry
+  literal source time or exact PTS plus rational time base and evidence digests.
 - If you add a public Pydantic model, append it to `typus/export_schemas.py` and regenerate `typus/schemas/*.json`.
 
 ## References

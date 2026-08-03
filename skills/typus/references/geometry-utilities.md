@@ -1,6 +1,7 @@
 # Typus Geometry Utilities
 
-Use this reference when working on bbox contracts, mapper conversions, or track geometry fields.
+Use this reference when working on bbox contracts, mapper conversions, or
+portable spatial observations.
 
 ## Canonical Geometry Contract
 
@@ -33,18 +34,24 @@ Conversion helpers:
 
 Pattern: convert at boundaries, keep internal storage canonical.
 
-## Detection and Track Models
+## Spatial Observation Models
 
-Primary file: `typus/models/tracks.py`
+Primary file: `typus/models/spatial.py`
+Supplemental docs: `docs/spatial.md`
 
-- `Detection` supports canonical `bbox_norm` and legacy `bbox`
-- `Detection.from_raw_detection(...)` enforces provider-aware conversion and validation
-- `Track` aggregates detections and normalizes derived frame bounds
+- `SpatialObservation` keeps presence, visibility, task resolvability,
+  measurement, frame identity, transforms, and provenance orthogonal.
+- `PointMeasurement`, `BBoxMeasurement`, and `MaskReference` form a tagged union.
+- `CoordinateSpace` declares unit, origin, axes, extent, dimensions, asset/crop
+  identity, grid semantics, and bounds/numeric policy.
+- `TransformChain` carries replayable affine matrices rather than method labels alone.
+- `SourceObservationLocator` and `EvidenceFrameReference` are independent;
+  decoded evidence uses literal PTS plus rational time base, never implicit FPS.
 
-When touching these models:
+When touching this contract:
 
-- preserve compatibility for both `bbox_norm` and legacy `bbox` paths
-- avoid implicit assumptions about provider coordinate systems
+- preserve explicit coordinate and temporal interpretation
+- keep missing measurement distinct from absence and task non-resolvability
 - keep validation errors explicit and actionable
 
 ## Geometry Ops Helpers
@@ -62,4 +69,4 @@ Use `typus/ops/` helpers instead of duplicating bbox math in service code.
 - Ensure canonical invariants remain strict and explicit.
 - Keep pixel edge semantics consistent in conversions.
 - Add or update tests when mapper logic or validation behavior changes.
-- Coordinate any geometry contract changes with downstream consumers before release.
+- Validate shared-contract changes against a real downstream round-trip fixture.

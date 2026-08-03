@@ -18,7 +18,7 @@ nav:
       - expanded_taxa schema: expanded_taxa.md
   - Models: models.md
   - Geometry: geometry.md
-  - Tracks: tracks.md
+  - Spatial Observations: spatial.md
   - Elevation Service: elevation_service.md
   - Contributing: contributing.md
   - Ops Helpers: reference/ops.md

@@ -7,6 +7,20 @@
         - to_xyxy_px
         - from_xyxy_px
 
+::: typus.models.spatial
+    options:
+      members:
+        - CoordinateSpace
+        - TransformStep
+        - TransformChain
+        - PointMeasurement
+        - BBoxMeasurement
+        - MaskReference
+        - SourceObservationLocator
+        - EvidenceFrameReference
+        - ObservationProvenance
+        - SpatialObservation
+
 ::: typus.ops.bbox
     options:
       members:
@@ -19,9 +33,3 @@
         - from_xywh_px
         - xyxy_to_xywh
         - xywh_to_xyxy
-
-::: typus.ops.tracks
-    options:
-      members:
-        - group_detections_by_frame
-        - detection_xyxy_px

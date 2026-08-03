@@ -23,6 +23,10 @@ database services. Anything that speaks taxonomy imports **Typus** and stays DRY
   `SQLiteTaxonomyService` (fixture) share one interface.
 * **Pydantic v2 models** – `Taxon`, `Clade`, `ClassificationResult`, and
   one-release deprecated classification aliases, all JSON-Schema-exportable.
+* **Portable spatial observations** – point, bbox, and mask-reference evidence
+  carries explicit coordinate spaces, replayable transforms, exact frame/PTS
+  identity, resolvability, and provenance instead of implicit FPS or frame-only
+  identity.
 * **Classification decision helpers** – Chow thresholds, hierarchy repair, and
   cost-sensitive expected-utility policies operate on calibrated
   `ClassificationResult` belief without retraining.
@@ -53,8 +57,9 @@ database services. Anything that speaks taxonomy imports **Typus** and stays DRY
 uv pip install polli-typus        # import typus
 ```
 
-The core install depends on **pydantic alone**. Models, canonical geometry,
-`typus.ops`, projections, and the classification/decision helpers all import
+The core install depends on **pydantic alone**. Models, canonical geometry and
+spatial observations, `typus.ops`, projections, and the
+classification/decision helpers all import
 without sqlalchemy, rapidfuzz, or any DB driver.
 
 ### Extras

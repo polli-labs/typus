@@ -1,0 +1,353 @@
+{
+  "$defs": {
+    "AxisDirection": {
+      "enum": [
+        "right",
+        "left",
+        "down",
+        "up"
+      ],
+      "title": "AxisDirection",
+      "type": "string"
+    },
+    "BBoxEdgeConvention": {
+      "enum": [
+        "continuous",
+        "half_open",
+        "closed"
+      ],
+      "title": "BBoxEdgeConvention",
+      "type": "string"
+    },
+    "BoundsPolicy": {
+      "enum": [
+        "reject",
+        "clamp",
+        "allow"
+      ],
+      "title": "BoundsPolicy",
+      "type": "string"
+    },
+    "CoordinateOrigin": {
+      "enum": [
+        "top_left",
+        "top_right",
+        "bottom_left",
+        "bottom_right",
+        "cartesian"
+      ],
+      "title": "CoordinateOrigin",
+      "type": "string"
+    },
+    "CoordinateSpace": {
+      "additionalProperties": false,
+      "description": "Explicit coordinate interpretation for portable spatial evidence.",
+      "properties": {
+        "space_id": {
+          "title": "Space Id",
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/$defs/CoordinateUnit"
+        },
+        "origin": {
+          "$ref": "#/$defs/CoordinateOrigin"
+        },
+        "x_axis": {
+          "$ref": "#/$defs/AxisDirection"
+        },
+        "y_axis": {
+          "$ref": "#/$defs/AxisDirection"
+        },
+        "extent": {
+          "$ref": "#/$defs/SpatialExtent"
+        },
+        "dimensions": {
+          "$ref": "#/$defs/RasterDimensions"
+        },
+        "asset_id": {
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "crop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Crop Id"
+        },
+        "point_semantics": {
+          "$ref": "#/$defs/PointSemantics"
+        },
+        "bbox_edge_convention": {
+          "$ref": "#/$defs/BBoxEdgeConvention"
+        },
+        "mask_grid_alignment": {
+          "$ref": "#/$defs/MaskGridAlignment"
+        },
+        "bounds_policy": {
+          "$ref": "#/$defs/BoundsPolicy"
+        },
+        "numeric_representation": {
+          "$ref": "#/$defs/NumericRepresentation"
+        },
+        "aliases": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        }
+      },
+      "required": [
+        "space_id",
+        "unit",
+        "origin",
+        "x_axis",
+        "y_axis",
+        "extent",
+        "dimensions",
+        "asset_id",
+        "point_semantics",
+        "bbox_edge_convention",
+        "mask_grid_alignment",
+        "bounds_policy",
+        "numeric_representation"
+      ],
+      "title": "CoordinateSpace",
+      "type": "object"
+    },
+    "CoordinateUnit": {
+      "enum": [
+        "normalized",
+        "pixel"
+      ],
+      "title": "CoordinateUnit",
+      "type": "string"
+    },
+    "Invertibility": {
+      "enum": [
+        "exact",
+        "approximate",
+        "none"
+      ],
+      "title": "Invertibility",
+      "type": "string"
+    },
+    "MaskGridAlignment": {
+      "enum": [
+        "pixel_centers",
+        "pixel_edges",
+        "continuous"
+      ],
+      "title": "MaskGridAlignment",
+      "type": "string"
+    },
+    "NumericRepresentation": {
+      "enum": [
+        "float32",
+        "float64",
+        "integer"
+      ],
+      "title": "NumericRepresentation",
+      "type": "string"
+    },
+    "PointSemantics": {
+      "enum": [
+        "sample",
+        "pixel_center",
+        "continuous"
+      ],
+      "title": "PointSemantics",
+      "type": "string"
+    },
+    "RasterDimensions": {
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "title": "RasterDimensions",
+      "type": "object"
+    },
+    "RoundingMode": {
+      "enum": [
+        "none",
+        "floor",
+        "ceil",
+        "truncate",
+        "half_up"
+      ],
+      "title": "RoundingMode",
+      "type": "string"
+    },
+    "SpatialExtent": {
+      "additionalProperties": false,
+      "description": "Closed coordinate-domain bounds.",
+      "properties": {
+        "x_min": {
+          "title": "X Min",
+          "type": "number"
+        },
+        "y_min": {
+          "title": "Y Min",
+          "type": "number"
+        },
+        "x_max": {
+          "title": "X Max",
+          "type": "number"
+        },
+        "y_max": {
+          "title": "Y Max",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x_min",
+        "y_min",
+        "x_max",
+        "y_max"
+      ],
+      "title": "SpatialExtent",
+      "type": "object"
+    },
+    "TransformStep": {
+      "additionalProperties": false,
+      "description": "One replayable affine step in an ordered transform chain.\n\n``method`` carries product-compatible labels such as\n``clip-crop-unmap-v1``. The affine matrix, spaces, and numeric policy are\nthe primitive contract.",
+      "properties": {
+        "from_space": {
+          "title": "From Space",
+          "type": "string"
+        },
+        "to_space": {
+          "title": "To Space",
+          "type": "string"
+        },
+        "kind": {
+          "default": "affine_2d",
+          "title": "Kind",
+          "type": "string"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "matrix_2x3": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "maxItems": 3,
+              "minItems": 3,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "maxItems": 3,
+              "minItems": 3,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            }
+          ],
+          "title": "Matrix 2X3",
+          "type": "array"
+        },
+        "rounding": {
+          "$ref": "#/$defs/RoundingMode"
+        },
+        "bounds_policy": {
+          "$ref": "#/$defs/BoundsPolicy"
+        },
+        "invertibility": {
+          "$ref": "#/$defs/Invertibility"
+        },
+        "round_trip_tolerance": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Round Trip Tolerance"
+        }
+      },
+      "required": [
+        "from_space",
+        "to_space",
+        "method",
+        "matrix_2x3",
+        "rounding",
+        "bounds_policy",
+        "invertibility"
+      ],
+      "title": "TransformStep",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Coordinate-space registry plus an ordered, composable step chain.",
+  "properties": {
+    "spaces": {
+      "items": {
+        "$ref": "#/$defs/CoordinateSpace"
+      },
+      "title": "Spaces",
+      "type": "array"
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/TransformStep"
+      },
+      "title": "Steps",
+      "type": "array"
+    }
+  },
+  "required": [
+    "spaces",
+    "steps"
+  ],
+  "title": "TransformChain",
+  "type": "object"
+}

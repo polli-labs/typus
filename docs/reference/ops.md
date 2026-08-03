@@ -1,10 +1,9 @@
 # Ops Helpers
 
-Lightweight utilities for common geometry and tracking operations. These are
+Lightweight utilities for common geometry operations. These are
 pure-Python helpers — importing `typus.ops` pulls in no dependency beyond
 pydantic (no sqlalchemy, rapidfuzz, or DB driver) — and are designed to complement
-the canonical geometry in `typus.models.geometry` and the tracking models in
-`typus.models.tracks`.
+the canonical geometry in `typus.models.geometry`.
 
 ## Bounding Boxes (`typus.ops.bbox`)
 
@@ -33,26 +32,6 @@ b2 = from_xywh_px(*xywh_px, 640, 480)
 assert b2 == b
 
 IoU = iou_xyxy((0,0,10,10), (5,5,15,15))
-```
-
-## Tracking (`typus.ops.tracks`)
-
-- `group_detections_by_frame(dets) -> dict[int, list[Detection]]` – Group by
-  `frame_number` with sorted keys; per‑frame order preserved.
-- `detection_xyxy_px(det, W, H) -> tuple` – Pixel `xyxy` for a `Detection`.
-  Prefers canonical `bbox_norm`; falls back to legacy pixel `bbox` when present.
-
-Example:
-
-```python
-from typus.models.geometry import BBoxXYWHNorm
-from typus.models.tracks import Detection
-from typus.ops import detection_xyxy_px, group_detections_by_frame
-
-d = Detection(frame_number=10, bbox_norm=BBoxXYWHNorm(x=0.1,y=0.2,w=0.4,h=0.5), confidence=0.9)
-xyxy = detection_xyxy_px(d, 1920, 1080)
-
-grouped = group_detections_by_frame([d])
 ```
 
 ## Design Principles

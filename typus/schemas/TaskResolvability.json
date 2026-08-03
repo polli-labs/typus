@@ -1,0 +1,29 @@
+{
+  "$defs": {
+    "ResolutionStatus": {
+      "enum": [
+        "resolvable",
+        "not_resolvable",
+        "not_assessed",
+        "unknown"
+      ],
+      "title": "ResolutionStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "localization": {
+      "$ref": "#/$defs/ResolutionStatus"
+    },
+    "segmentation": {
+      "$ref": "#/$defs/ResolutionStatus"
+    }
+  },
+  "required": [
+    "localization",
+    "segmentation"
+  ],
+  "title": "TaskResolvability",
+  "type": "object"
+}

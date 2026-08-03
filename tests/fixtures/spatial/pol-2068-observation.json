@@ -1,0 +1,99 @@
+{
+  "observation_id": "pol-2068:CLIP19_0010-0025:CLIP19-004:0",
+  "subject_id": "P:CLIP19_0010-0025:02",
+  "parent_observation_ids": [],
+  "presence": "present",
+  "visibility": "visible",
+  "resolvability": {
+    "localization": "resolvable",
+    "segmentation": "not_resolvable"
+  },
+  "measurement": {
+    "kind": "point",
+    "coordinate_space": "display-content-normalized-v2",
+    "x": 0.16374075202226823,
+    "y": 0.2829781577225131,
+    "measurement_role": "pollinator.body_center"
+  },
+  "source_locator": {
+    "clip_id": "CLIP19_0010-0025",
+    "event_id": "CLIP19-004",
+    "point_index": 0,
+    "frame_index": 79,
+    "time_sec": 1.3389830508474576
+  },
+  "evidence_frame": {
+    "media_sha256": "a715d6b19fef376e663db500b16db86cace3ebd00c9a62ff7321faadffedcd1a",
+    "decoded_frame_index": 79,
+    "pts": 20224,
+    "pts_time_base": {
+      "numerator": 1,
+      "denominator": 15104
+    },
+    "pts_table_sha256": "0827b70dce1ca6578b95a8290113771cf7937dcdfbfed3a5f8d9cd79c197efef"
+  },
+  "transforms": {
+    "spaces": [
+      {
+        "space_id": "crop.normalized",
+        "unit": "normalized",
+        "origin": "top_left",
+        "x_axis": "right",
+        "y_axis": "down",
+        "extent": {"x_min": 0.0, "y_min": 0.0, "x_max": 1.0, "y_max": 1.0},
+        "dimensions": {"width": 3088, "height": 1466},
+        "asset_id": "sha256:a715d6b19fef376e663db500b16db86cace3ebd00c9a62ff7321faadffedcd1a",
+        "crop_id": "CLIP19_0010-0025",
+        "point_semantics": "continuous",
+        "bbox_edge_convention": "continuous",
+        "mask_grid_alignment": "pixel_centers",
+        "bounds_policy": "reject",
+        "numeric_representation": "float64",
+        "aliases": ["display-content-normalized-v2"]
+      },
+      {
+        "space_id": "source_frame.normalized",
+        "unit": "normalized",
+        "origin": "top_left",
+        "x_axis": "right",
+        "y_axis": "down",
+        "extent": {"x_min": 0.0, "y_min": 0.0, "x_max": 1.0, "y_max": 1.0},
+        "dimensions": {"width": 7680, "height": 4320},
+        "asset_id": "source:CLIP19",
+        "crop_id": null,
+        "point_semantics": "continuous",
+        "bbox_edge_convention": "continuous",
+        "mask_grid_alignment": "pixel_centers",
+        "bounds_policy": "reject",
+        "numeric_representation": "float64",
+        "aliases": ["source-frame-normalized-v1"]
+      }
+    ],
+    "steps": [
+      {
+        "from_space": "crop.normalized",
+        "to_space": "source_frame.normalized",
+        "kind": "crop",
+        "method": "clip-crop-unmap-v1",
+        "matrix_2x3": [
+          [0.40208333333333335, 0.0, 0.5506510416666667],
+          [0.0, 0.33935185185185185, 0.19930555555555557]
+        ],
+        "rounding": "none",
+        "bounds_policy": "reject",
+        "invertibility": "exact",
+        "round_trip_tolerance": 1e-12
+      }
+    ]
+  },
+  "provenance": {
+    "producer": "human",
+    "derivation": "measured",
+    "method": "saffron-keypoint",
+    "version": "schema-v4",
+    "source_hashes": {
+      "saffron.annotation": "49a8c5076e2a10842bd9f18f15c2235f03f50555f8638d01c0584d4c260f3734",
+      "pol-2068.repair-batch": "7680ff78c8bc3c7b0408323cb5113a84757a716d688ec6d715cf62f944751e21"
+    }
+  }
+}

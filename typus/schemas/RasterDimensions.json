@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "width": {
+      "exclusiveMinimum": 0,
+      "title": "Width",
+      "type": "integer"
+    },
+    "height": {
+      "exclusiveMinimum": 0,
+      "title": "Height",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "width",
+    "height"
+  ],
+  "title": "RasterDimensions",
+  "type": "object"
+}

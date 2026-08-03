@@ -1,0 +1,47 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "mask",
+      "default": "mask",
+      "title": "Kind",
+      "type": "string"
+    },
+    "coordinate_space": {
+      "title": "Coordinate Space",
+      "type": "string"
+    },
+    "uri": {
+      "title": "Uri",
+      "type": "string"
+    },
+    "sha256": {
+      "title": "Sha256",
+      "type": "string"
+    },
+    "media_type": {
+      "title": "Media Type",
+      "type": "string"
+    },
+    "measurement_role": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Measurement Role"
+    }
+  },
+  "required": [
+    "coordinate_space",
+    "uri",
+    "sha256",
+    "media_type"
+  ],
+  "title": "MaskReference",
+  "type": "object"
+}

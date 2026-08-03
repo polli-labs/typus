@@ -8,7 +8,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
+exclude-newer = "2026-07-27T18:00:53.243965Z"
 exclude-newer-span = "P7D"
 
 [[package]]
@@ -1255,7 +1255,7 @@ wheels = [
 
 [[package]]
 name = "polli-typus"
-version = "0.7.0"
+version = "0.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },

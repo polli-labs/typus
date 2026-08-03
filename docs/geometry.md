@@ -148,54 +148,12 @@ BBoxMapper.register("my_provider", my_provider_mapper)
 bbox = BBoxMapper.get("my_provider")(10, 20, 50, 60, 100, 100)
 ```
 
-## Integration with Models
+## Integration with Spatial Observations
 
-### Detection Models
-
-The `Detection` model (used in tracks) supports both canonical and legacy bbox formats:
-
-```python
-from typus.models.tracks import Detection
-from typus import BBoxXYWHNorm
-
-# Preferred: Use canonical bbox
-detection = Detection(
-    frame_number=100,
-    bbox_norm=BBoxXYWHNorm(x=0.1, y=0.2, w=0.5, h=0.6),
-    confidence=0.95
-)
-
-# Legacy support (deprecated)
-detection_legacy = Detection(
-    frame_number=100,
-    bbox=[10, 20, 50, 60],  # Pixel coordinates - DEPRECATED
-    confidence=0.95
-)
-```
-
-### Converting Raw Detection Data
-
-Use the factory method to convert from provider-specific formats:
-
-```python
-# Raw detection from Gemini API
-raw_detection = {
-    "frame_number": 100,
-    "bbox": [50, 50, 80, 90],  # Gemini bottom-right coordinates
-    "confidence": 0.95
-}
-
-# Convert to canonical format
-detection = Detection.from_raw_detection(
-    raw_detection,
-    upload_w=100, upload_h=100,
-    provider="gemini_br_xyxy"
-)
-
-# Now has both canonical and legacy fields
-assert detection.bbox_norm is not None  # Canonical format
-assert detection.bbox == [50, 50, 80, 90]  # Legacy preserved
-```
+Use `BBoxMeasurement` when a canonical bbox crosses a repository or persistence
+boundary. The measurement names its `CoordinateSpace`; consumers do not infer
+origin, normalization, dimensions, edge convention, or asset identity from the
+bbox alone. See [Spatial Observations](spatial.md).
 
 ## Migration Guide
 
@@ -242,7 +200,7 @@ def handle_bbox(bbox: BBoxXYWHNorm):
 1. **Always use canonical format** for new code
 2. **Convert at API boundaries** using provider mappers
 3. **Store in canonical format** to avoid coordinate system bugs
-4. **Use factory methods** like `Detection.from_raw_detection()` for conversion
+4. **Carry coordinate-space context** when geometry crosses a boundary
 5. **Validate early** - canonical types enforce invariants at construction time
 
 ## JSON Schema
@@ -258,5 +216,5 @@ schema = BBoxXYWHNorm.model_json_schema()
 
 Generated schemas are available in `typus/schemas/` directory:
 - `BBoxXYWHNorm.json`
-- `Detection.json`
-- `Track.json`
+- `CoordinateSpace.json`
+- `SpatialObservation.json`

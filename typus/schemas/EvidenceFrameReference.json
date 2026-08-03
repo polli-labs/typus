@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "TimeBase": {
+      "additionalProperties": false,
+      "properties": {
+        "numerator": {
+          "exclusiveMinimum": 0,
+          "title": "Numerator",
+          "type": "integer"
+        },
+        "denominator": {
+          "exclusiveMinimum": 0,
+          "title": "Denominator",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "TimeBase",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Exact decoded evidence-frame identity.",
+  "properties": {
+    "media_sha256": {
+      "title": "Media Sha256",
+      "type": "string"
+    },
+    "decoded_frame_index": {
+      "minimum": 0,
+      "title": "Decoded Frame Index",
+      "type": "integer"
+    },
+    "pts": {
+      "title": "Pts",
+      "type": "integer"
+    },
+    "pts_time_base": {
+      "$ref": "#/$defs/TimeBase"
+    },
+    "pts_table_sha256": {
+      "title": "Pts Table Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "media_sha256",
+    "decoded_frame_index",
+    "pts",
+    "pts_time_base",
+    "pts_table_sha256"
+  ],
+  "title": "EvidenceFrameReference",
+  "type": "object"
+}
