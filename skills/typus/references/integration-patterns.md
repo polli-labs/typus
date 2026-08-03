@@ -15,7 +15,7 @@ Typus currently plays four distinct roles in the Polli stack:
 
 - canonical taxonomy authority for biological taxon IDs, names, ancestry, LCA,
   and distance queries
-- canonical geometry and detection/track DTO surface at the package boundary
+- canonical geometry and portable spatial-observation DTO surface at the package boundary
 - shared classification/result contract owner for downstream inference and UI
   consumers
 - API/service facade over data ultimately sourced from ibridaDB tables and
@@ -27,7 +27,8 @@ looks small.
 ## Common Consumer Patterns
 
 - service callers consume taxonomy APIs (`get_taxon`, `search_taxa`, `ancestors`, `lca`, `distance`)
-- inference/tracking callers consume DTOs (`Detection`, `Track`, classification models)
+- inference/annotation/tracking callers consume spatial observations and
+  classification models at repository boundaries
 - UI/reporting callers consume summary helpers (`TaxonSummary`, `PollinatorGroup`)
 
 Concrete downstream ownership today:
@@ -37,8 +38,8 @@ Concrete downstream ownership today:
   data
 - `linnaeus` depends on Typus-owned taxonomy and classification contracts for
   inference-facing outputs and postprocessing
-- `ibrida` and serving/reporting flows consume Typus geometry and
-  classification/taxonomy DTOs rather than re-defining their own
+- `ibrida` and serving/reporting flows consume Typus coordinate-space,
+  transform, geometry, and classification/taxonomy DTOs rather than re-defining their own
 - `polli` UI/reporting surfaces should treat Typus-owned generated schemas and
   DTOs as canonical when the data crosses the API boundary
 

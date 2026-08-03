@@ -1,0 +1,127 @@
+{
+  "$defs": {
+    "BoundsPolicy": {
+      "enum": [
+        "reject",
+        "clamp",
+        "allow"
+      ],
+      "title": "BoundsPolicy",
+      "type": "string"
+    },
+    "Invertibility": {
+      "enum": [
+        "exact",
+        "approximate",
+        "none"
+      ],
+      "title": "Invertibility",
+      "type": "string"
+    },
+    "RoundingMode": {
+      "enum": [
+        "none",
+        "floor",
+        "ceil",
+        "truncate",
+        "half_up"
+      ],
+      "title": "RoundingMode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One replayable affine step in an ordered transform chain.\n\n``method`` carries product-compatible labels such as\n``clip-crop-unmap-v1``. The affine matrix, spaces, and numeric policy are\nthe primitive contract.",
+  "properties": {
+    "from_space": {
+      "title": "From Space",
+      "type": "string"
+    },
+    "to_space": {
+      "title": "To Space",
+      "type": "string"
+    },
+    "kind": {
+      "default": "affine_2d",
+      "title": "Kind",
+      "type": "string"
+    },
+    "method": {
+      "title": "Method",
+      "type": "string"
+    },
+    "matrix_2x3": {
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        }
+      ],
+      "title": "Matrix 2X3",
+      "type": "array"
+    },
+    "rounding": {
+      "$ref": "#/$defs/RoundingMode"
+    },
+    "bounds_policy": {
+      "$ref": "#/$defs/BoundsPolicy"
+    },
+    "invertibility": {
+      "$ref": "#/$defs/Invertibility"
+    },
+    "round_trip_tolerance": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Round Trip Tolerance"
+    }
+  },
+  "required": [
+    "from_space",
+    "to_space",
+    "method",
+    "matrix_2x3",
+    "rounding",
+    "bounds_policy",
+    "invertibility"
+  ],
+  "title": "TransformStep",
+  "type": "object"
+}

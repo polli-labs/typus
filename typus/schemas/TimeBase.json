@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "numerator": {
+      "exclusiveMinimum": 0,
+      "title": "Numerator",
+      "type": "integer"
+    },
+    "denominator": {
+      "exclusiveMinimum": 0,
+      "title": "Denominator",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "numerator",
+    "denominator"
+  ],
+  "title": "TimeBase",
+  "type": "object"
+}

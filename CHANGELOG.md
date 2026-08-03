@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## 0.8.0 – 2026-08-03
+
+### Added
+- Added the POL-2081 portable spatial-observation contract: a tagged
+  point/bbox/mask-reference measurement union, explicit coordinate spaces and
+  raster dimensions, replayable affine transform chains, independent source
+  and decoded-evidence frame references, task resolvability, presence,
+  visibility, and orthogonal producer/derivation provenance.
+- Added an exact POL-2068 observation fixture grounded in the promoted Saffron
+  annotation, media digest, literal PTS table, crop transform, and repair-batch
+  receipt. Python and exported-JSON-Schema tests cover round trips, transform
+  replay, forbidden implicit FPS, structural failures, and cross-field
+  invariants.
+
+### Removed (BREAKING)
+- Removed the unused `Detection`, `Track`, and `TrackStats` DTOs plus their
+  tracking-only ops and schemas. Fresh organization-wide code search found no
+  external runtime consumer; retaining them would preserve a second temporal
+  and geometry contract based on `frame_number` and ambiguous bbox fields.
+
+### Notes
+- Point uncertainty remains future-compatible provenance/measurement vocabulary,
+  not a concrete 0.8.0 type. The current covariance writer does not yet have a
+  cross-repository reader and round-trip fixture, so freezing its shape here
+  would be premature.
+
 ## 0.7.0 – 2026-07-27
 
 ### Changed (BREAKING — packaging)

@@ -1,0 +1,42 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "point",
+      "default": "point",
+      "title": "Kind",
+      "type": "string"
+    },
+    "coordinate_space": {
+      "title": "Coordinate Space",
+      "type": "string"
+    },
+    "x": {
+      "title": "X",
+      "type": "number"
+    },
+    "y": {
+      "title": "Y",
+      "type": "number"
+    },
+    "measurement_role": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Measurement Role"
+    }
+  },
+  "required": [
+    "coordinate_space",
+    "x",
+    "y"
+  ],
+  "title": "PointMeasurement",
+  "type": "object"
+}
